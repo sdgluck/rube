@@ -41,6 +41,10 @@ struct RoomView: View {
     @State private var seenMatches: Set<String>?
     @State private var pendingMatch: String?
     @State private var confirmLeave = false
+    @State private var confirmReset = false
+    /// Bumped by "Start Over": the deck is rebuilt from scratch rather than
+    /// patched, so no card dealt before the reset can survive it.
+    @State private var deckGeneration = 0
     @State private var actionError: APIError?
 
     static let pollInterval: Duration = .seconds(3)
@@ -92,7 +96,9 @@ struct RoomView: View {
 
             switch view {
             case .swipe:
-                SwipeDeckView(room: room, code: code, roomState: s) { key in pendingMatch = key } refresh: { await poll() }
+                SwipeDeckView(room: room, code: code, roomState: s, onMatched: { key in pendingMatch = key },
+                              refresh: { await poll() }, startOver: { confirmReset = true })
+                    .id(deckGeneration)
             case .matches:
                 MatchesView(room: room, code: code, roomState: s) { await poll() }
             }
@@ -119,11 +125,18 @@ struct RoomView: View {
             }
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    Button("Start Over", systemImage: "arrow.counterclockwise") { confirmReset = true }
                     Button("Leave Room", systemImage: "rectangle.portrait.and.arrow.right", role: .destructive) { confirmLeave = true }
                 } label: {
                     Label("Room Options", systemImage: "ellipsis")
                 }
+                .accessibilityIdentifier("room-options")
             }
+        }
+        .confirmationDialog("Start over?", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Start Over", role: .destructive) { reset() }
+        } message: {
+            Text("Your swipes in this room are cleared and the deck deals again from the top. Everyone else's stay.")
         }
         .confirmationDialog("Leave room \(s.code)?", isPresented: $confirmLeave, titleVisibility: .visible) {
             Button("Leave Room", role: .destructive) { leave() }
@@ -162,6 +175,19 @@ struct RoomView: View {
         }
         pendingMatch = nil
         seenMatches = Set(unanimous.map(\.ratingKey))
+    }
+
+    func reset() {
+        Task {
+            do {
+                _ = try await room.client.call(PortalAPI.matchReset, .init(code: code))
+                deckGeneration += 1
+                view = .swipe
+                await poll()
+            } catch {
+                actionError = APIError.from(error)
+            }
+        }
     }
 
     func leave() {

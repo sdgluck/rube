@@ -80,7 +80,11 @@ final class SmokeTests: XCTestCase {
         shot(app, "11-admin-users")
     }
 
-    func testOwnerCreatesAMatchRoom() {
+    /// The whole of a room, from the owner's side: create it in the app, have
+    /// a guest (played over HTTP by `DevServer`) like every film, then swipe,
+    /// undo, match, vote and withdraw the vote, reset, and leave — checking
+    /// each step against the server's own `match.state`.
+    func testOwnerPlaysAMatchRoomEndToEnd() async throws {
         let app = launch(as: Self.owner)
         connectAndSignIn(app)
 
@@ -94,29 +98,129 @@ final class SmokeTests: XCTestCase {
         let create = app.buttons["create-room"]
         XCTAssertTrue(create.waitForExistence(timeout: 15), "the new-room form")
         // Wait for the live count, so the room isn't started from an unknown deck.
-        let counted = NSPredicate(format: "label CONTAINS 'films'")
-        expectation(for: counted, evaluatedWith: create)
-        waitForExpectations(timeout: 15)
+        XCTAssertTrue(create.waitForLabel(containing: "films", timeout: 15), "the live count")
         shot(app, "13-match-new-room")
         create.tap()
 
-        let room = app.navigationBars.matching(NSPredicate(format: "identifier BEGINSWITH 'Room '")).firstMatch
-        XCTAssertTrue(room.waitForExistence(timeout: 20), "inside the room")
-        sleep(2)
-        shot(app, "14-match-deck")
-        // The room exists either way; swiping needs `match.state`, which the
-        // dev server currently fails ("Output validation failed": Plex's
-        // identity has no machineIdentifier, so plexServerId is undefined, not
-        // null). Swipe when it answers; say so when it doesn't.
-        let like = app.buttons["like"]
-        guard like.waitForExistence(timeout: 10) else {
-            XCTAssertTrue(app.staticTexts["Output validation failed"].exists, "the room failed for some other reason")
-            return
-        }
-        like.tap()
+        let roomBar = app.navigationBars.matching(NSPredicate(format: "identifier BEGINSWITH 'Room '")).firstMatch
+        XCTAssertTrue(roomBar.waitForExistence(timeout: 20), "inside the room")
+        let code = String(roomBar.identifier.dropFirst("Room ".count))
+
+        // The second member: a guest who likes everything.
+        let owner = DevServer.Credential.session(try await DevServer.portalSession(as: Self.owner))
+        let before = try await DevServer.state(code, as: owner)
+        let invite = try XCTUnwrap(before["invite"] as? String)
+        _ = try await DevServer.guestWhoLikesEverything(code: code, invite: invite, name: "Gus")
+
+        let like = app.buttons["like"], nope = app.buttons["nope"], undo = app.buttons["undo"]
+        XCTAssertTrue(like.waitForExistence(timeout: 20), "the deck")
+        let card = app.descendants(matching: .any).matching(identifier: "swipe-card").firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 10), "a card")
         sleep(1)
-        app.buttons["Matches"].firstMatch.tap()
-        shot(app, "15-match-matches")
+        shot(app, "14-match-deck")
+
+        // Nope by dragging, then take it back: the same film is on top again.
+        let firstTitle = card.label
+        card.swipeLeft()
+        sleep(1)
+        XCTAssertTrue(undo.isEnabled, "undo after a swipe")
+        undo.tap()
+        sleep(1)
+        XCTAssertEqual(card.label, firstTitle, "undo puts the card back")
+
+        // A like the guest already gave is a match.
+        like.tap()
+        let seeMatches = app.buttons["See Matches"]
+        XCTAssertTrue(seeMatches.waitForExistence(timeout: 15), "the match sheet")
+        shot(app, "15-match-its-a-match")
+        app.buttons["Keep Swiping"].tap()
+
+        // A couple more: one nope by button, one like (another match, dismissed).
+        XCTAssertTrue(nope.waitForExistence(timeout: 5))
+        nope.tap()
+        sleep(1)
+        like.tap()
+        if app.buttons["Keep Swiping"].waitForExistence(timeout: 10) { app.buttons["Keep Swiping"].tap() }
+        sleep(1)
+        let swiped = try await DevServer.state(code, as: owner)
+        XCTAssertEqual((swiped["me"] as? [String: Any])?["swiped"] as? Int, 3, "three swipes landed after the undo")
+        XCTAssertEqual(swiped["unanimousCount"] as? Int, 2, "two films everyone liked")
+
+        // Vote, then withdraw it — the second tap sends ratingKey: null.
+        app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Matches'")).firstMatch.tap()
+        let vote = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'vote-'")).firstMatch
+        XCTAssertTrue(vote.waitForExistence(timeout: 10), "a film to vote for")
+        let votedKey = String(vote.identifier.dropFirst("vote-".count))
+        vote.tap()
+        XCTAssertTrue(app.buttons["vote-\(votedKey)"].waitForLabel(containing: "Your pick", timeout: 10), "the vote shows")
+        shot(app, "16-match-matches")
+        let afterVote = try await DevServer.state(code, as: owner)
+        XCTAssertEqual(afterVote["myVote"] as? String, votedKey)
+        app.buttons["vote-\(votedKey)"].tap()
+        XCTAssertTrue(app.buttons["vote-\(votedKey)"].waitForLabel(containing: "Watch this", timeout: 10), "the vote is withdrawn")
+        let afterWithdraw = try await DevServer.state(code, as: owner)
+        XCTAssertTrue(afterWithdraw["myVote"] is NSNull, "withdrawn on the server too")
+
+        // Start over: the server forgets this member's swipes.
+        app.buttons["room-options"].tap()
+        app.buttons["Start Over"].firstMatch.tap()
+        let confirmReset = app.sheets.buttons["Start Over"].exists ? app.sheets.buttons["Start Over"] : app.buttons.matching(identifier: "Start Over").element(boundBy: 0)
+        XCTAssertTrue(confirmReset.waitForExistence(timeout: 5))
+        confirmReset.tap()
+        sleep(2)
+        let afterReset = try await DevServer.state(code, as: owner)
+        XCTAssertEqual((afterReset["me"] as? [String: Any])?["swiped"] as? Int, 0, "reset clears my swipes")
+        XCTAssertTrue(like.waitForExistence(timeout: 10), "a fresh deck")
+
+        // Leave: back in the lobby, and the room is no longer mine.
+        app.buttons["room-options"].tap()
+        app.buttons["Leave Room"].firstMatch.tap()
+        let confirmLeave = app.sheets.buttons["Leave Room"].exists ? app.sheets.buttons["Leave Room"] : app.buttons.matching(identifier: "Leave Room").element(boundBy: 0)
+        XCTAssertTrue(confirmLeave.waitForExistence(timeout: 5))
+        confirmLeave.tap()
+        XCTAssertTrue(start.waitForExistence(timeout: 15), "back in the lobby")
+        let rooms = try await DevServer.query("match.rooms", [:], as: owner) as? [[String: Any]] ?? []
+        XCTAssertFalse(rooms.contains { $0["code"] as? String == code }, "left room \(code)")
+    }
+
+    /// Someone with no account: opens an invite link on a fresh install,
+    /// previews the room, gives a name, joins, swipes — and matches with the
+    /// owner, who liked that film first (over HTTP).
+    func testAGuestJoinsFromAnInviteLink() async throws {
+        let owner = DevServer.Credential.session(try await DevServer.portalSession(as: Self.owner))
+        let createdRaw = try await DevServer.mutate("match.create", ["sectionId": "1", "filters": [String: Any]()], as: owner)
+        let created = try XCTUnwrap(createdRaw as? [String: Any])
+        let code = try XCTUnwrap(created["code"] as? String), invite = try XCTUnwrap(created["invite"] as? String)
+        let deckRaw = try await DevServer.query("match.deck", ["code": code, "exclude": [String](), "limit": 1], as: owner)
+        let deck = try XCTUnwrap(deckRaw as? [String: Any])
+        let first = try XCTUnwrap((deck["films"] as? [[String: Any]])?.first?["ratingKey"] as? String)
+        _ = try await DevServer.mutate("match.swipe", ["code": code, "ratingKey": first, "liked": true], as: owner)
+
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        let server = DevServer.portal.absoluteString.addingPercentEncoding(withAllowedCharacters: .alphanumerics)!
+        app.launchArguments = ["-TBResetState", "YES", "-TBOpenURL", "tinkerbell://match?server=\(server)&code=\(code)&invite=\(invite)"]
+        app.launch()
+
+        let name = app.textFields["Your name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 20), "the guest join screen")
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS 'owner'")).firstMatch.exists, "the preview names who's there")
+        shot(app, "17-guest-join")
+        name.tap()
+        name.typeText("Gus")
+        app.buttons["Join Room \(code)"].tap()
+
+        let like = app.buttons["like"]
+        XCTAssertTrue(like.waitForExistence(timeout: 20), "the guest's deck")
+        sleep(2)
+        shot(app, "18-guest-deck")
+        like.tap()
+        XCTAssertTrue(app.buttons["See Matches"].waitForExistence(timeout: 15), "a match with the owner")
+        shot(app, "19-guest-its-a-match")
+        app.buttons["See Matches"].tap()
+
+        let members = (try await DevServer.state(code, as: owner)["members"] as? [[String: Any]]) ?? []
+        XCTAssertTrue(members.contains { $0["name"] as? String == "Gus" && $0["guest"] as? Bool == true }, "the guest is in the room")
     }
 
     func testASharedUserHasNoAdminPart() {
@@ -131,7 +235,7 @@ final class SmokeTests: XCTestCase {
         menu.tap()
         XCTAssertTrue(app.buttons["Settings"].waitForExistence(timeout: 5))
         XCTAssertFalse(app.buttons["Admin"].exists, "the menu offers no Admin part")
-        shot(app, "16-shared-user-menu")
+        shot(app, "20-shared-user-menu")
     }
 
     func shot(_ app: XCUIApplication, _ name: String) {
@@ -143,5 +247,16 @@ final class SmokeTests: XCTestCase {
         if let dir = ProcessInfo.processInfo.environment["TB_SHOT_DIR"] {
             try? screenshot.pngRepresentation.write(to: URL(fileURLWithPath: dir).appending(path: "\(name).png"))
         }
+    }
+}
+
+extension XCUIElement {
+    func waitForLabel(containing text: String, timeout: TimeInterval) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline {
+            if exists, label.contains(text) { return true }
+            RunLoop.current.run(until: Date().addingTimeInterval(0.25))
+        }
+        return false
     }
 }

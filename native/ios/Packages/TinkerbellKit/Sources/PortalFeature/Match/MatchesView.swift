@@ -82,14 +82,11 @@ struct MatchesView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(film.title).font(.headline)
                             Text(film.likedBy.joined(separator: ", ")).font(.caption).foregroundStyle(.secondary)
-                            Button {
+                            Chip((mine ? "Your pick" : "Watch this") + (voters.isEmpty ? "" : " · \(voters.count)"),
+                                 systemImage: mine ? "checkmark" : nil, isOn: mine) {
                                 vote(mine ? nil : film.ratingKey)
-                            } label: {
-                                Text((mine ? "Your pick" : "Watch this") + (voters.isEmpty ? "" : " · \(voters.count)"))
                             }
-                            .buttonStyle(.bordered)
-                            .tint(mine ? .accentColor : .secondary)
-                            .controlSize(.small)
+                            .accessibilityIdentifier("vote-\(film.ratingKey)")
                         }
                     }
                     .contentShape(.rect)

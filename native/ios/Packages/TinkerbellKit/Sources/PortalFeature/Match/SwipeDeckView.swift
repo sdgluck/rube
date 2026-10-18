@@ -19,6 +19,8 @@ struct SwipeDeckView: View {
     let roomState: RoomState
     let onMatched: (String) -> Void
     let refresh: () async -> Void
+    /// Asks the room to reset, which confirms first and rebuilds this view.
+    let startOver: () -> Void
 
     @State private var cards: [Film] = []
     @State private var remaining: Int?
@@ -72,7 +74,9 @@ struct SwipeDeckView: View {
                     .buttonStyle(.bordered).buttonBorderShape(.circle).tint(.red)
                     .disabled(cards.isEmpty || flinging != nil)
                     .accessibilityLabel("Skip")
+                    .accessibilityIdentifier("nope")
                 Button("Undo", systemImage: "arrow.uturn.backward") { undo() }
+                    .accessibilityIdentifier("undo")
                     .labelStyle(.iconOnly).font(.title3)
                     .buttonStyle(.bordered).buttonBorderShape(.circle)
                     .disabled(last == nil)
@@ -161,21 +165,6 @@ struct SwipeDeckView: View {
         Task {
             do {
                 _ = try await room.client.call(PortalAPI.matchUndo, .init(code: code, ratingKey: film.ratingKey))
-                await refresh()
-            } catch {
-                self.error = error.userMessage
-            }
-        }
-    }
-
-    func startOver() {
-        Task {
-            do {
-                _ = try await room.client.call(PortalAPI.matchReset, .init(code: code))
-                cards = []
-                last = nil
-                remaining = nil
-                await deal()
                 await refresh()
             } catch {
                 self.error = error.userMessage
