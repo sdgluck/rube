@@ -160,29 +160,48 @@ builds the routers, and runs **two HTTP servers**:
 
 `portal-isolation.test.ts` / `portal-surface.test.ts` guard the portal boundary.
 
-### Native apps (Capacitor)
+### Native apps (`native/`)
 
-`apps/web` and `apps/portal` also build into iOS and Android apps
-(`capacitor.config.ts`, `ios/`, `android/`; see `DEVELOPMENT.md`). The UI is
-bundled into the app, so the server is somewhere else, and that changes four
-things:
+There is one SwiftUI app (`native/ios`) and one Compose app (`native/android`).
+Everyone gets its Portal part; an admin can switch to an Admin part. The app
+holds **two independent connections**, and the two servers stay exactly as
+separate as for the browser. Ports, routers, session scopes and the isolation
+tests are unchanged, and the portal never advertises the admin address. See
+`DEVELOPMENT.md` for commands.
 
-- **No same-origin assumptions.** Build URLs through
-  `@tinkerbell/native-client`: `apiUrl()`, `authHeaders()`, `mediaUrl()` (or
-  web's `#lib/media`), and `saveFile()` / `downloadFromServer()` for
-  downloads. A hard-coded `/api/...`, `location.href` to a download, or
-  `window.open` works in the browser and silently does nothing in the app.
-- **Bearer sessions.** Both context factories accept `Authorization: Bearer`
-  alongside the cookie. `auth.start({ client: "native" })` and
-  `auth.poll({ handshake })` return the nonce and the session in the response
-  body. The handshake records which kind of client began it, so a browser
-  handshake can never be finished as a native one.
-- **Media tokens.** These are the `admin-media` session scope. They are
-  accepted only as `?access_token=` on GET routes in `apps/server/src/auth.ts`.
-- **CORS.** CORS is `apps/server/src/cors.ts`. It covers only the origins in
-  `NATIVE_APPS` (contracts) and never allows credentials.
+- **The contract is zod.** `NATIVE_PROCEDURES` in
+  `packages/contracts/src/native-api` lists every procedure the apps call,
+  with its output schema, and the router attaches the same object with
+  `.output()`.
+  - Changing what a native procedure returns means changing that schema.
+    Typecheck catches a resolver that drifts from it.
+  - `native-api.test.ts` checks the manifest against the routers, with real
+    calls.
+  - Outputs are plain JSON: no `z.date()`, bigint, transforms or custom types.
+    Timestamps are epoch ms, and `int()` marks an integer for the models.
+  - Calling a new procedure from an app means adding it to the manifest.
+- **The models are generated.** `packages/native-codegen` writes them, using
+  the standalone `zod-native-ir`, `zod-to-swift` and `zod-to-kotlin` packages
+  (GitHub dependencies pinned to a tag). It reads inputs from the routers'
+  own `.input()`. Never hand-edit `Generated/API.swift` or `generated/Api.kt`.
+  Run `pnpm native:codegen`; `pnpm verify` fails while they are stale.
+- **Sign-in is `auth.exchange`.** The app runs the plex.tv PIN itself, then
+  exchanges the Plex token on each server. Each server checks the account on
+  its own. `exchange` is public, is rate-limited, and refuses any request
+  carrying `Origin`/`Sec-Fetch-Site` (`browser-request.ts`), so no page script
+  ever reads a session from a response body.
+- **Bearer sessions** are accepted by both context factories alongside the
+  cookie.
+- **The Capacitor builds are being retired.** That covers `ios/`, `android/`,
+  `capacitor.config.ts` in both SPAs, `packages/native-client`,
+  `apps/server/src/cors.ts`, `NATIVE_APPS`, and the
+  `auth.start({ client: "native" })` handshake. They stay until the native
+  app ships. Don't build new features on them.
 
 ### The phone layout
+
+Goes with the Capacitor builds, replaced by plain responsive CSS, so keep it
+working but don't grow it.
 
 Below `--bp-md` (768px) both SPAs behave as native apps, in the Capacitor
 apps and in phone browsers alike. Platform details read `<html data-platform>`

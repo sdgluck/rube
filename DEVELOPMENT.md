@@ -163,37 +163,88 @@ platform's look in a desktop browser's device mode.
 
 ## Native apps
 
-`apps/web` and `apps/portal` are also Capacitor apps for iOS and Android. Each
-app's `capacitor.config.ts` sits beside its `vite.config.ts`, and its Xcode and
-Gradle projects are in its `ios/` and `android/` folders. The code they share
-is in `packages/native-client`.
+One app per platform, both `dev.tinkerbell.app` with the `tinkerbell://` link
+scheme: SwiftUI in `native/ios` and Jetpack Compose in `native/android`. They
+call the same `/api/trpc` endpoints the SPAs do, as plain JSON (queries are
+GET with `?input=`, mutations POST), and hold two independent connections, one
+to the portal and one to the admin server.
 
 ```sh
-pnpm native:ios web          # build dist-native, cap sync, open Xcode
-pnpm native:android portal   # the same for the portal app in Android Studio
-pnpm native:sync             # rebuild and sync both apps, without opening anything
-pnpm native:ios web --live   # hot reload: the app loads its UI from `pnpm dev`
-pnpm native:assets           # re-render icons and splashes from resources/icon.svg
+pnpm native:dev-server   # seeded server, mock Plex and mock plex.tv on 0.0.0.0; prints connect links
+pnpm native:codegen      # regenerate the Swift and Kotlin models
 ```
 
-- **Separate bundle.** The apps ship their own copy of the SPA. It is built
-  with `vite build --mode native` into `dist-native/`, so the `dist/` the
-  server serves is never touched.
-- **Talking to a server.** On a device, the SPA connects to a server the user
-  picks: a typed address or a `tinkerbell://connect?server=…` link. Every
-  request uses an absolute URL with `Authorization: Bearer <session>`.
-- **CORS.** The server answers CORS only for the apps' fixed origins
-  (`capacitor://app.tinkerbell`, `https://app.tinkerbell`, and the `portal.`
-  equivalents). To run an app against your dev server, point it at
-  `http://<your LAN IP>:3000`. `pnpm dev` binds to loopback, so start the
-  server with `HOST=0.0.0.0`.
-- **Images and video.** `<img>` and `<video>` can't send a header, so they use
-  a short-lived media token in the query string (`auth.mediaToken`). It is
-  accepted only on the plain GET routes.
-- **Versions.** `pnpm release` stamps the native version fields. The build
-  number is the version as one integer: 0.36.1 → 36001.
-- **Toolchains.** Building needs Xcode for iOS, and Android Studio with
-  JDK 21 for Android. Signing keys and store listings stay outside the repo.
+iOS (Xcode 26, iOS 26):
+
+```sh
+open native/ios/Tinkerbell.xcodeproj
+swift test --package-path native/ios/Packages/TinkerbellKit
+# UI tests, against a running native:dev-server:
+xcodebuild test -project native/ios/Tinkerbell.xcodeproj -scheme Tinkerbell \
+  -destination 'platform=iOS Simulator,name=iPhone 17'
+```
+
+Android (JDK 21, Android SDK 35, `ANDROID_HOME` set):
+
+```sh
+cd native/android
+./gradlew test lint assembleDebug
+# UI tests, on a running emulator, against a running native:dev-server:
+./gradlew :app:connectedDebugAndroidTest
+```
+
+- **The models are generated.** Every procedure the apps call is listed in
+  `NATIVE_PROCEDURES` (`packages/contracts/src/native-api`), and its router
+  attaches that schema with `.output()`. The server validates what it sends,
+  and tRPC types the resolver against it. `packages/native-codegen` turns the
+  schemas, and each procedure's own `.input()`, into `Generated/API.swift` and
+  `generated/Api.kt`. To change a shape, change the schema, run
+  `pnpm native:codegen` and commit both. `pnpm verify` and CI fail while the
+  generated files are stale. Outputs must be plain JSON: no `z.date()`,
+  bigints or transforms, and timestamps are epoch milliseconds. Mark integers
+  with `int()`.
+- **The generators are separate packages.** They are
+  [zod-native-ir](https://github.com/sdgluck/zod-native-ir),
+  [zod-to-swift](https://github.com/sdgluck/zod-to-swift) and
+  [zod-to-kotlin](https://github.com/sdgluck/zod-to-kotlin), taken as GitHub
+  dependencies pinned to a tag. Each repo commits its `dist/`, because pnpm 11
+  won't run a git dependency's build. To change one, release a new tag there,
+  then bump the pin in `packages/native-codegen/package.json`.
+- **Sign-in.** The app runs the plex.tv PIN flow itself, then calls
+  `auth.exchange({ plexToken })` on each server. Each server checks the account
+  on its own and returns a session in the response body. `exchange` refuses
+  any request carrying `Origin` or `Sec-Fetch-Site`, so a web page can't read
+  a session that way.
+- **The dev server.** `native:dev-server` signs in against a mock plex.tv.
+  Connect links carry `plexTv=`, which only a debug build honours. The iOS
+  simulator reaches the host as `127.0.0.1` and the Android emulator as
+  `10.0.2.2`. Debug builds also take launch switches that the UI tests use:
+  - **iOS:** `-TBResetState YES`, `-TBDevSignInAs <plexUserId>` and
+    `-TBOpenURL <link>`.
+  - **Android:** the intent extras `tb.resetState`, `tb.devSignInAs` and
+    `tb.openUrl`.
+- **Emulator.** Start the Android emulator with `-gpu host`. With the default
+  software renderer, a debug build is too slow for the UI tests' timeouts.
+- **Versions.** `pnpm release` stamps `native/ios/Config/Version.xcconfig` and
+  `native/android/version.properties`. The build number is the version as one
+  integer: 0.43.0 → 43000.
+- **CI.** `.github/workflows/native.yml` runs only when `native/` changes. It
+  runs the package tests and a simulator build on macOS, and
+  `test lint assembleDebug` on Linux. The UI tests run locally only. Signing
+  and store upload are manual, and the keys stay outside the repo.
+
+### Capacitor apps (being retired)
+
+`apps/web` and `apps/portal` still build into Capacitor apps (`ios/`,
+`android/` and `capacitor.config.ts` in each, plus `packages/native-client`),
+until the native app has shipped. Run them with `pnpm native:ios web`,
+`pnpm native:android portal` and `pnpm native:sync`.
+
+- **Talking to the server.** They connect with bearer sessions and the old
+  `auth.start({ client: "native" })` handshake.
+- **CORS.** The server allows CORS only for the apps' fixed origins
+  (`apps/server/src/cors.ts`).
+- **Media.** Images and video use `?access_token=` media tokens.
 
 ## Release
 

@@ -173,29 +173,43 @@ address (the Mosquitto add-on listens on `mqtt://<ha-host>:1883`).
 
 ## Mobile apps
 
-Tinkerbell has two phone apps, for iOS and Android. **Tinkerbell** is the admin
-app, and **Tinkerbell Portal** is for the people you share your server with.
-Both run on your phone and connect to your own server.
+Tinkerbell has one phone app, for iOS and Android. The people you share your
+server with use its **Portal** part: their collections, tastes, movie match and
+what's leaving soon. If you run the server, the same app also has an **Admin**
+part, with a switch between the two.
 
-- **Connecting.** Open **Settings → Mobile app** in a browser and scan the code
-  with your phone. You can also type the server's address into the app.
-- **Portal app.** To share the portal app, save the portal's address under
-  **Settings → Portal → Address**. A code for the portal app then appears
-  there.
-- **Signing in.** You sign in with Plex inside the app. The app stores your
-  session in the phone's keychain.
+- **Connecting yourself.** Open **Settings → Mobile app** in a browser and scan
+  the code with your phone. The code carries both the admin and the portal
+  address.
+- **Connecting the people you share with.** Save the portal's address under
+  **Settings → Portal → Address**. A code for the portal then appears there.
+  Either way, you can also type an address into the app, and the app always
+  asks before it connects to a server.
+- **Signing in.** You sign in with Plex inside the app. The app then signs in
+  to the portal and to the admin server separately, and each one checks your
+  Plex account for itself. The portal never learns the admin address, and a
+  portal session can't open the admin part. The app keeps its sessions in the
+  phone's keychain and doesn't keep your Plex token at all.
+- **Movie match invites.** An invite link opens in the app if it's installed,
+  even for a room on someone else's server, where you join as a guest. Without
+  the app, the link opens the web portal.
+- **The admin part** covers the overview and health, jobs and rule runs,
+  cleanup and protections, collections, and users. Everything else has a link
+  to the web admin.
 - **App lock.** You can turn on Face ID, Touch ID or fingerprint unlock in the
   app's settings.
 - **At home and away.** On your home network, a plain address like
   `http://192.168.1.10:3000` works. Away from home, your phone needs an address
   that reaches the server from outside, served over HTTPS by a reverse proxy.
-- **Admin sign-in.** Turn on admin sign-in before you make the admin app
-  reachable from outside. The admin app still works with sign-in off, but it
+  The admin server listens only on `127.0.0.1` unless you set `HOST`, and a
+  phone can't reach that. **Settings → Mobile app** warns when that is the case.
+- **Admin sign-in.** Turn on admin sign-in before you make the admin server
+  reachable from outside. The admin part still works with sign-in off, but it
   shows a warning that anyone who can reach the server can change it.
 
-The apps only accept requests from their own built-in origins, and only with a
-bearer token. Exposing the server to the apps doesn't open it to other
-websites.
+The app's sign-in hands the session back to the app itself, so the server
+refuses it from a web browser. Exposing the server for the app doesn't let a
+web page sign in on anyone's behalf.
 
 ## Personalized home screens
 
