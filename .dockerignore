@@ -33,3 +33,10 @@ apps/*/dist
 apps/*/ios
 apps/*/android
 apps/*/dist-native
+
+# The native app and the tooling that generates its models. Neither image
+# serves or builds them, and native-codegen's generators are git dependencies
+# (github:sdgluck/zod-to-*), which an image build has no credentials to clone.
+native
+packages/native-codegen
+**/.native-dev-data

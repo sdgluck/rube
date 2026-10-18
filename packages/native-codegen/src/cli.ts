@@ -15,9 +15,7 @@ import { createTestContainer } from "@tinkerbell/composition/test-support";
 import { ServicesToken } from "@tinkerbell/composition";
 import { JobsToken, registerJobs } from "@tinkerbell/jobs";
 import { createTrpc } from "@tinkerbell/trpc";
-import { buildDocument, type ProcedureSource } from "./collect.ts";
-import { emitKotlin } from "./kotlin.ts";
-import { emitSwift } from "./swift.ts";
+import { emitKotlin, emitSwift, type ProcedureSource } from "./collect.ts";
 
 const ROOT = join(import.meta.dirname, "..", "..", "..");
 
@@ -56,8 +54,8 @@ async function sources(): Promise<ProcedureSource[]> {
 }
 
 export async function generate(): Promise<Record<keyof typeof TARGETS, string>> {
-  const doc = buildDocument(await sources());
-  return { swift: emitSwift(doc), kotlin: emitKotlin(doc) };
+  const all = await sources();
+  return { swift: emitSwift(all), kotlin: emitKotlin(all) };
 }
 
 async function main() {

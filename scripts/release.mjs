@@ -211,6 +211,34 @@ for (const app of ["web", "portal"]) {
   updated.push(pbxproj, gradle);
 }
 
+// The native app (`native/`) keeps its version in one small file per platform
+// rather than inside the Xcode project or Gradle script, so this is a plain
+// key=value rewrite that can't land in the wrong build configuration.
+const nativeVersions = [
+  {
+    file: join(ROOT, "native/ios/Config/Version.xcconfig"),
+    rewrite: (s) =>
+      s
+        .replace(/^MARKETING_VERSION = .*$/m, `MARKETING_VERSION = ${next}`)
+        .replace(/^CURRENT_PROJECT_VERSION = .*$/m, `CURRENT_PROJECT_VERSION = ${buildNumber}`),
+  },
+  {
+    file: join(ROOT, "native/android/version.properties"),
+    rewrite: (s) =>
+      s.replace(/^versionName=.*$/m, `versionName=${next}`).replace(/^versionCode=.*$/m, `versionCode=${buildNumber}`),
+  },
+];
+for (const { file, rewrite } of nativeVersions) {
+  let current;
+  try {
+    current = readFileSync(file, "utf8");
+  } catch {
+    continue;
+  }
+  writeFileSync(file, rewrite(current));
+  updated.push(file);
+}
+
 // ── Screenshots ─────────────────────────────────────────────────────────────
 // After the version bump, never before: the sidebar renders a `v0.0.0` pill on
 // every page, so capturing first would bake the *previous* version into all 50-

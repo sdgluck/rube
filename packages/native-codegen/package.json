@@ -23,6 +23,9 @@
     "@tinkerbell/jobs": "workspace:*",
     "@tinkerbell/trpc": "workspace:*",
     "@types/node": "^25.2.3",
-    "typescript": "^7.0.2"
+    "typescript": "^7.0.2",
+    "zod-native-ir": "github:sdgluck/zod-native-ir#v0.1.1",
+    "zod-to-kotlin": "github:sdgluck/zod-to-kotlin#v0.1.1",
+    "zod-to-swift": "github:sdgluck/zod-to-swift#v0.1.1"
   }
 }
