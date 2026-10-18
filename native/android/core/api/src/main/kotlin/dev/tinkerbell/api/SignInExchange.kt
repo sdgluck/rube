@@ -62,7 +62,7 @@ object SignInExchange {
 
     suspend fun logoutAdmin(client: TrpcClient) {
         try {
-            client.call(AdminApi.authLogout, Admin.AuthLogoutInput())
+            client.call(AdminApi.authLogout)
         } catch (e: CancellationException) {
             throw e
         } catch (_: Exception) {

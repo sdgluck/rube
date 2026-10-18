@@ -20,25 +20,14 @@ import type { ConfigStore } from "./config.ts";
 export type SessionScope = "portal" | "admin";
 
 /**
- * Every kind of token the sessions table holds. `SessionScope` is the subset a
- * person signs in to (and that has a cookie); `admin-media` is minted *from*
- * an admin session for the native app's `<img>`/`<video>` requests, which can't
- * carry an `Authorization` header. It lives in the URL, so it is short-lived
- * and only the GET routes accept it — the session token itself never appears
- * in a URL, a proxy log or a `Referer`.
- */
-export type TokenScope = SessionScope | "admin-media";
-
-/**
  * Portal sessions are long-lived because the portal is a low-privilege,
  * user-facing page people return to occasionally. An admin session can delete
  * every collection on the server, so it expires far sooner — kept alive by
  * sliding refresh for as long as the admin is actually using the app.
  */
-const SESSION_TTL_MS: Record<TokenScope, number> = {
+const SESSION_TTL_MS: Record<SessionScope, number> = {
   portal: 30 * 24 * 60 * 60 * 1000, // 30 days
   admin: 7 * 24 * 60 * 60 * 1000, // 7 days
-  "admin-media": 24 * 60 * 60 * 1000, // 1 day; the app mints a fresh one on launch
 };
 
 /** Seconds, for the `Max-Age` cookie attribute. */
@@ -58,8 +47,8 @@ const RAW_TOKEN_RE = /^[0-9a-f]{64}$/;
 
 /**
  * The session token from an `Authorization: Bearer …` header — how the native
- * apps authenticate, since a cookie set by a server on another origin is never
- * sent back from `capacitor://`.
+ * app authenticates. It talks to the server from URLSession/OkHttp, which keep
+ * the session in the Keychain/Keystore rather than a cookie jar.
  *
  * Only the shape a session token has is accepted. That is what keeps an agent
  * API key (`tbk_…`) from being mistaken for one: keys are read-only and live on
@@ -78,7 +67,7 @@ function hashToken(raw: string): string {
 export interface PlexSession {
   userId: number;
   username: string;
-  scope: TokenScope;
+  scope: SessionScope;
   /** True when this read slid the expiry forward, so the caller re-sets the cookie. */
   refreshed?: boolean;
 }
@@ -120,7 +109,7 @@ export function createSessions(deps: SessionsDeps) {
   }
 
   /** Create a session and return the raw token to set as a cookie. */
-  function createPlexSession(userId: number, username: string, scope: TokenScope): string {
+  function createPlexSession(userId: number, username: string, scope: SessionScope): string {
     const raw = randomBytes(32).toString("hex");
     const now = Date.now();
     db.insert(plexSessions)
@@ -134,7 +123,7 @@ export function createSessions(deps: SessionsDeps) {
    * expired, or belongs to a different scope. A portal cookie presented to an
    * admin route resolves to nothing at all, not to a downgraded session.
    */
-  function getPlexSession(raw: string | undefined, scope: TokenScope): PlexSession | undefined {
+  function getPlexSession(raw: string | undefined, scope: SessionScope): PlexSession | undefined {
     if (!raw) return undefined;
     const row = db
       .select()
@@ -150,7 +139,7 @@ export function createSessions(deps: SessionsDeps) {
 
     // Sliding expiry: an admin who uses the app daily never gets logged out,
     // while an abandoned session still dies on schedule.
-    const ttl = SESSION_TTL_MS[row.scope as TokenScope] ?? SESSION_TTL_MS.portal;
+    const ttl = SESSION_TTL_MS[row.scope as SessionScope] ?? SESSION_TTL_MS.portal;
     const refreshed = now + ttl - row.expiresAt > SLIDING_REFRESH_AFTER_MS;
     if (refreshed) {
       db.update(plexSessions)
@@ -159,7 +148,7 @@ export function createSessions(deps: SessionsDeps) {
         .run();
     }
 
-    return { userId: row.userId, username: row.username, scope: row.scope as TokenScope, refreshed };
+    return { userId: row.userId, username: row.username, scope: row.scope as SessionScope, refreshed };
   }
 
   function deletePlexSession(raw: string | undefined): void {
@@ -170,7 +159,7 @@ export function createSessions(deps: SessionsDeps) {
   }
 
   /** Drop every session in a scope — used when auth config changes invalidate them. */
-  function deletePlexSessionsInScope(scope: TokenScope): void {
+  function deletePlexSessionsInScope(scope: SessionScope): void {
     db.delete(plexSessions).where(eq(plexSessions.scope, scope)).run();
   }
 

@@ -867,11 +867,6 @@ object Admin {
     }
 
     @Serializable
-    data class AuthLogoutInput(
-        val mediaToken: String? = null,
-    )
-
-    @Serializable
     data class AuthLogoutOutput(
         val ok: Boolean,
     )
@@ -2214,7 +2209,7 @@ object AdminApi {
     val authStatus = Endpoint("auth.status", Endpoint.Kind.QUERY, NoInput.serializer(), Admin.AuthStatusOutput.serializer())
     val authServer = Endpoint("auth.server", Endpoint.Kind.QUERY, NoInput.serializer(), Admin.AuthServerOutput.serializer())
     val authExchange = Endpoint("auth.exchange", Endpoint.Kind.MUTATION, Admin.AuthExchangeInput.serializer(), Admin.AuthExchangeOutput.serializer())
-    val authLogout = Endpoint("auth.logout", Endpoint.Kind.MUTATION, Admin.AuthLogoutInput.serializer(), Admin.AuthLogoutOutput.serializer())
+    val authLogout = Endpoint("auth.logout", Endpoint.Kind.MUTATION, NoInput.serializer(), Admin.AuthLogoutOutput.serializer())
     val statsOverview = Endpoint("stats.overview", Endpoint.Kind.QUERY, NoInput.serializer(), Admin.StatsOverviewOutput.serializer())
     val statsActivity = Endpoint("stats.activity", Endpoint.Kind.QUERY, NoInput.serializer(), Admin.StatsActivityOutput.serializer())
     val statsSessions = Endpoint("stats.sessions", Endpoint.Kind.QUERY, NoInput.serializer(), ListSerializer(PlexSession.serializer()))

@@ -1,11 +1,7 @@
 /**
- * The native apps' half of sign-in: a bearer token instead of a cookie, and a
- * handshake whose nonce and session travel in the response body.
- *
- * The property that matters is the separation. A browser's session must never
- * come back in a body, where page script could read it, so a handshake begun
- * by a browser can't be finished as a native one — and the reverse, so a nonce
- * that was only ever in a body can't be replayed as a cookie.
+ * The native app's side of a request: its session arrives as a bearer token
+ * instead of a cookie, and `auth.server` tells it which of the two servers it
+ * reached. Its sign-in, `auth.exchange`, is covered in `native-exchange.test.ts`.
  */
 import { describe, test, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
@@ -58,11 +54,6 @@ describe("bearer sessions", () => {
     assert.equal(adminContext({ authorization: `Bearer tbk_${"a".repeat(43)}` }).session, undefined);
   });
 
-  test("a media token is not a bearer session", () => {
-    const media = createPlexSession(42, "owner", "admin-media");
-    assert.equal(adminContext({ authorization: `Bearer ${media}` }).session, undefined);
-  });
-
   test("the cookie wins over a bearer header", () => {
     const other = createPlexSession(42, "owner", "portal");
     const raw = createPlexSession(42, "owner", "admin");
@@ -78,56 +69,6 @@ describe("bearer sessions", () => {
       resHeaders: new Headers(),
     });
     assert.equal(ctx.rawToken, raw);
-  });
-});
-
-describe("the native handshake", () => {
-  test("a browser handshake can't be finished as a native one", async () => {
-    const nonce = handshakes.createHandshake("admin", 1, "browser");
-    const caller = t.createCallerFactory(appRouter)(adminContext());
-    // `expired` comes back before plex.tv is asked anything.
-    assert.equal((await caller.auth.poll({ handshake: nonce })).status, "expired");
-  });
-
-  test("a native handshake can't be finished from a cookie", async () => {
-    const nonce = handshakes.createHandshake("admin", 1, "native");
-    const caller = t.createCallerFactory(appRouter)(adminContext({ cookie: `tb_admin_handshake=${nonce}` }));
-    assert.equal((await caller.auth.poll()).status, "expired");
-  });
-
-  test("an expired native poll sets no cookie", async () => {
-    const resHeaders = new Headers();
-    const ctx = { ...adminContext(), resHeaders };
-    await t
-      .createCallerFactory(appRouter)(ctx)
-      .auth.poll({ handshake: "f".repeat(64) });
-    assert.equal(resHeaders.get("set-cookie"), null);
-  });
-
-  test("a portal native handshake is no use to the admin router", async () => {
-    const nonce = handshakes.createHandshake("portal", 1, "native");
-    const caller = t.createCallerFactory(appRouter)(adminContext());
-    assert.equal((await caller.auth.poll({ handshake: nonce })).status, "expired");
-  });
-});
-
-describe("media tokens", () => {
-  test("a signed-in admin gets one, and it isn't their session", async () => {
-    const raw = createPlexSession(42, "owner", "admin");
-    const caller = t.createCallerFactory(appRouter)(adminContext({ authorization: `Bearer ${raw}` }));
-    const { token } = await caller.auth.mediaToken();
-    assert.ok(token);
-    assert.notEqual(token, raw);
-    assert.equal(deps.sessions.getPlexSession(token, "admin-media")?.userId, 42);
-  });
-
-  test("logout takes the media token with it", async () => {
-    const raw = createPlexSession(42, "owner", "admin");
-    const media = createPlexSession(42, "owner", "admin-media");
-    const caller = t.createCallerFactory(appRouter)(adminContext({ authorization: `Bearer ${raw}` }));
-    await caller.auth.logout({ mediaToken: media });
-    assert.equal(deps.sessions.getPlexSession(media, "admin-media"), undefined);
-    assert.equal(deps.sessions.getPlexSession(raw, "admin"), undefined);
   });
 });
 

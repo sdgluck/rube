@@ -405,13 +405,6 @@ export type { MatchFilters } from "./match.ts";
 export { DEFAULT_UI_SCALE, isUiScale, UI_SCALES } from "./ui-scale.ts";
 export type { UiScale } from "./ui-scale.ts";
 export * from "./download-clients.ts";
-export {
-  NATIVE_APP,
-  NATIVE_APPS,
-  isLoopbackAddress,
-  nativeConnectLink,
-  nativeOrigins,
-  type NativeApp,
-} from "./native-apps.ts";
+export { NATIVE_APP, isLoopbackAddress, nativeConnectLink } from "./native-apps.ts";
 export { SYSTEM_COLLECTION_LABELS } from "./system-labels.ts";
 export { parseLogLine, stampLog } from "./run-log.ts";

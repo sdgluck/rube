@@ -2643,24 +2643,6 @@ extension Admin {
         }
     }
 
-    public struct AuthLogoutInput: Codable, Sendable, Hashable {
-
-        public var mediaToken: String?
-
-        public init(mediaToken: String? = nil) {
-            self.mediaToken = mediaToken
-        }
-
-        enum CodingKeys: String, CodingKey {
-            case mediaToken
-        }
-
-        public func encode(to encoder: Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encodeIfPresent(mediaToken, forKey: .mediaToken)
-        }
-    }
-
     public struct AuthLogoutOutput: Codable, Sendable, Hashable {
 
         public var ok: Bool
@@ -7106,7 +7088,7 @@ public enum AdminAPI {
     public static let authStatus = Endpoint<NoInput, Admin.AuthStatusOutput>(path: "auth.status", kind: .query)
     public static let authServer = Endpoint<NoInput, Admin.AuthServerOutput>(path: "auth.server", kind: .query)
     public static let authExchange = Endpoint<Admin.AuthExchangeInput, Admin.AuthExchangeOutput>(path: "auth.exchange", kind: .mutation)
-    public static let authLogout = Endpoint<Admin.AuthLogoutInput, Admin.AuthLogoutOutput>(path: "auth.logout", kind: .mutation)
+    public static let authLogout = Endpoint<NoInput, Admin.AuthLogoutOutput>(path: "auth.logout", kind: .mutation)
     public static let statsOverview = Endpoint<NoInput, Admin.StatsOverviewOutput>(path: "stats.overview", kind: .query)
     public static let statsActivity = Endpoint<NoInput, Admin.StatsActivityOutput>(path: "stats.activity", kind: .query)
     public static let statsSessions = Endpoint<NoInput, Admin.StatsSessionsOutput>(path: "stats.sessions", kind: .query)

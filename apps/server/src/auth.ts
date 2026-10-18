@@ -11,15 +11,16 @@
  * why it isn't in `security.ts` itself — that file must stay importable
  * without opening the database.
  *
- * Three credentials get through, for three kinds of caller:
+ * Two credentials get through, for two kinds of caller:
  *
  * - the `tb_admin_session` cookie — the browser SPA, served from this origin;
- * - `Authorization: Bearer <session>` — the native app's uploads and fetches,
- *   which reach this server cross-origin where no cookie is sent;
- * - `?access_token=<media token>` on GET/HEAD only — the native app's `<img>`
- *   and `<video>` tags, which can't send a header at all. That token is its own
- *   short-lived `admin-media` session, so the real one never sits in a URL, and
- *   it can't upload, import or post a poster because those are all POSTs.
+ * - `Authorization: Bearer <session>` — the native app, whose HTTP stack sends
+ *   the header on image requests too.
+ *
+ * Nothing is accepted from the query string. The retired Capacitor apps took a
+ * `?access_token=` media token here because a WebView's `<img>` can't send a
+ * header; the native app has no such limit, and a credential in a URL lands in
+ * proxy logs and `Referer`s.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { Services } from "@tinkerbell/composition";
@@ -37,14 +38,8 @@ export function createAuth(deps: Services) {
     if (!adminAuthRequired()) return true;
     const raw =
       parseCookieHeader(req.headers.cookie ?? "", ADMIN_COOKIE) ?? parseBearerToken(req.headers.authorization);
-    const session = getPlexSession(raw, "admin") ?? mediaSession(req);
+    const session = getPlexSession(raw, "admin");
     return !!session && isAdminAccount(session.userId);
-  }
-
-  function mediaSession(req: IncomingMessage) {
-    if (req.method !== "GET" && req.method !== "HEAD") return undefined;
-    const token = new URL(req.url ?? "/", "http://x").searchParams.get("access_token") ?? undefined;
-    return getPlexSession(token, "admin-media");
   }
 
   /** Gate a non-tRPC route. Returns true when it answered 401 and the caller should stop. */

@@ -117,28 +117,16 @@ describe("portal router surface", () => {
   });
 
   /** What the procedure's input schema makes of a hostile payload. */
-  function parsedInput(path: string, raw: unknown): unknown {
-    const inputs = procedures()[path]._def.inputs as { parse(v: unknown): unknown }[];
-    assert.equal(inputs.length, 1, `${path} should have exactly one input schema`);
-    return inputs[0].parse(raw);
-  }
-
-  test("poll accepts no PIN id from the caller", () => {
-    // The regression this guards: an input schema here means a caller can name
+  test("start and poll take no input, so a caller can name neither the PIN nor the return address", () => {
+    // Two regressions this guards. An input on poll means a caller can name
     // the PIN to redeem, and plex.tv's ids are sequential — so polling around
     // the live range while somebody approves theirs collects their session.
-    // The native app sends its handshake nonce, which is as unguessable as the
-    // cookie it stands in for; anything shaped like a PIN id is dropped.
-    assert.deepEqual(parsedInput("auth.poll", { handshake: "n", pinId: 5, id: 5, code: "x" }), { handshake: "n" });
-  });
-
-  test("start accepts no forwardUrl from the caller", () => {
-    // Same shape of bug in the other direction: a caller-chosen return address
-    // makes a genuine app.plex.tv link that lands the user on their page. The
-    // only thing a caller says is which kind of client it is.
-    assert.deepEqual(parsedInput("auth.start", { client: "native", forwardUrl: "https://evil.example" }), {
-      client: "native",
-    });
+    // An input on start let a caller choose `forwardUrl`: a genuine
+    // app.plex.tv link that lands the user on their page. The handshake lives
+    // in the HttpOnly cookie, and the return address is the server's own.
+    for (const path of ["auth.start", "auth.poll"]) {
+      assert.equal((procedures()[path]._def.inputs as unknown[]).length, 0, path);
+    }
   });
 
   test("poll refuses a caller with no handshake cookie instead of reaching plex.tv", async () => {

@@ -109,13 +109,3 @@ describe("parseBearerToken", () => {
     }
   });
 });
-
-describe("media tokens", () => {
-  test("are a scope of their own: not an admin session, and an admin session is not one", () => {
-    const media = sessions.createPlexSession(1, "owner", "admin-media");
-    const admin = sessions.createPlexSession(1, "owner", "admin");
-    assert.equal(sessions.getPlexSession(media, "admin"), undefined);
-    assert.equal(sessions.getPlexSession(admin, "admin-media"), undefined);
-    assert.equal(sessions.getPlexSession(media, "admin-media")?.userId, 1);
-  });
-});

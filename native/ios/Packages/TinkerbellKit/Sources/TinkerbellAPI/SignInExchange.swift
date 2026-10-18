@@ -51,6 +51,6 @@ public enum SignInExchange {
     }
 
     public static func logoutAdmin(_ client: TRPCClient) async {
-        _ = try? await client.call(AdminAPI.authLogout, .init())
+        _ = try? await client.call(AdminAPI.authLogout)
     }
 }

@@ -26,13 +26,11 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { isAgentApiPath } from "@tinkerbell/agent-api";
-import { nativeOrigins } from "@tinkerbell/contracts";
 import { errorMessage } from "@tinkerbell/core";
 import type { Services } from "@tinkerbell/composition";
 import type { createTrpc } from "@tinkerbell/trpc";
 import { buildPlexImageUrl, isBuildAsset, resolveStaticPath } from "./security.ts";
 import { clientIp } from "./auth.ts";
-import { applyCors } from "./cors.ts";
 import { sendFetchResponse, toFetchRequest } from "./http.ts";
 
 const MIME_TYPES: Record<string, string> = {
@@ -119,10 +117,6 @@ async function proxyPlexImage(res: ServerResponse, imageUrl: URL, fetchImpl: typ
   }
 }
 
-/** Each server admits only its own app — the portal app has no business on the admin port. */
-const ADMIN_APP_ORIGINS: ReadonlySet<string> = new Set(nativeOrigins("admin"));
-const PORTAL_APP_ORIGINS: ReadonlySet<string> = new Set(nativeOrigins("portal"));
-
 type RouteHandler = (req: IncomingMessage, res: ServerResponse, url: URL) => Promise<boolean>;
 
 /**
@@ -164,10 +158,6 @@ export function createAdminHandler(deps: AdminHandlerDeps) {
   return async function handleAdminRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const url = new URL(req.url!, `http://${req.headers.host}`);
     const path = url.pathname;
-
-    // Before every route, so a preflight never reaches the admin gate (it
-    // carries no credentials by design) and every answer carries the header.
-    if (applyCors(req, res, ADMIN_APP_ORIGINS)) return;
 
     // Plex image proxy. Gated: it fetches arbitrary thumbs using the server's
     // own Plex token, so leaving it open would hand an anonymous caller a
@@ -293,8 +283,6 @@ export function createPortalHandler(deps: PortalHandlerDeps) {
   return async function handlePortalRequest(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const url = new URL(req.url!, `http://${req.headers.host}`);
     const path = url.pathname;
-
-    if (applyCors(req, res, PORTAL_APP_ORIGINS)) return;
 
     if (path.startsWith("/api/trpc")) {
       const fetchReq = toFetchRequest(req);

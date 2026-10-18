@@ -53,11 +53,6 @@ export async function sendFetchResponse(fetchRes: Response, res: ServerResponse)
   if (res.destroyed || res.writableEnded) return;
 
   const headers = Object.fromEntries(fetchRes.headers.entries());
-  // `writeHead` replaces a header set earlier rather than merging it, and tRPC
-  // sends its own `Vary` — which would drop the `Vary: Origin` CORS set
-  // (`cors.ts`) and let a cache serve one origin's answer to another.
-  const vary = res.getHeader("Vary");
-  if (vary && headers.vary) headers.vary = `${String(vary)}, ${headers.vary}`;
   res.writeHead(fetchRes.status, headers);
   if (!fetchRes.body) {
     res.end();
