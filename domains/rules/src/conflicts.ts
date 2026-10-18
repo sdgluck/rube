@@ -140,9 +140,10 @@ export function createConflicts(deps: ConflictsDeps) {
   /**
    * Two rules producing a collection of the same name.
    *
-   * Plex allows it, so this fails silently and spectacularly: you get two
-   * collections both called "Top Rated", each rebuilt nightly by a different
-   * rule, and which one a user sees depends on the order they were made in.
+   * Plex allows it. Since `finalize` started giving the second one a title of
+   * its own (`ruleRowTitle`) the two no longer pool their items, so this is no
+   * longer data loss — but people still see two shelves that read the same,
+   * with nothing to tell them apart, and that is still the admin's to resolve.
    * Read from what the rules actually built, so two rules that merely *could*
    * collide are not reported until they do.
    */
@@ -194,7 +195,7 @@ export function createConflicts(deps: ConflictsDeps) {
         rules: involved.map((r) => ({ id: r.id, name: r.name })),
         subject: displayName,
         library: { key: sectionKey, title: sectionTitles.get(sectionKey) ?? `library ${sectionKey}` },
-        detail: `Both build a collection called "${displayName}" in the same library. Plex allows two collections with one name, so you get two — and which one a user sees depends on the order they were built.`,
+        detail: `Both build a collection called "${displayName}" in the same library. Their items are kept apart, but people see two collections that read the same and can't tell which is which. Rename one rule's collections, or narrow one rule so only the other builds it.`,
       });
     }
     return conflicts;

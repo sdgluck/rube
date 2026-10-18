@@ -79,8 +79,8 @@ function GroupSummary({ group, onOpenRule }: { group: ConflictGroup; onOpenRule:
     <>
       {ruleNames} {group.rules.length === 2 ? "both build" : "all build"}{" "}
       {count === 1 ? "a collection with the same name" : `${count} collections with the same names`}
-      {where}. Plex keeps every copy, so each name below appears {group.rules.length === 2 ? "twice" : "more than once"}{" "}
-      — and which one people see depends on the order they were built.
+      {where}. Each keeps its own items, but each name below appears{" "}
+      {group.rules.length === 2 ? "twice" : "more than once"} and people can't tell the copies apart.
       <span className={styles.conflictNames}>
         {group.subjects.map((name) => (
           <Link
