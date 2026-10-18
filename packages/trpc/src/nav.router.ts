@@ -1,7 +1,17 @@
 import type { TrpcDeps } from "./deps.ts";
 import { desc, eq, sql } from "drizzle-orm";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
-import { collections, mediaItems, rules, plexUsers, jobRuns, events, prerolls, arrSyncState } from "@tinkerbell/db";
+import {
+  collections,
+  mediaItems,
+  rules,
+  plexUsers,
+  jobs,
+  jobRuns,
+  events,
+  prerolls,
+  arrSyncState,
+} from "@tinkerbell/db";
 import { DAY_MS, WEEK_MS } from "@tinkerbell/core";
 
 import { t, procedure } from "./_base.ts";
@@ -67,6 +77,39 @@ export function createNavRouter(deps: Pick<TrpcDeps, "cleanup" | "db" | "problem
     }
   }
 
+  /**
+   * "error" when any enabled job's latest finished run failed, "ok" when they
+   * all succeeded, null when nothing has finished within the freshness window.
+   *
+   * This was `lastJobStatus("healthcheck")`, which made the Jobs dot a
+   * healthcheck dot: a poster refresh that failed four days earlier left it
+   * green the whole time. A cancelled run is someone's decision, not a fault,
+   * so a job's latest run is its latest that completed or failed. A disabled
+   * job is left out — its last failure is no longer anything to act on.
+   */
+  function jobsHealth(): "ok" | "error" | null {
+    try {
+      const cutoff = Date.now() - STATUS_FRESHNESS_MS;
+      const rows = db
+        .select({ status: jobRuns.status })
+        .from(jobs)
+        .innerJoin(
+          jobRuns,
+          sql`${jobRuns.id} = (
+            SELECT id FROM job_runs latest
+            WHERE latest.job_id = ${jobs.id} AND latest.status IN ('completed', 'failed')
+            ORDER BY latest.started_at DESC LIMIT 1
+          )`,
+        )
+        .where(sql`${jobs.enabled} = 1 AND ${jobRuns.finishedAt} >= ${cutoff}`)
+        .all();
+      if (rows.length === 0) return null;
+      return rows.some((r) => r.status === "failed") ? "error" : "ok";
+    } catch {
+      return null;
+    }
+  }
+
   function recentErrorEventCount(windowMs: number): number {
     try {
       const since = Date.now() - windowMs;
@@ -127,7 +170,7 @@ export function createNavRouter(deps: Pick<TrpcDeps, "cleanup" | "db" | "problem
         // would sit at a permanent non-zero and stop meaning anything.
         cleanupDueSoon: safeDueSoonCount(),
         overlaysStatus: lastJobStatus("overlays"),
-        jobsStatus: lastJobStatus("healthcheck"),
+        jobsStatus: jobsHealth(),
         // Read from `arr_sync_state`, which the sync and the poller keep
         // current. Deliberately *not* a fan-out to every configured *Arr:
         // the nav renders on every page load, and one unreachable instance
