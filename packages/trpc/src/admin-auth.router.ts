@@ -25,6 +25,7 @@ import {
   setSessionCookie,
 } from "./cookies.ts";
 import { isBrowserRequest, refuseBrowser } from "./browser-request.ts";
+import { exchangeAccount } from "./exchange-account.ts";
 import { createHandshakes } from "./handshake.ts";
 import { serverInfo } from "./server-info.ts";
 import { NativeAdmin } from "@tinkerbell/contracts/native-api";
@@ -227,7 +228,7 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
         if (!ctx.authRequired) return { status: "open" as const };
 
         await requireOwner();
-        const account = await getPlexAccount(input.plexToken, ensureAdminPlexClientId());
+        const account = await exchangeAccount(input.plexToken, ensureAdminPlexClientId());
         if (!isAdminAccount(account.id)) {
           log.warn("admin sign-in refused", { userId: account.id, username: account.username, ip: ctx.ip });
           emitEvent("auth.denied", `Admin sign-in refused for Plex user ${account.username}`, {

@@ -96,7 +96,11 @@ export const createHandshakes = perDeps(function createHandshakes(_deps: TrpcDep
   }
 
   function rateLimit(ip: string): void {
-    const now = Date.now();
+    // Elapsed time, not the wall clock. The native dev server freezes `Date`,
+    // and a window measured on a stopped clock never closes: sixty sign-ins
+    // and every later one was refused until a restart. A clock stepped back by
+    // NTP would do the same here in miniature.
+    const now = performance.now();
     const entry = attempts.get(ip);
     if (!entry || entry.resetAt < now) {
       attempts.set(ip, { count: 1, resetAt: now + RATE_WINDOW_MS });

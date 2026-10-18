@@ -9,7 +9,7 @@
  * Against the mock plex.tv rather than a `fetch` stub, so the `/user` lookup's
  * URL and headers are the real ones.
  */
-import { describe, test, after, before, beforeEach } from "node:test";
+import { describe, test, after, before, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { createTestContainer } from "@tinkerbell/composition/test-support";
@@ -93,7 +93,9 @@ describe("admin auth.exchange", () => {
 
   test("a token plex.tv doesn't recognise is not a session", async () => {
     const { caller } = admin();
-    await assert.rejects(caller.auth.exchange({ plexToken: "not-a-real-token" }));
+    // UNAUTHORIZED, not the 500 an unmapped plex.tv 401 became: the app has to
+    // read it as "sign in again", not "this server is broken".
+    await assert.rejects(caller.auth.exchange({ plexToken: "not-a-real-token" }), { code: "UNAUTHORIZED" });
   });
 
   test("with admin auth off there is nothing to sign in to", async () => {
@@ -116,6 +118,22 @@ describe("admin auth.exchange", () => {
     for (let i = 0; i < 60; i++) await caller.auth.exchange({ plexToken: token });
     await assert.rejects(caller.auth.exchange({ plexToken: token }), { code: "TOO_MANY_REQUESTS" });
   });
+
+  test("the rate-limit window closes even when the wall clock stands still", () => {
+    // The native dev server freezes `Date`; a window timed on it never ended.
+    const frozen = mock.method(Date, "now", () => 1_700_000_000_000);
+    let elapsed = 0;
+    const clock = mock.method(performance, "now", () => elapsed);
+    try {
+      for (let i = 0; i < 60; i++) handshakes.rateLimit("10.0.0.9");
+      assert.throws(() => handshakes.rateLimit("10.0.0.9"), { code: "TOO_MANY_REQUESTS" });
+      elapsed += 60_001;
+      assert.doesNotThrow(() => handshakes.rateLimit("10.0.0.9"));
+    } finally {
+      frozen.mock.restore();
+      clock.mock.restore();
+    }
+  });
 });
 
 describe("portal auth.exchange", () => {
@@ -129,6 +147,11 @@ describe("portal auth.exchange", () => {
   test("someone who isn't a user of this server is refused", async () => {
     const { caller } = portal();
     await assert.rejects(caller.auth.exchange({ plexToken: plexTv.tokenFor(STRANGER) }), { code: "FORBIDDEN" });
+  });
+
+  test("a token plex.tv doesn't recognise is UNAUTHORIZED, not a server error", async () => {
+    const { caller } = portal();
+    await assert.rejects(caller.auth.exchange({ plexToken: "not-a-real-token" }), { code: "UNAUTHORIZED" });
   });
 
   test("a browser can't exchange", async () => {

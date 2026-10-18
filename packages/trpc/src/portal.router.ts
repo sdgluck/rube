@@ -22,6 +22,7 @@ import {
   setSessionCookie,
 } from "./cookies.ts";
 import { isBrowserRequest, refuseBrowser } from "./browser-request.ts";
+import { exchangeAccount } from "./exchange-account.ts";
 import { createHandshakes } from "./handshake.ts";
 import { createPortalComponents } from "./portal-components.ts";
 import { createPortalMatchRouter } from "./portal-match.router.ts";
@@ -211,7 +212,7 @@ export function createPortalRouter(deps: TrpcDeps) {
         .mutation(async ({ ctx, input }) => {
           refuseBrowser(ctx.fromBrowser);
           rateLimit(ctx.ip);
-          const account = await getPlexAccount(input.plexToken, ensurePlexClientId());
+          const account = await exchangeAccount(input.plexToken, ensurePlexClientId());
           if (!plexUserExists(account.id)) {
             throw new TRPCError({ code: "FORBIDDEN", message: "This Plex account isn't a user of this server." });
           }
