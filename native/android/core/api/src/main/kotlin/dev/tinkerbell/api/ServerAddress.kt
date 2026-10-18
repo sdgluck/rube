@@ -1,7 +1,7 @@
 // Turning what somebody typed into a server address, and deciding whether the
-// server at it is one this app can talk to. A port of
-// `packages/native-client/src/server-url.ts` by way of `ServerAddress.swift`;
-// the golden vectors are in `ServerAddressTest`.
+// server at it is one this app can talk to. Kept in step with
+// `ServerAddress.swift`; the golden vectors both platforms pass are in
+// `ServerAddressTest`.
 //
 // People type `192.168.1.10:3000`, `tinkerbell.example.com/` or paste a URL
 // with a path from their address bar. The probe tries each candidate until one

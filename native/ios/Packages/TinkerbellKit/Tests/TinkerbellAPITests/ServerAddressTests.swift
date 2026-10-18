@@ -1,7 +1,8 @@
-// Golden vectors from `packages/native-client/src/pure.test.ts` (the
-// serverCandidates / judgeServerInfo cases), plus what the native app adds:
-// the `exchange` capability, the admin's extra fields, and where an address
-// points.
+// Golden vectors for reading a typed address and judging the server behind
+// it, first written for the retired Capacitor client and kept as the
+// reference: candidates, product/version checks, the `exchange` capability,
+// the admin's extra fields, and where an address points. The same cases as
+// `ServerAddressTest.kt`; change both together.
 
 import Foundation
 import Testing

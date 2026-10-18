@@ -1,6 +1,6 @@
 // Face ID (or the passcode) in front of the app.
 //
-// Opt-in, as in the Capacitor app (`packages/native-client/src/lock.ts`). The
+// Opt-in, as it was in the retired Capacitor apps. The
 // sessions already sit in the Keychain, so this guards against someone
 // holding the unlocked phone, not against theft of a token — worth offering
 // for an app that can empty a media library, not worth imposing on someone
