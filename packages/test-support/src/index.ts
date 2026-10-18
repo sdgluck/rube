@@ -19,3 +19,4 @@ export * from "./mock-arr-server.ts";
 export * from "./mock-download-clients.ts";
 export * from "./mock-list-server.ts";
 export * from "./mock-plex-server.ts";
+export * from "./mock-plex-tv.ts";

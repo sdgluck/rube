@@ -18,6 +18,19 @@ const VERSION: string = JSON.parse(readFileSync(join(import.meta.dirname, "..", 
 
 export type ServerProduct = "tinkerbell-admin" | "tinkerbell-portal";
 
-export function serverInfo(product: ServerProduct): { product: ServerProduct; version: string } {
-  return { product, version: VERSION };
+/**
+ * What this server can do for a native client, so the app asks instead of
+ * inferring it from a version number. `exchange` is `auth.exchange`: sign-in
+ * from a Plex token the app obtained itself. An app that needs it and doesn't
+ * see it says "update the server" rather than failing at the last step.
+ */
+export const SERVER_CAPABILITIES = ["exchange"] as const;
+export type ServerCapability = (typeof SERVER_CAPABILITIES)[number];
+
+export function serverInfo(product: ServerProduct): {
+  product: ServerProduct;
+  version: string;
+  capabilities: ServerCapability[];
+} {
+  return { product, version: VERSION, capabilities: [...SERVER_CAPABILITIES] };
 }

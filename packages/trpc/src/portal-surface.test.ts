@@ -30,7 +30,8 @@ const { createHandshake } = createHandshakes(trpcDeps);
  * The complete public surface of the portal API. `personalizationStatus` and
  * `branding` are what the login screen renders itself from, and the three
  * handshake procedures are unauthenticated by definition, as is `auth.server`,
- * which the native app asks before sign-in. A shared user's own data is never
+ * which the native app asks before sign-in, and `auth.exchange`, the app's
+ * sign-in from a Plex token it got itself. A shared user's own data is never
  * in here.
  *
  * The two `match.guest.*` procedures are the movie-match invite screen: how
@@ -44,6 +45,7 @@ const PUBLIC_PATHS = new Set([
   "auth.poll",
   "auth.logout",
   "auth.server",
+  "auth.exchange",
   "match.guest.preview",
   "match.guest.join",
 ]);

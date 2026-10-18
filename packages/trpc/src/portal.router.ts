@@ -21,6 +21,7 @@ import {
   setHandshakeCookie,
   setSessionCookie,
 } from "./cookies.ts";
+import { isBrowserRequest, refuseBrowser } from "./browser-request.ts";
 import { createHandshakes } from "./handshake.ts";
 import { createPortalComponents } from "./portal-components.ts";
 import { createPortalMatchRouter } from "./portal-match.router.ts";
@@ -44,6 +45,8 @@ export interface PortalContext {
    * is a caller with no session.
    */
   matchGuest?: string;
+  /** A web page's request rather than the app's — see `browser-request.ts`. */
+  fromBrowser?: boolean;
 }
 
 const tp = initTRPC.context<PortalContext>().create();
@@ -51,6 +54,8 @@ const tp = initTRPC.context<PortalContext>().create();
 /** Browser or native sign-in — see the same pair in admin-auth.router.ts. */
 const startInput = z.object({ client: z.enum(["browser", "native"]) }).optional();
 const pollInput = z.object({ handshake: z.string().max(128) }).optional();
+/** A plex.tv user token the native app obtained itself — see `auth.exchange`. */
+const exchangeInput = z.object({ plexToken: z.string().min(1).max(256) });
 const publicProcedure = tp.procedure;
 const userProcedure = tp.procedure.use(({ ctx, next }) => {
   if (!ctx.session) throw new TRPCError({ code: "UNAUTHORIZED", message: "Sign in with Plex first." });
@@ -116,6 +121,7 @@ export function createPortalRouter(deps: TrpcDeps) {
       origin: `${secure ? "https" : "http"}://${host}`,
       ip: opts.ip ?? "unknown",
       matchGuest: opts.req.headers.get("x-match-guest")?.slice(0, 128) || undefined,
+      fromBrowser: isBrowserRequest(opts.req),
     };
   }
 
@@ -190,6 +196,23 @@ export function createPortalRouter(deps: TrpcDeps) {
         if (native) return { status: "ok" as const, username: account.username, token: raw };
         setSessionCookie(ctx.resHeaders, raw, { scope: "portal", secure: ctx.secure });
         return { status: "ok" as const, username: account.username };
+      }),
+
+      /**
+       * The native app's sign-in: a Plex token from the PIN flow the app ran
+       * itself, checked here independently of the admin server. Same refusal
+       * as `poll` for someone who isn't a user of this server, and the same
+       * reasoning as the admin `exchange` for refusing a browser.
+       */
+      exchange: publicProcedure.input(exchangeInput).mutation(async ({ ctx, input }) => {
+        refuseBrowser(ctx.fromBrowser);
+        rateLimit(ctx.ip);
+        const account = await getPlexAccount(input.plexToken, ensurePlexClientId());
+        if (!plexUserExists(account.id)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "This Plex account isn't a user of this server." });
+        }
+        const token = createPlexSession(account.id, account.username, "portal");
+        return { status: "ok" as const, username: account.username, token };
       }),
 
       logout: publicProcedure.mutation(({ ctx }) => {

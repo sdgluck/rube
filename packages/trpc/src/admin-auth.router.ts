@@ -24,6 +24,7 @@ import {
   setHandshakeCookie,
   setSessionCookie,
 } from "./cookies.ts";
+import { isBrowserRequest, refuseBrowser } from "./browser-request.ts";
 import { createHandshakes } from "./handshake.ts";
 import { serverInfo } from "./server-info.ts";
 
@@ -34,6 +35,8 @@ import { serverInfo } from "./server-info.ts";
  */
 const startInput = z.object({ client: z.enum(["browser", "native"]) }).optional();
 const pollInput = z.object({ handshake: z.string().max(128) }).optional();
+/** A plex.tv user token the native app obtained by running the PIN flow itself. */
+const exchangeInput = z.object({ plexToken: z.string().min(1).max(256) });
 
 const log = createLogger("auth");
 
@@ -87,6 +90,7 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
       origin: `${secure ? "https" : "http"}://${host}`,
       ip: opts.ip ?? "unknown",
       authRequired: adminAuthRequired(),
+      fromBrowser: isBrowserRequest(opts.req),
     };
   }
 
@@ -199,6 +203,44 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
       return { status: "ok" as const, username: account.username };
     }),
 
+    /**
+     * The native app's sign-in. The app runs the plex.tv PIN flow itself — so
+     * one approval signs it in to the portal and to this server, each of which
+     * checks the result independently and shares nothing with the other — and
+     * hands over the Plex token it got. This server asks plex.tv who that is,
+     * applies the same admin check as `poll`, and answers with a session of its
+     * own in the body.
+     *
+     * The Plex token is used for that one lookup and never logged or stored.
+     * A browser can't call this: a page that got hold of a Plex token must not
+     * be able to turn it into an admin session readable from script.
+     */
+    exchange: publicProcedure.input(exchangeInput).mutation(async ({ ctx, input }) => {
+      refuseBrowser(ctx.fromBrowser);
+      rateLimit(ctx.ip);
+      // Nothing to sign in to — the app says so instead of holding a session
+      // that proves nothing.
+      if (!ctx.authRequired) return { status: "open" as const };
+
+      await requireOwner();
+      const account = await getPlexAccount(input.plexToken, ensureAdminPlexClientId());
+      if (!isAdminAccount(account.id)) {
+        log.warn("admin sign-in refused", { userId: account.id, username: account.username, ip: ctx.ip });
+        emitEvent("auth.denied", `Admin sign-in refused for Plex user ${account.username}`, {
+          userId: account.id,
+          ip: ctx.ip,
+        });
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: `${account.username} isn't allowed to administer this server.`,
+        });
+      }
+
+      const token = createPlexSession(account.id, account.username, "admin");
+      emitEvent("auth.signin", `${account.username} signed in in the app`, { userId: account.id, ip: ctx.ip });
+      return { status: "ok" as const, username: account.username, token };
+    }),
+
     logout: publicProcedure
       .input(z.object({ mediaToken: z.string().max(128).optional() }).optional())
       .mutation(({ ctx, input }) => {
@@ -213,7 +255,15 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
      * "Is this a Tinkerbell admin server, and which release?" — the native
      * app's server picker asks before anything else. See `server-info.ts`.
      */
-    server: publicProcedure.query(() => serverInfo("tinkerbell-admin")),
+    server: publicProcedure.query(() => ({
+      ...serverInfo("tinkerbell-admin"),
+      // Whether the app needs to sign in at all — with auth off it shows a
+      // standing "admin is open" warning instead of a sign-in button.
+      authRequired: adminAuthRequired(),
+      // The admin may name the portal (it is the public half); the portal
+      // never names the admin, which is why this is only on this router.
+      portalUrl: getConfig("user_app_public_url") || null,
+    })),
 
     /**
      * A short-lived credential for the native app's images and video, which

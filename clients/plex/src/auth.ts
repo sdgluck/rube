@@ -9,7 +9,18 @@
  */
 import { httpRequestJson } from "@tinkerbell/http";
 
-const PLEX_TV = "https://plex.tv/api/v2";
+/**
+ * plex.tv, unless a development build points it at the mock in
+ * `@tinkerbell/test-support/plex-tv` — the native apps' sign-in can't be
+ * exercised end to end against the real one without a real account approving
+ * every run. Ignored in production, where an env var redirecting the identity
+ * provider would be a way to mint any session at all.
+ */
+function plexTv(): string {
+  const override = process.env.TINKERBELL_PLEX_TV_URL;
+  if (override && process.env.NODE_ENV !== "production") return `${override.replace(/\/+$/, "")}/api/v2`;
+  return "https://plex.tv/api/v2";
+}
 
 function baseHeaders(clientId: string, product = "Tinkerbell"): Record<string, string> {
   return {
@@ -26,7 +37,7 @@ export interface PlexPin {
 
 export async function createPlexPin(clientId: string, product = "Tinkerbell"): Promise<PlexPin> {
   const data = await httpRequestJson<{ id: number; code: string }>({
-    url: `${PLEX_TV}/pins?strong=true`,
+    url: `${plexTv()}/pins?strong=true`,
     init: { method: "POST", headers: baseHeaders(clientId, product) },
     timeoutMs: 15_000,
   });
@@ -57,7 +68,7 @@ export function buildPlexAuthUrl(opts: {
 /** Poll a pin; returns the user auth token once they've authenticated, else null. */
 export async function checkPlexPin(id: number, clientId: string): Promise<string | null> {
   const data = await httpRequestJson<{ authToken: string | null }>({
-    url: `${PLEX_TV}/pins/${id}`,
+    url: `${plexTv()}/pins/${id}`,
     init: { method: "GET", headers: baseHeaders(clientId) },
     timeoutMs: 15_000,
   });
@@ -75,7 +86,7 @@ export interface PlexUserAccount {
 /** Resolve the identity behind a user auth token via plex.tv. */
 export async function getPlexAccount(authToken: string, clientId: string): Promise<PlexUserAccount> {
   const data = await httpRequestJson<PlexUserAccount>({
-    url: `${PLEX_TV}/user`,
+    url: `${plexTv()}/user`,
     init: { method: "GET", headers: { ...baseHeaders(clientId), "X-Plex-Token": authToken } },
     timeoutMs: 15_000,
   });

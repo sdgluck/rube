@@ -26,6 +26,13 @@ export interface AdminContext {
   /** False when auth is switched off in config or bypassed by the env var. */
   authRequired: boolean;
   /**
+   * The request came from a web page — it carried `Origin` or `Sec-Fetch-Site`,
+   * which browsers always send on a cross-origin fetch and URLSession/OkHttp
+   * never do. `auth.exchange` refuses such a caller, so no page script can turn
+   * a Plex token into a session it can read out of a response body.
+   */
+  fromBrowser?: boolean;
+  /**
    * Set when the caller is the agent API (`/mcp`, `/api/v1`) acting on a
    * verified key rather than a signed-in admin. Such a caller may run queries
    * and nothing else — see `refuseWritesFromAgents`.

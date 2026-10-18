@@ -9,7 +9,8 @@
     "./arr": "./src/mock-arr-server.ts",
     "./download-clients": "./src/mock-download-clients.ts",
     "./lists": "./src/mock-list-server.ts",
-    "./plex": "./src/mock-plex-server.ts"
+    "./plex": "./src/mock-plex-server.ts",
+    "./plex-tv": "./src/mock-plex-tv.ts"
   },
   "files": [
     "src"

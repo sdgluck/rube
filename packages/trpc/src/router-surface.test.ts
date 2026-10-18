@@ -35,10 +35,20 @@ const { getConfig } = c.resolve(ConfigStoreToken);
  * adopted at all — there is no session to authenticate with before auth is
  * on — and re-checks for a session itself once it is. `server` is the native
  * app's "is this a Tinkerbell, and which release?", asked before sign-in and
- * answering only a product name and version. Nothing else belongs here: not
+ * answering only a product name and version. `exchange` is the native app's
+ * sign-in — it turns a Plex token the app got from plex.tv into a session,
+ * after the same admin check as `poll`. Nothing else belongs here: not
  * health, not nav, not config.
  */
-const PUBLIC_PATHS = new Set(["auth.status", "auth.start", "auth.poll", "auth.logout", "auth.enable", "auth.server"]);
+const PUBLIC_PATHS = new Set([
+  "auth.status",
+  "auth.start",
+  "auth.poll",
+  "auth.logout",
+  "auth.enable",
+  "auth.server",
+  "auth.exchange",
+]);
 
 function anonymousContext() {
   return {
