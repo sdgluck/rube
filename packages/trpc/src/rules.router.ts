@@ -9,6 +9,7 @@ import { TRPCError } from "@trpc/server";
 import { errorMessage } from "@tinkerbell/core";
 import { PLAYLIST_CAPABLE_RULE_TYPES, ruleConfigSchema } from "@tinkerbell/contracts";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 /**
  * Reject a config the generate job couldn't parse, without rewriting it.
@@ -265,7 +266,7 @@ export function createRulesRouter(
       return { ok: true };
     }),
 
-    list: procedure.query(() => {
+    list: procedure.output(NativeAdmin.RulesListOutput).query(() => {
       const tallies = getRuleRunCounts();
       return getRules().map((r) => ({
         ...r,
@@ -344,22 +345,28 @@ export function createRulesRouter(
       return startOrAttachRuleRun(input.id, "test");
     }),
 
-    run: procedure.input(z.object({ id: z.string() })).mutation(({ input }) => {
-      return startOrAttachRuleRun(input.id, "run");
-    }),
+    run: procedure
+      .input(z.object({ id: z.string() }))
+      .output(NativeAdmin.RulesRunOutput)
+      .mutation(({ input }) => {
+        return startOrAttachRuleRun(input.id, "run");
+      }),
 
     /**
      * Ask a run to stop. Safe to call from any tab, or for a run this process
      * isn't executing — the executor notices the status and unwinds.
      */
-    cancelRun: procedure.input(z.object({ runId: z.string() })).mutation(({ input }) => {
-      const outcome = requestRuleRunCancel(input.runId);
-      if (outcome) console.log(`[rule-runs] Cancel requested for run "${input.runId}" (${outcome})`);
-      return { ok: outcome !== null, status: outcome };
-    }),
+    cancelRun: procedure
+      .input(z.object({ runId: z.string() }))
+      .output(NativeAdmin.RulesCancelRunOutput)
+      .mutation(({ input }) => {
+        const outcome = requestRuleRunCancel(input.runId);
+        if (outcome) console.log(`[rule-runs] Cancel requested for run "${input.runId}" (${outcome})`);
+        return { ok: outcome !== null, status: outcome };
+      }),
 
     /** Every rule run currently queued, running or unwinding, with rule names. */
-    activeRuns: procedure.query(() => getActiveRuleRuns()),
+    activeRuns: procedure.output(NativeAdmin.RulesActiveRunsOutput).query(() => getActiveRuleRuns()),
 
     runs: procedure
       .input(
@@ -369,6 +376,7 @@ export function createRulesRouter(
           phase: z.enum(["run", "test"]).optional(),
         }),
       )
+      .output(NativeAdmin.RulesRunsOutput)
       .query(({ input }) => {
         const runs = getRuleRuns(input.ruleId, { limit: input.limit, phase: input.phase });
         // One grouped query for the whole page rather than one per row — the
@@ -378,7 +386,10 @@ export function createRulesRouter(
         return runs.map((run) => ({ ...run, changes: counts.get(run.id) ?? { added: 0, removed: 0 } }));
       }),
 
-    runDetail: procedure.input(z.object({ runId: z.string() })).query(({ input }) => getRuleRun(input.runId)),
+    runDetail: procedure
+      .input(z.object({ runId: z.string() }))
+      .output(NativeAdmin.RulesRunDetailOutput)
+      .query(({ input }) => getRuleRun(input.runId)),
 
     /**
      * Where the items went, for a run that produced none.
@@ -473,16 +484,19 @@ export function createRulesRouter(
     /** Incremental log slice — see `useRunLog` on the client for why. */
     runLog: procedure
       .input(z.object({ runId: z.string(), offset: z.number().int().min(0).default(0) }))
+      .output(NativeAdmin.RulesRunLogOutput)
       .query(({ input }) => getRuleRunLog(input.runId, input.offset) ?? { chunk: "", nextOffset: 0, size: 0 }),
 
     /** Latest runs across all rules, for the Jobs dashboard. */
     recentRuns: procedure
       .input(z.object({ limit: z.number().int().min(1).max(100).optional() }).optional())
+      .output(NativeAdmin.RulesRecentRunsOutput)
       .query(({ input }) => getRecentRuleRuns(input?.limit ?? 20)),
 
     /** The per-rule breakdown of a Generate/Cleanup job run. */
     runsForJobRun: procedure
       .input(z.object({ jobRunId: z.string() }))
+      .output(NativeAdmin.RulesRunsForJobRunOutput)
       .query(({ input }) => getRuleRunsForJobRun(input.jobRunId)),
 
     lastTestResult: procedure.input(z.object({ id: z.string() })).query(({ input }): PersistedTestResult | null => {

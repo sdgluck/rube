@@ -3,6 +3,7 @@ import { z } from "zod";
 
 import { t, procedure } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 export function createEventsRouter(deps: Pick<TrpcDeps, "events">) {
   const { events } = deps;
@@ -18,6 +19,7 @@ export function createEventsRouter(deps: Pick<TrpcDeps, "events">) {
           sortDir: z.enum(["asc", "desc"]).default("desc"),
         }),
       )
+      .output(NativeAdmin.EventsListOutput)
       .query(({ input }) => getEvents(input)),
 
     types: procedure.query(() => getEventTypes()),

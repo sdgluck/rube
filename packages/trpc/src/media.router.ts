@@ -7,6 +7,7 @@ import { narrateSmartFilter, ruleConfigSchema } from "@tinkerbell/contracts";
 
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 export function createMediaRouter(deps: Pick<TrpcDeps, "clients" | "collections" | "config" | "db" | "media">) {
   const { clients } = deps;
@@ -65,24 +66,27 @@ export function createMediaRouter(deps: Pick<TrpcDeps, "clients" | "collections"
     /** The label filter's options — every label the local index has seen. */
     labels: procedure.query(() => listLabels()),
 
-    get: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
-      const client = getPlexClient();
-      const detail = await client.getItemDetail(input.ratingKey);
+    get: procedure
+      .input(z.object({ ratingKey: z.string() }))
+      .output(NativeAdmin.MediaGetOutput)
+      .query(async ({ input }) => {
+        const client = getPlexClient();
+        const detail = await client.getItemDetail(input.ratingKey);
 
-      // Use the local membership index instead of the Plex item's `Collection`
-      // refs: the latter only covers static collections, while the index also
-      // captures smart-collection membership (populated during sync).
-      const enrichedCollections = getCollectionsForItem(input.ratingKey).map((row) => ({
-        ratingKey: row.plexRatingKey,
-        title: row.title,
-        sectionTitle: row.sectionTitle,
-      }));
+        // Use the local membership index instead of the Plex item's `Collection`
+        // refs: the latter only covers static collections, while the index also
+        // captures smart-collection membership (populated during sync).
+        const enrichedCollections = getCollectionsForItem(input.ratingKey).map((row) => ({
+          ratingKey: row.plexRatingKey,
+          title: row.title,
+          sectionTitle: row.sectionTitle,
+        }));
 
-      return {
-        ...detail,
-        collections: enrichedCollections,
-      };
-    }),
+        return {
+          ...detail,
+          collections: enrichedCollections,
+        };
+      }),
 
     /**
      * Why this item is where it is.
@@ -96,40 +100,46 @@ export function createMediaRouter(deps: Pick<TrpcDeps, "clients" | "collections"
      * A collection with no rule behind it is reported as such rather than
      * omitted: "somebody made this by hand in Plex" is a real and useful answer.
      */
-    why: procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => {
-      return getCollectionsForItem(input.ratingKey).map((row) => {
-        const ruleId = row.labels.find((l) => l.startsWith("Rule:"))?.slice("Rule:".length);
-        const rule = ruleId
-          ? db
-              .select({ id: rules.id, name: rules.name, type: rules.type, config: rules.config })
-              .from(rules)
-              .where(eq(rules.id, ruleId))
-              .get()
-          : undefined;
+    why: procedure
+      .input(z.object({ ratingKey: z.string() }))
+      .output(NativeAdmin.MediaWhyOutput)
+      .query(({ input }) => {
+        return getCollectionsForItem(input.ratingKey).map((row) => {
+          const ruleId = row.labels.find((l) => l.startsWith("Rule:"))?.slice("Rule:".length);
+          const rule = ruleId
+            ? db
+                .select({ id: rules.id, name: rules.name, type: rules.type, config: rules.config })
+                .from(rules)
+                .where(eq(rules.id, ruleId))
+                .get()
+            : undefined;
 
-        let criteria: string | null = null;
-        if (rule) {
-          const parsed = ruleConfigSchema.safeParse(rule.config);
-          const filter = parsed.success ? parsed.data.smartFilter : undefined;
-          if (filter && filter.children.length > 0) {
-            // Rules store tag values as display names already, so no per-server
-            // lookup is needed to render them readably.
-            criteria = narrateSmartFilter(filter, { noun: "items" });
+          let criteria: string | null = null;
+          if (rule) {
+            const parsed = ruleConfigSchema.safeParse(rule.config);
+            const filter = parsed.success ? parsed.data.smartFilter : undefined;
+            if (filter && filter.children.length > 0) {
+              // Rules store tag values as display names already, so no per-server
+              // lookup is needed to render them readably.
+              criteria = narrateSmartFilter(filter, { noun: "items" });
+            }
           }
-        }
 
-        return {
-          collection: { ratingKey: row.plexRatingKey, title: row.title, sectionTitle: row.sectionTitle },
-          rule: rule ? { id: rule.id, name: rule.name, type: rule.type } : null,
-          criteria,
-        };
-      });
-    }),
+          return {
+            collection: { ratingKey: row.plexRatingKey, title: row.title, sectionTitle: row.sectionTitle },
+            rule: rule ? { id: rule.id, name: rule.name, type: rule.type } : null,
+            criteria,
+          };
+        });
+      }),
 
-    children: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
-      const client = getPlexClient();
-      return client.getMetadataChildren(input.ratingKey);
-    }),
+    children: procedure
+      .input(z.object({ ratingKey: z.string() }))
+      .output(NativeAdmin.MediaChildrenOutput)
+      .query(async ({ input }) => {
+        const client = getPlexClient();
+        return client.getMetadataChildren(input.ratingKey);
+      }),
 
     columns: procedure.query(() => {
       return getConfig("media_columns") ?? null;

@@ -15,6 +15,7 @@ import {
 import { DAY_MS, WEEK_MS } from "@tinkerbell/core";
 
 import { t, procedure } from "./_base.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 /**
  * Fresh-status threshold: a tick / cross next to a sidebar item is only
@@ -158,7 +159,7 @@ export function createNavRouter(deps: Pick<TrpcDeps, "cleanup" | "db" | "problem
      * cheap `COUNT(*)`s; statuses come from the most recent finished job
      * run within the freshness window. One round-trip for the whole nav.
      */
-    metrics: procedure.query(() => {
+    metrics: procedure.output(NativeAdmin.NavMetricsOutput).query(() => {
       return {
         collections: countOf(collections),
         media: countOf(mediaItems),

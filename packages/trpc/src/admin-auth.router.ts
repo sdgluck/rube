@@ -27,6 +27,7 @@ import {
 import { isBrowserRequest, refuseBrowser } from "./browser-request.ts";
 import { createHandshakes } from "./handshake.ts";
 import { serverInfo } from "./server-info.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 /**
  * Which client is signing in. A browser gets the handshake and the session as
@@ -100,7 +101,7 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
      * else. Public by necessity — it's the answer to "do I need to log in?".
      * It deliberately reveals nothing beyond that and the signed-in identity.
      */
-    status: publicProcedure.query(({ ctx }) => {
+    status: publicProcedure.output(NativeAdmin.AuthStatusOutput).query(({ ctx }) => {
       const owner = cachedOwner();
       const configured = adminAuthConfigured();
       // Who the owner is, and who else may administer, are answers for people
@@ -215,34 +216,38 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
      * A browser can't call this: a page that got hold of a Plex token must not
      * be able to turn it into an admin session readable from script.
      */
-    exchange: publicProcedure.input(exchangeInput).mutation(async ({ ctx, input }) => {
-      refuseBrowser(ctx.fromBrowser);
-      rateLimit(ctx.ip);
-      // Nothing to sign in to — the app says so instead of holding a session
-      // that proves nothing.
-      if (!ctx.authRequired) return { status: "open" as const };
+    exchange: publicProcedure
+      .input(exchangeInput)
+      .output(NativeAdmin.AuthExchangeOutput)
+      .mutation(async ({ ctx, input }) => {
+        refuseBrowser(ctx.fromBrowser);
+        rateLimit(ctx.ip);
+        // Nothing to sign in to — the app says so instead of holding a session
+        // that proves nothing.
+        if (!ctx.authRequired) return { status: "open" as const };
 
-      await requireOwner();
-      const account = await getPlexAccount(input.plexToken, ensureAdminPlexClientId());
-      if (!isAdminAccount(account.id)) {
-        log.warn("admin sign-in refused", { userId: account.id, username: account.username, ip: ctx.ip });
-        emitEvent("auth.denied", `Admin sign-in refused for Plex user ${account.username}`, {
-          userId: account.id,
-          ip: ctx.ip,
-        });
-        throw new TRPCError({
-          code: "FORBIDDEN",
-          message: `${account.username} isn't allowed to administer this server.`,
-        });
-      }
+        await requireOwner();
+        const account = await getPlexAccount(input.plexToken, ensureAdminPlexClientId());
+        if (!isAdminAccount(account.id)) {
+          log.warn("admin sign-in refused", { userId: account.id, username: account.username, ip: ctx.ip });
+          emitEvent("auth.denied", `Admin sign-in refused for Plex user ${account.username}`, {
+            userId: account.id,
+            ip: ctx.ip,
+          });
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: `${account.username} isn't allowed to administer this server.`,
+          });
+        }
 
-      const token = createPlexSession(account.id, account.username, "admin");
-      emitEvent("auth.signin", `${account.username} signed in in the app`, { userId: account.id, ip: ctx.ip });
-      return { status: "ok" as const, username: account.username, token };
-    }),
+        const token = createPlexSession(account.id, account.username, "admin");
+        emitEvent("auth.signin", `${account.username} signed in in the app`, { userId: account.id, ip: ctx.ip });
+        return { status: "ok" as const, username: account.username, token };
+      }),
 
     logout: publicProcedure
       .input(z.object({ mediaToken: z.string().max(128).optional() }).optional())
+      .output(NativeAdmin.AuthLogoutOutput)
       .mutation(({ ctx, input }) => {
         deletePlexSession(ctx.rawToken);
         // The app's media token outlives nothing it was minted from.
@@ -255,7 +260,7 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
      * "Is this a Tinkerbell admin server, and which release?" — the native
      * app's server picker asks before anything else. See `server-info.ts`.
      */
-    server: publicProcedure.query(() => ({
+    server: publicProcedure.output(NativeAdmin.AuthServerOutput).query(() => ({
       ...serverInfo("tinkerbell-admin"),
       // Whether the app needs to sign in at all — with auth off it shows a
       // standing "admin is open" warning instead of a sign-in button.

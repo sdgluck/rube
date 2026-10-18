@@ -10,6 +10,7 @@ import { derivePalette, fetchPosterUrl, renderCollectionPoster } from "@tinkerbe
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { createPreviewCache } from "./preview.router.ts";
 import { paginationInput } from "./_pagination.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 const ratingKeyInput = z.object({ ratingKey: z.string() });
 
@@ -206,6 +207,7 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
           sortDir: z.enum(["asc", "desc"]).default("asc"),
         }),
       )
+      .output(NativeAdmin.CollectionsListOutput)
       .query(({ input }) => {
         // A rule also claims the collection recorded as its last generated one,
         // even when that collection carries no `Rule:<id>` label — see
@@ -307,16 +309,22 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
       return flags;
     }),
 
-    get: procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => {
-      const row = getLocalCollection(input.ratingKey);
-      if (!row) throw new Error(`Collection ${input.ratingKey} not found`);
-      return row;
-    }),
+    get: procedure
+      .input(z.object({ ratingKey: z.string() }))
+      .output(NativeAdmin.CollectionsGetOutput)
+      .query(({ input }) => {
+        const row = getLocalCollection(input.ratingKey);
+        if (!row) throw new Error(`Collection ${input.ratingKey} not found`);
+        return row;
+      }),
 
-    items: procedure.input(z.object({ ratingKey: z.string() })).query(async ({ input }) => {
-      const client = getPlexClient();
-      return client.getCollectionChildren(input.ratingKey);
-    }),
+    items: procedure
+      .input(z.object({ ratingKey: z.string() }))
+      .output(NativeAdmin.CollectionsItemsOutput)
+      .query(async ({ input }) => {
+        const client = getPlexClient();
+        return client.getCollectionChildren(input.ratingKey);
+      }),
 
     update: procedure
       .input(z.object({ ratingKey: z.string(), title: z.string().optional(), summary: z.string().optional() }))
@@ -348,11 +356,14 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
 
     owningRule: procedure.input(ratingKeyInput).query(({ input }) => owningRuleFor(input.ratingKey)),
 
-    stats: procedure.input(ratingKeyInput).query(({ input }) => ({
-      ...getCollectionStats(input.ratingKey),
-      performance: getCollectionPerformance([input.ratingKey]).get(input.ratingKey) ?? null,
-      performanceWindow: performanceWindow(),
-    })),
+    stats: procedure
+      .input(ratingKeyInput)
+      .output(NativeAdmin.CollectionsStatsOutput)
+      .query(({ input }) => ({
+        ...getCollectionStats(input.ratingKey),
+        performance: getCollectionPerformance([input.ratingKey]).get(input.ratingKey) ?? null,
+        performanceWindow: performanceWindow(),
+      })),
 
     /**
      * The other collections the same rule produced. Sibling shelves are how a
@@ -601,11 +612,14 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
     }),
 
     /** Re-read this one collection from Plex, without a full library sync. */
-    syncOne: procedure.input(ratingKeyInput).mutation(async ({ input }) => {
-      const row = requireCollection(input.ratingKey);
-      await resyncCollection(input.ratingKey, row.sectionId);
-      return { ok: true as const };
-    }),
+    syncOne: procedure
+      .input(ratingKeyInput)
+      .output(NativeAdmin.CollectionsSyncOneOutput)
+      .mutation(async ({ input }) => {
+        const row = requireCollection(input.ratingKey);
+        await resyncCollection(input.ratingKey, row.sectionId);
+        return { ok: true as const };
+      }),
 
     filterFieldValues: procedure
       .input(z.object({ sectionId: z.string(), field: z.string() }))

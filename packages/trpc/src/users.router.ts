@@ -13,6 +13,7 @@ import { PlexApiError, realSessions } from "@tinkerbell/plex";
 
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 /**
  * plex.tv says most of what it means through the status code, so a bare
@@ -94,6 +95,7 @@ export function createUsersRouter(deps: Pick<TrpcDeps, "clients" | "config" | "j
           sortDir: z.enum(["asc", "desc"]).default("asc"),
         }),
       )
+      .output(NativeAdmin.UsersListOutput)
       .query(async ({ input }) => {
         const result = getLocalUsers({
           search: input.search || undefined,
@@ -123,12 +125,15 @@ export function createUsersRouter(deps: Pick<TrpcDeps, "clients" | "config" | "j
         return result;
       }),
 
-    get: procedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
-      const client = getPlexClient();
-      const detail = await withPlexErrors(() => getUserDetail(client, input.userId));
-      if (!detail) throw new TRPCError({ code: "NOT_FOUND", message: "No such Plex user." });
-      return detail;
-    }),
+    get: procedure
+      .input(z.object({ userId: z.number() }))
+      .output(NativeAdmin.UsersGetOutput)
+      .query(async ({ input }) => {
+        const client = getPlexClient();
+        const detail = await withPlexErrors(() => getUserDetail(client, input.userId));
+        if (!detail) throw new TRPCError({ code: "NOT_FOUND", message: "No such Plex user." });
+        return detail;
+      }),
 
     /**
      * Live sessions for one user, filtered from the single server-wide read.
@@ -137,16 +142,22 @@ export function createUsersRouter(deps: Pick<TrpcDeps, "clients" | "config" | "j
      * authenticates with the owner's token, so its sessions would otherwise all
      * appear on the owner's user page as films they are watching.
      */
-    sessions: procedure.input(z.object({ userId: z.number() })).query(async ({ input }) => {
-      const client = getPlexClient();
-      const sessions = realSessions(await client.getActiveSessions());
-      return sessions.filter((s) => s.userId === input.userId);
-    }),
+    sessions: procedure
+      .input(z.object({ userId: z.number() }))
+      .output(NativeAdmin.UsersSessionsOutput)
+      .query(async ({ input }) => {
+        const client = getPlexClient();
+        const sessions = realSessions(await client.getActiveSessions());
+        return sessions.filter((s) => s.userId === input.userId);
+      }),
 
-    history: procedure.input(z.object({ userId: z.number() }).merge(paginationInput)).query(async ({ input }) => {
-      const client = getPlexClient();
-      return client.getWatchHistory({ accountID: String(input.userId), limit: input.limit, offset: input.offset });
-    }),
+    history: procedure
+      .input(z.object({ userId: z.number() }).merge(paginationInput))
+      .output(NativeAdmin.UsersHistoryOutput)
+      .query(async ({ input }) => {
+        const client = getPlexClient();
+        return client.getWatchHistory({ accountID: String(input.userId), limit: input.limit, offset: input.offset });
+      }),
 
     invites: procedure.query(() => listInvites()),
 
@@ -155,7 +166,7 @@ export function createUsersRouter(deps: Pick<TrpcDeps, "clients" | "config" | "j
       return { ok: true };
     }),
 
-    sync: procedure.mutation(async () => {
+    sync: procedure.output(NativeAdmin.UsersSyncOutput).mutation(async () => {
       const client = getPlexClient();
       return syncUsers(client);
     }),
@@ -281,6 +292,7 @@ export function createUsersRouter(deps: Pick<TrpcDeps, "clients" | "config" | "j
 
     terminateSession: procedure
       .input(z.object({ sessionId: z.string().min(1), reason: z.string().max(200).default("") }))
+      .output(NativeAdmin.UsersTerminateSessionOutput)
       .mutation(async ({ input }) => {
         const client = getPlexClient();
         await withPlexErrors(() => client.terminateSession(input.sessionId, input.reason));

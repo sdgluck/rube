@@ -25,6 +25,7 @@ import { GUEST_NAME_MAX, MatchError, type Caller } from "@tinkerbell/domain.matc
 import type { PlexClient } from "@tinkerbell/plex";
 import type { TrpcDeps } from "./deps.ts";
 import type { PortalProcedures } from "./portal.router.ts";
+import { NativePortal } from "@tinkerbell/contracts/native-api";
 
 const room = z.object({ code: matchCodeSchema });
 const invite = z.string().min(1).max(64);
@@ -105,46 +106,57 @@ export function createPortalMatchRouter(
   }
 
   return router({
-    libraries: creator.query(({ ctx }) => match.libraries(ctx.session.userId)),
+    libraries: creator
+      .output(NativePortal.MatchLibrariesOutput)
+      .query(({ ctx }) => match.libraries(ctx.session.userId)),
 
     genres: creator
       .input(z.object({ sectionId }))
+      .output(NativePortal.MatchGenresOutput)
       .query(({ ctx, input }) => run(() => match.genres(ctx.session.userId, input.sectionId))),
 
     presets: creator
       .input(z.object({ sectionId }))
+      .output(NativePortal.MatchPresetsOutput)
       .query(({ ctx, input }) => run(() => match.presets(ctx.session.userId, input.sectionId))),
 
     count: creator
       .input(z.object({ sectionId, filters: matchFiltersSchema }))
+      .output(NativePortal.MatchCountOutput)
       .query(({ ctx, input }) => run(() => match.count(ctx.session.userId, input.sectionId, input.filters))),
 
     create: creator
       .input(z.object({ sectionId, filters: matchFiltersSchema }))
+      .output(NativePortal.MatchCreateOutput)
       .mutation(({ ctx, input }) => run(() => match.createRoom(ctx.session, input.sectionId, input.filters))),
 
-    rooms: creator.query(({ ctx }) => match.myRooms(ctx.session.userId)),
+    rooms: creator.output(NativePortal.MatchRoomsOutput).query(({ ctx }) => match.myRooms(ctx.session.userId)),
 
     join: creator
       .input(room.extend({ invite: invite.optional() }))
+      .output(NativePortal.MatchJoinOutput)
       .mutation(({ ctx, input }) => run(() => match.join(ctx.session, input.code, input.invite))),
 
-    state: member.input(room).query(async ({ ctx, input }) => {
-      const state = run(() => match.state(ctx.caller, input.code));
-      // The admin's public address when there is one — the link is going to
-      // someone who isn't on this network — and the address this request came
-      // in on otherwise. A fragment, so the secret never reaches a server log.
-      const base = (getConfig("user_app_public_url") || ctx.origin).replace(/\/+$/, "");
-      return {
-        ...state,
-        link: `${base}/#match/${state.code}/${state.invite}`,
-        // A guest has no way into the server's Plex, so no link to it.
-        plexServerId: state.me.guest ? null : await serverId(),
-      };
-    }),
+    state: member
+      .input(room)
+      .output(NativePortal.MatchStateOutput)
+      .query(async ({ ctx, input }) => {
+        const state = run(() => match.state(ctx.caller, input.code));
+        // The admin's public address when there is one — the link is going to
+        // someone who isn't on this network — and the address this request came
+        // in on otherwise. A fragment, so the secret never reaches a server log.
+        const base = (getConfig("user_app_public_url") || ctx.origin).replace(/\/+$/, "");
+        return {
+          ...state,
+          link: `${base}/#match/${state.code}/${state.invite}`,
+          // A guest has no way into the server's Plex, so no link to it.
+          plexServerId: state.me.guest ? null : await serverId(),
+        };
+      }),
 
     deck: member
       .input(room.extend({ exclude: z.array(ratingKey).max(100), limit: z.number().int().min(1).max(50) }))
+      .output(NativePortal.MatchDeckOutput)
       .query(async ({ ctx, input }) => {
         const page = run(() => match.deck(ctx.caller, input.code, input.exclude, input.limit));
         return { ...page, films: await withSummaries(page.films) };
@@ -152,6 +164,7 @@ export function createPortalMatchRouter(
 
     swipe: member
       .input(room.extend({ ratingKey, liked: z.boolean() }))
+      .output(NativePortal.MatchSwipeOutput)
       .mutation(({ ctx, input }) => run(() => match.swipe(ctx.caller, input.code, input.ratingKey, input.liked))),
 
     undo: member
@@ -169,10 +182,12 @@ export function createPortalMatchRouter(
     guest: router({
       preview: invited
         .input(room.extend({ invite }))
+        .output(NativePortal.MatchGuestPreviewOutput)
         .query(({ input }) => run(() => match.preview(input.code, input.invite))),
 
       join: invited
         .input(room.extend({ invite, name: z.string().trim().min(1).max(GUEST_NAME_MAX) }))
+        .output(NativePortal.MatchGuestJoinOutput)
         .mutation(({ ctx, input }) => {
           // Each join is a new member row; the secret stops strangers, this stops a loop.
           rateLimit(ctx.ip);

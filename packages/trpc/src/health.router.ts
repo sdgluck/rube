@@ -4,6 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { errorMessage } from "@tinkerbell/core";
 
 import { t, procedure } from "./_base.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 /** A mute in the past has already lapsed and is reported as absent. */
 function mutedUntilFor(until: number | undefined): number | null {
@@ -16,7 +17,7 @@ export function createHealthRouter(deps: Pick<TrpcDeps, "config" | "health">) {
   const { reportHealth, getHealthLatest, getHealthHistory, healthServices, checkServiceHealth } = health;
 
   const healthRouter = t.router({
-    status: procedure.query(() => {
+    status: procedure.output(NativeAdmin.HealthStatusOutput).query(() => {
       const services = healthServices();
       const serviceNames = services.map((s) => s.service);
       const entries = getHealthLatest(serviceNames);
@@ -73,24 +74,27 @@ export function createHealthRouter(deps: Pick<TrpcDeps, "config" | "health">) {
         return { ok: true };
       }),
 
-    check: procedure.input(z.object({ service: z.string() })).mutation(async ({ input }) => {
-      // Checked against the live service list before anything is recorded. An
-      // unknown name used to throw "Unknown service" from `checkServiceHealth` and
-      // then be *written as a failing health row for it* — so a caller could
-      // invent a service, and a second call would announce `health.failed` for
-      // something that does not exist.
-      if (!healthServices().some((s) => s.service === input.service)) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown service: ${input.service}` });
-      }
-      try {
-        await checkServiceHealth(input.service);
-        return { ok: true };
-      } catch (err) {
-        const message = errorMessage(err);
-        reportHealth(input.service, "error", message);
-        throw new TRPCError({ code: "BAD_GATEWAY", message });
-      }
-    }),
+    check: procedure
+      .input(z.object({ service: z.string() }))
+      .output(NativeAdmin.HealthCheckOutput)
+      .mutation(async ({ input }) => {
+        // Checked against the live service list before anything is recorded. An
+        // unknown name used to throw "Unknown service" from `checkServiceHealth` and
+        // then be *written as a failing health row for it* — so a caller could
+        // invent a service, and a second call would announce `health.failed` for
+        // something that does not exist.
+        if (!healthServices().some((s) => s.service === input.service)) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Unknown service: ${input.service}` });
+        }
+        try {
+          await checkServiceHealth(input.service);
+          return { ok: true };
+        } catch (err) {
+          const message = errorMessage(err);
+          reportHealth(input.service, "error", message);
+          throw new TRPCError({ code: "BAD_GATEWAY", message });
+        }
+      }),
   });
 
   return healthRouter;

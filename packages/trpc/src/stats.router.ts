@@ -6,6 +6,7 @@ import { HISTORY_SORTS } from "@tinkerbell/domain.playback";
 import { DAY_MS } from "@tinkerbell/core";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { realSessions } from "@tinkerbell/plex";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 /**
  * Periods offered by the history-backed panels. `0` means all time — the
@@ -51,11 +52,11 @@ export function createStatsRouter(deps: Pick<TrpcDeps, "clients" | "media" | "pl
      * bandwidth figure that is the measurement's own load. The Stress Test page
      * is where a run in flight is meant to be visible.
      */
-    sessions: procedure.query(async () => {
+    sessions: procedure.output(NativeAdmin.StatsSessionsOutput).query(async () => {
       const client = getPlexClient();
       return realSessions(await client.getActiveSessions());
     }),
-    recentlyAdded: procedure.query(() => getCachedRecentlyAdded()),
+    recentlyAdded: procedure.output(NativeAdmin.StatsRecentlyAddedOutput).query(() => getCachedRecentlyAdded()),
     /**
      * The period's top items, ranked either by plays or by how many different
      * people played them.
@@ -67,16 +68,17 @@ export function createStatsRouter(deps: Pick<TrpcDeps, "clients" | "media" | "pl
       .input(z.object({ periodDays: periodSchema, rank: z.enum(["plays", "viewers"]).default("plays") }).optional())
       .query(({ input }) => getMostWatched({ since: sinceFor(input?.periodDays ?? 7), rank: input?.rank ?? "plays" })),
     periods: procedure.query(() => PERIOD_DAYS),
-    overview: procedure.query(() => getLibraryOverview()),
-    activity: procedure.query(() => getActivitySummary()),
+    overview: procedure.output(NativeAdmin.StatsOverviewOutput).query(() => getLibraryOverview()),
+    activity: procedure.output(NativeAdmin.StatsActivityOutput).query(() => getActivitySummary()),
     activitySeries: procedure
       .input(z.object({ days: z.number().int().min(2).max(90) }).optional())
       .query(({ input }) => getActivitySeries(input?.days ?? 14)),
-    ops: procedure.query(() => getOpsSummary()),
+    ops: procedure.output(NativeAdmin.StatsOpsOutput).query(() => getOpsSummary()),
 
     /** Who watched the most in a period — the Top Users panel. */
     topUsers: procedure
       .input(z.object({ periodDays: periodSchema, limit: z.number().int().min(1).max(50).default(10) }).optional())
+      .output(NativeAdmin.StatsTopUsersOutput)
       .query(({ input }) =>
         topUsers({ since: sinceFor(input?.periodDays ?? 7) || undefined, limit: input?.limit ?? 10 }),
       ),
@@ -119,6 +121,7 @@ export function createStatsRouter(deps: Pick<TrpcDeps, "clients" | "media" | "pl
           dir: z.enum(["asc", "desc"]).default("desc"),
         }),
       )
+      .output(NativeAdmin.StatsHistoryOutput)
       .query(({ input }) =>
         serverHistory({
           since: sinceFor(input.periodDays) || undefined,
@@ -132,11 +135,15 @@ export function createStatsRouter(deps: Pick<TrpcDeps, "clients" | "media" | "pl
       ),
 
     /** Who has watched an item — the Media detail "Watched by" line. */
-    watchedBy: procedure.input(z.object({ ratingKey: z.string() })).query(({ input }) => watchedBy(input.ratingKey)),
+    watchedBy: procedure
+      .input(z.object({ ratingKey: z.string() }))
+      .output(NativeAdmin.StatsWatchedByOutput)
+      .query(({ input }) => watchedBy(input.ratingKey)),
 
     /** Plays and watch time for one user. */
     userPlayback: procedure
       .input(z.object({ userId: z.number(), periodDays: periodSchema }))
+      .output(NativeAdmin.StatsUserPlaybackOutput)
       .query(({ input }) => userTotals(input.userId, sinceFor(input.periodDays) || undefined)),
 
     /**
@@ -157,12 +164,15 @@ export function createStatsRouter(deps: Pick<TrpcDeps, "clients" | "media" | "pl
      * Plays and watch time for every user, for the Users table.
      * Returned as an array because tRPC serialises a Map to `{}`.
      */
-    allUserPlayback: procedure.input(z.object({ periodDays: periodSchema }).optional()).query(({ input }) =>
-      [...allUserTotals(sinceFor(input?.periodDays ?? 0) || undefined)].map(([userId, totals]) => ({
-        userId,
-        ...totals,
-      })),
-    ),
+    allUserPlayback: procedure
+      .input(z.object({ periodDays: periodSchema }).optional())
+      .output(NativeAdmin.StatsAllUserPlaybackOutput)
+      .query(({ input }) =>
+        [...allUserTotals(sinceFor(input?.periodDays ?? 0) || undefined)].map(([userId, totals]) => ({
+          userId,
+          ...totals,
+        })),
+      ),
   });
 
   return statsRouter;

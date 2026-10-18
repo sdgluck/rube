@@ -27,6 +27,7 @@ import { createPortalComponents } from "./portal-components.ts";
 import { createPortalMatchRouter } from "./portal-match.router.ts";
 import { serverInfo } from "./server-info.ts";
 import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
+import { NativePortal } from "@tinkerbell/contracts/native-api";
 
 export interface PortalContext {
   session?: { userId: number; username: string };
@@ -127,12 +128,12 @@ export function createPortalRouter(deps: TrpcDeps) {
 
   const portalRouter = tp.router({
     // Whether personalization is live — the portal shows a banner when it isn't.
-    personalizationStatus: publicProcedure.query(() => {
+    personalizationStatus: publicProcedure.output(NativePortal.PersonalizationStatusOutput).query(() => {
       return getConfig("global_personalized_sharing")?.status ?? "disabled";
     }),
 
     // Admin-customized header/background. Public so the login screen is branded.
-    branding: publicProcedure.query(() => getConfig("portal_branding") ?? {}),
+    branding: publicProcedure.output(NativePortal.BrandingOutput).query(() => getConfig("portal_branding") ?? {}),
 
     auth: tp.router({
       /**
@@ -204,28 +205,31 @@ export function createPortalRouter(deps: TrpcDeps) {
        * as `poll` for someone who isn't a user of this server, and the same
        * reasoning as the admin `exchange` for refusing a browser.
        */
-      exchange: publicProcedure.input(exchangeInput).mutation(async ({ ctx, input }) => {
-        refuseBrowser(ctx.fromBrowser);
-        rateLimit(ctx.ip);
-        const account = await getPlexAccount(input.plexToken, ensurePlexClientId());
-        if (!plexUserExists(account.id)) {
-          throw new TRPCError({ code: "FORBIDDEN", message: "This Plex account isn't a user of this server." });
-        }
-        const token = createPlexSession(account.id, account.username, "portal");
-        return { status: "ok" as const, username: account.username, token };
-      }),
+      exchange: publicProcedure
+        .input(exchangeInput)
+        .output(NativePortal.AuthExchangeOutput)
+        .mutation(async ({ ctx, input }) => {
+          refuseBrowser(ctx.fromBrowser);
+          rateLimit(ctx.ip);
+          const account = await getPlexAccount(input.plexToken, ensurePlexClientId());
+          if (!plexUserExists(account.id)) {
+            throw new TRPCError({ code: "FORBIDDEN", message: "This Plex account isn't a user of this server." });
+          }
+          const token = createPlexSession(account.id, account.username, "portal");
+          return { status: "ok" as const, username: account.username, token };
+        }),
 
-      logout: publicProcedure.mutation(({ ctx }) => {
+      logout: publicProcedure.output(NativePortal.AuthLogoutOutput).mutation(({ ctx }) => {
         deletePlexSession(ctx.rawToken);
         clearSessionCookie(ctx.resHeaders, { scope: "portal", secure: ctx.secure });
         return { ok: true };
       }),
 
       /** "Is this a Tinkerbell portal, and which release?" — see `server-info.ts`. */
-      server: publicProcedure.query(() => serverInfo("tinkerbell-portal")),
+      server: publicProcedure.output(NativePortal.AuthServerOutput).query(() => serverInfo("tinkerbell-portal")),
     }),
 
-    me: userProcedure.query(({ ctx }) => {
+    me: userProcedure.output(NativePortal.MeOutput).query(({ ctx }) => {
       return { userId: ctx.session.userId, username: ctx.session.username };
     }),
 
@@ -237,7 +241,7 @@ export function createPortalRouter(deps: TrpcDeps) {
      * can never use). Behind the session, not public: the sign-in screen has no
      * use for it.
      */
-    components: userProcedure.query(() => {
+    components: userProcedure.output(NativePortal.ComponentsOutput).query(() => {
       const states = portalComponentStates();
       return Object.fromEntries(Object.entries(states).map(([id, s]) => [id, s.on])) as Record<
         PortalComponentId,
@@ -246,7 +250,9 @@ export function createPortalRouter(deps: TrpcDeps) {
     }),
 
     preferences: tp.router({
-      get: userProcedure.query(({ ctx }) => getUserPreferences(ctx.session.userId)),
+      get: userProcedure
+        .output(NativePortal.PreferencesGetOutput)
+        .query(({ ctx }) => getUserPreferences(ctx.session.userId)),
 
       /**
        * Merged over what is stored, not written over it.
@@ -265,6 +271,7 @@ export function createPortalRouter(deps: TrpcDeps) {
         // what is stored and the *result* is validated, which keeps "absent means
         // unchanged" while still refusing a malformed value.
         .input(z.object({ preferences: z.record(z.string(), z.unknown()), optedIn: z.boolean() }))
+        .output(NativePortal.PreferencesSetOutput)
         .mutation(({ ctx, input }) => {
           requireComponent("tab.tastes");
           // A hidden section's keys are dropped rather than refused: the form
@@ -298,7 +305,7 @@ export function createPortalRouter(deps: TrpcDeps) {
      * job keeps current, and a portal that opens a Plex connection per visitor
      * is a portal that falls over when the server is busy.
      */
-    myCollections: userProcedure.query(({ ctx }) => {
+    myCollections: userProcedure.output(NativePortal.MyCollectionsOutput).query(({ ctx }) => {
       requireComponent("tab.collections");
       const rows = getCollectionsForUser(ctx.session.username);
       return rows.map((row) => ({
@@ -324,6 +331,7 @@ export function createPortalRouter(deps: TrpcDeps) {
      */
     notInterested: userProcedure
       .input(z.object({ title: z.string().trim().min(1).max(500) }))
+      .output(NativePortal.NotInterestedOutput)
       .mutation(({ ctx, input }) => {
         requireComponent("action.notForMe");
         const current = getUserPreferences(ctx.session.userId);
@@ -359,7 +367,7 @@ export function createPortalRouter(deps: TrpcDeps) {
      * already spared would be asking people to worry about nothing, and a
      * portal that cries wolf is one nobody reads the week it matters.
      */
-    leavingSoon: userProcedure.query(({ ctx }) => {
+    leavingSoon: userProcedure.output(NativePortal.LeavingSoonOutput).query(({ ctx }) => {
       requireComponent("tab.leaving");
       const voted = keepVotesForUser(ctx.session.userId);
       // Scoped to the libraries shared with this user — see `sharedSectionKeys`.
@@ -377,6 +385,7 @@ export function createPortalRouter(deps: TrpcDeps) {
      */
     voteKeep: userProcedure
       .input(z.object({ ratingKey: z.string().min(1), keep: z.boolean() }))
+      .output(NativePortal.VoteKeepOutput)
       .mutation(({ ctx, input }) => {
         // Only for something a rule has actually queued. The vote shows up on the
         // admin's queue with the voter's name against it, so an unchecked rating
@@ -403,10 +412,13 @@ export function createPortalRouter(deps: TrpcDeps) {
      * never let one shared user read another's anything, and a watch history is
      * the last place to start.
      */
-    myWatchSummary: userProcedure.query(({ ctx }) => userTotals(ctx.session.userId)),
+    myWatchSummary: userProcedure
+      .output(NativePortal.MyWatchSummaryOutput)
+      .query(({ ctx }) => userTotals(ctx.session.userId)),
 
     searchTitles: userProcedure
       .input(z.object({ q: z.string() }))
+      .output(NativePortal.SearchTitlesOutput)
       .query(({ ctx, input }) => searchMediaTitles(input.q, 15, sharedSectionKeys(ctx.session.userId))),
 
     /** Movie match — see `portal-match.router.ts`, which is where its guests are let in. */
@@ -419,7 +431,7 @@ export function createPortalRouter(deps: TrpcDeps) {
       getPlexClient,
     }),
 
-    availableGenres: userProcedure.query(async () => {
+    availableGenres: userProcedure.output(NativePortal.AvailableGenresOutput).query(async () => {
       const client = getPlexClient();
       let sections = await client.getSections();
       const configured = getConfig("global_plex_libraries");

@@ -5,6 +5,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { t, procedure } from "./_base.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "stats">) {
   const {
@@ -36,7 +37,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
   const { getLastFailedRun } = stats;
 
   const jobsRouter = t.router({
-    list: procedure.query(() => getJobs()),
+    list: procedure.output(NativeAdmin.JobsListOutput).query(() => getJobs()),
 
     /**
      * Scheduled starts currently held back — see `deferral.ts`. Read by the
@@ -104,6 +105,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
 
     runs: procedure
       .input(z.object({ jobId: z.string(), limit: z.number().int().min(1).max(500).optional() }))
+      .output(NativeAdmin.JobsRunsOutput)
       .query(({ input }) => getJobRuns(input.jobId, input.limit)),
 
     /**
@@ -111,11 +113,14 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
      * second while a run is live, and shipping the whole log each time was the
      * single most expensive thing this API did.
      */
-    run: procedure.input(z.object({ runId: z.string() })).query(({ input }) => {
-      const run = getJobRun(input.runId);
-      if (!run) throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.runId} not found` });
-      return run;
-    }),
+    run: procedure
+      .input(z.object({ runId: z.string() }))
+      .output(NativeAdmin.JobsRunOutput)
+      .query(({ input }) => {
+        const run = getJobRun(input.runId);
+        if (!run) throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.runId} not found` });
+        return run;
+      }),
 
     /**
      * Incremental log fetch. Pass back the previous `nextOffset` to get only
@@ -124,6 +129,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
      */
     runLog: procedure
       .input(z.object({ runId: z.string(), offset: z.number().int().min(0).default(0) }))
+      .output(NativeAdmin.JobsRunLogOutput)
       .query(({ input }) => {
         const slice = getJobRunLog(input.runId, input.offset);
         if (!slice) throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.runId} not found` });
@@ -131,16 +137,20 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
       }),
 
     /** Whole log in one shot, for the download affordance. */
-    fullLog: procedure.input(z.object({ runId: z.string() })).query(({ input }) => {
-      const text = getJobRunFullLog(input.runId);
-      if (text === null) throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.runId} not found` });
-      return { log: text };
-    }),
+    fullLog: procedure
+      .input(z.object({ runId: z.string() }))
+      .output(NativeAdmin.JobsFullLogOutput)
+      .query(({ input }) => {
+        const text = getJobRunFullLog(input.runId);
+        if (text === null) throw new TRPCError({ code: "NOT_FOUND", message: `Run ${input.runId} not found` });
+        return { log: text };
+      }),
 
-    activeRuns: procedure.query(() => getActiveRuns()),
+    activeRuns: procedure.output(NativeAdmin.JobsActiveRunsOutput).query(() => getActiveRuns()),
 
     recentRuns: procedure
       .input(z.object({ limit: z.number().int().min(1).max(100).optional() }).optional())
+      .output(NativeAdmin.JobsRecentRunsOutput)
       .query(({ input }) => getRecentRuns(input?.limit)),
 
     /**
@@ -149,7 +159,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
      * `recentRuns` can't answer this: a failure drops off the end of that
      * window as soon as enough jobs have run since.
      */
-    lastFailure: procedure.query(() => getLastFailedRun()),
+    lastFailure: procedure.output(NativeAdmin.JobsLastFailureOutput).query(() => getLastFailedRun()),
 
     /** Choices for the settings form's user and rule pickers. */
     fieldOptions: procedure.query(() => fieldOptions()),
@@ -237,6 +247,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
 
     start: procedure
       .input(z.object({ jobId: z.string(), variant: z.string().optional() }))
+      .output(NativeAdmin.JobsStartOutput)
       .mutation(async ({ input }) => {
         const result = await startJob(input.jobId, { variant: input.variant });
         if (!result.ok) {
@@ -260,13 +271,16 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
         return { runId: result.runId };
       }),
 
-    cancel: procedure.input(z.object({ runId: z.string() })).mutation(({ input }) => {
-      const ok = cancelRun(input.runId);
-      if (!ok) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `Run ${input.runId} is not running` });
-      }
-      return { ok: true };
-    }),
+    cancel: procedure
+      .input(z.object({ runId: z.string() }))
+      .output(NativeAdmin.JobsCancelOutput)
+      .mutation(({ input }) => {
+        const ok = cancelRun(input.runId);
+        if (!ok) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Run ${input.runId} is not running` });
+        }
+        return { ok: true };
+      }),
 
     bywCollections: procedure.query(() => getBywCollectionsGroupedByUser()),
     wtylCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("WeThinkYoudLike")),

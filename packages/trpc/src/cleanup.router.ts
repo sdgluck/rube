@@ -3,6 +3,7 @@ import { z } from "zod";
 import { DAY_MS } from "@tinkerbell/core";
 
 import { t, procedure } from "./_base.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
   const { cleanup } = deps;
@@ -29,6 +30,7 @@ export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
     /** Everything queued across every rule, closest to being actioned first. */
     queue: procedure
       .input(z.object({ includeActioned: z.boolean().default(false) }).optional())
+      .output(NativeAdmin.CleanupQueueOutput)
       .query(({ input }) => queuedCandidates({ includeActioned: input?.includeActioned ?? false })),
 
     /**
@@ -44,7 +46,7 @@ export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
      * One query for the whole table rather than one per row — a cleanup rule's
      * status cell needs this on every render of the list.
      */
-    counts: procedure.query(() => Object.fromEntries(countsByRule())),
+    counts: procedure.output(NativeAdmin.CleanupCountsOutput).query(() => Object.fromEntries(countsByRule())),
 
     /**
      * Say yes to one item, for a rule that holds destructive actions until
@@ -56,6 +58,7 @@ export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
      */
     approve: procedure
       .input(z.object({ ruleId: z.string(), ratingKey: z.string(), approved: z.boolean() }))
+      .output(NativeAdmin.CleanupApproveOutput)
       .mutation(({ input }) => {
         setCandidateApproval(input.ruleId, input.ratingKey, input.approved);
         return { ok: true as const };
@@ -67,7 +70,7 @@ export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
      * Separate from a hold, which always expires by design. This is the answer
      * to "stop asking me about this film", and to "nothing in Favourites, ever".
      */
-    protections: procedure.query(() => listProtections()),
+    protections: procedure.output(NativeAdmin.CleanupProtectionsOutput).query(() => listProtections()),
 
     protect: procedure
       .input(
@@ -78,15 +81,19 @@ export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
           note: z.string().default(""),
         }),
       )
+      .output(NativeAdmin.CleanupProtectOutput)
       .mutation(({ input }) => {
         addProtection(input.kind, input.value, input.label, input.note);
         return { ok: true };
       }),
 
-    unprotect: procedure.input(z.object({ id: z.number().int() })).mutation(({ input }) => {
-      removeProtection(input.id);
-      return { ok: true };
-    }),
+    unprotect: procedure
+      .input(z.object({ id: z.number().int() }))
+      .output(NativeAdmin.CleanupUnprotectOutput)
+      .mutation(({ input }) => {
+        removeProtection(input.id);
+        return { ok: true };
+      }),
 
     /** One rule's queue and audit trail — the Rules page drill-down. */
     forRule: procedure.input(z.object({ ruleId: z.string() })).query(({ input }) => listCandidates(input.ruleId)),
@@ -107,6 +114,7 @@ export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
           days: z.number().int().positive().nullable().default(90),
         }),
       )
+      .output(NativeAdmin.CleanupHoldOutput)
       .mutation(({ input }) => {
         holdCandidate(input.ruleId, input.ratingKey, input.days == null ? null : Date.now() + input.days * DAY_MS);
         return { ok: true };
@@ -133,6 +141,7 @@ export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
           days: z.number().int().positive().nullable().default(90),
         }),
       )
+      .output(NativeAdmin.CleanupHoldManyOutput)
       .mutation(({ input }) => {
         const until = input.days == null ? null : Date.now() + input.days * DAY_MS;
         const previous: Array<{ ruleId: string; ratingKey: string; heldUntil: number | null }> = [];
@@ -157,6 +166,7 @@ export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
             .max(500),
         }),
       )
+      .output(NativeAdmin.CleanupRestoreHoldsOutput)
       .mutation(({ input }) => {
         for (const item of input.items) holdCandidate(item.ruleId, item.ratingKey, item.heldUntil);
         return { ok: true as const, count: input.items.length };

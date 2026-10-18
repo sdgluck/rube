@@ -5,6 +5,7 @@ import { PROBLEM_KINDS } from "@tinkerbell/contracts";
 import { ProblemFixError } from "@tinkerbell/domain.problems";
 
 import { t, procedure } from "./_base.ts";
+import { NativeAdmin } from "@tinkerbell/contracts/native-api";
 
 const target = z.object({ kind: z.enum(PROBLEM_KINDS), subject: z.string().min(1) });
 
@@ -29,13 +30,17 @@ export function createProblemsRouter(deps: Pick<TrpcDeps, "problems" | "jobs">) 
 
   return t.router({
     /** Every problem, dismissed ones included and marked, plus when shows were last compared. */
-    list: procedure.query(() => problems.list()),
+    list: procedure.output(NativeAdmin.ProblemsListOutput).query(() => problems.list()),
 
-    fix: procedure.input(target).mutation(({ input }) => mapFixErrors(() => problems.fix(input.kind, input.subject))),
+    fix: procedure
+      .input(target)
+      .output(NativeAdmin.ProblemsFixOutput)
+      .mutation(({ input }) => mapFixErrors(() => problems.fix(input.kind, input.subject))),
 
     /** Every open fixable problem of a kind, or only `subjects` — a selection on the page. */
     fixAll: procedure
       .input(z.object({ kind: z.enum(PROBLEM_KINDS), subjects: z.array(z.string().min(1)).max(2000).optional() }))
+      .output(NativeAdmin.ProblemsFixAllOutput)
       .mutation(({ input }) => mapFixErrors(() => problems.fixAll(input.kind, input.subjects))),
 
     dismiss: procedure.input(target).mutation(({ input }) => {
@@ -62,13 +67,16 @@ export function createProblemsRouter(deps: Pick<TrpcDeps, "problems" | "jobs">) 
      * Run the scan now. With a subject, only that show is re-fetched — the
      * rest keep their signatures, so the run is seconds rather than minutes.
      */
-    rescan: procedure.input(z.object({ subject: z.string().optional() }).optional()).mutation(async ({ input }) => {
-      if (input?.subject) problems.recheck(input.subject);
-      const result = await startJob("scan-problems");
-      if (!result.ok && result.reason !== "already-running") {
-        throw new TRPCError({ code: "PRECONDITION_FAILED", message: `Couldn't start the scan (${result.reason}).` });
-      }
-      return result;
-    }),
+    rescan: procedure
+      .input(z.object({ subject: z.string().optional() }).optional())
+      .output(NativeAdmin.ProblemsRescanOutput)
+      .mutation(async ({ input }) => {
+        if (input?.subject) problems.recheck(input.subject);
+        const result = await startJob("scan-problems");
+        if (!result.ok && result.reason !== "already-running") {
+          throw new TRPCError({ code: "PRECONDITION_FAILED", message: `Couldn't start the scan (${result.reason}).` });
+        }
+        return result;
+      }),
   });
 }
