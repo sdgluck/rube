@@ -167,13 +167,13 @@ export default function Events() {
                         : event.message;
                     return (
                       <tr key={event.id}>
-                        <td data-cell="meta" className={styles.timestamp}>
+                        <td className={styles.timestamp}>
                           <RelativeTime timestamp={event.timestamp} />
                         </td>
-                        <td data-cell="pill">
+                        <td>
                           <span className={`${sharedStyles.statusPill} ${badge.className}`}>{badge.label}</span>
                         </td>
-                        <td data-cell="title">
+                        <td>
                           {/* Only the message is the link — the repeat count and
                               the average duration describe the roll-up, not the
                               one occurrence you'd be opening. */}

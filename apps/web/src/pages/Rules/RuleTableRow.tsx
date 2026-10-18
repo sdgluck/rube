@@ -267,7 +267,7 @@ export default function RuleTableRow({
             : undefined
         }
       >
-        <td className={styles.checkboxCell} data-cell="hide">
+        <td className={styles.checkboxCell}>
           <input
             type="checkbox"
             aria-label={`Select ${rule.name}`}
@@ -278,7 +278,7 @@ export default function RuleTableRow({
             }}
           />
         </td>
-        <td className={styles.orderCell} data-cell="hide">
+        <td className={styles.orderCell}>
           {canReorder ? (
             <span className={styles.dragHandle} aria-hidden="true" title="Drag to change when this rule runs">
               ⠿
@@ -289,7 +289,7 @@ export default function RuleTableRow({
             </span>
           )}
         </td>
-        <td data-cell="title">
+        <td className={styles.titleCell}>
           {rule.name}
           {rule.registryPackSlug && (
             <span className={styles.registryBadge} title={`Imported from the "${rule.registryPackSlug}" registry pack`}>
@@ -298,13 +298,13 @@ export default function RuleTableRow({
           )}
           <ScheduleBadges config={rule.config} />
         </td>
-        <td data-cell="pill">
+        <td>
           <span className={`${styles.typeLabel} ${typeBadge}`}>{TYPE_LABELS[rule.type] || rule.type}</span>
         </td>
-        <td className={styles.toggleCell} data-cell="hide">
+        <td className={styles.toggleCell}>
           <ToggleSwitch checked={!!rule.enabled} onChange={onToggleEnabled} size="sm" />
         </td>
-        <td className={styles.statusCell} data-cell="meta">
+        <td className={styles.statusCell}>
           <StatusCell
             rule={rule}
             isTesting={isTesting}
@@ -314,16 +314,16 @@ export default function RuleTableRow({
             isMetadata={isMetadata}
           />
         </td>
-        <td className={styles.runsCell} data-cell="hide">
+        <td className={styles.runsCell}>
           <Link to={runsHref} className={styles.runsLink} title={`Run history for ${rule.name}`}>
             {rule.runCount > 0 ? `${rule.runCount} run${rule.runCount === 1 ? "" : "s"}` : "No runs"}
             <ChevronRight size="1.4rem" aria-hidden />
           </Link>
         </td>
-        <td data-cell="hide">
+        <td>
           <span className={styles.configSummary}>{configSummary}</span>
         </td>
-        <td data-cell="hide">
+        <td>
           <RowActions
             label={`Actions for ${rule.name}`}
             actions={[

@@ -879,7 +879,7 @@ td.previewBlockCell {
     padding: 0 1rem;
   }
 
-  .tableBleedRight td[data-cell="title"] {
+  .tableBleedRight .titleCell {
     min-width: 16rem;
   }
 }

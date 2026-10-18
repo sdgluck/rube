@@ -216,23 +216,21 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
               <tbody>
                 {sortedProposed.map((p) => (
                   <tr key={p.key}>
-                    <td data-cell="meta">
+                    <td>
                       <input type="checkbox" checked={selected.has(p.key)} onChange={() => toggle(p.key)} />
                     </td>
-                    <td data-cell="title">
+                    <td>
                       <div>{p.ruleName}</div>
                       <div className={local.rowHint}>
                         e.g. {p.sampleNames.slice(0, 3).join(", ")}
                         {p.sampleNames.length > 3 ? ", …" : ""}
                       </div>
                     </td>
-                    <td data-cell="meta">
+                    <td>
                       <code>{p.ruleType}</code>
                     </td>
-                    <td data-cell="meta">{p.sectionTitle}</td>
-                    <td data-cell="meta" className={local.numCol}>
-                      {p.replacesCount}
-                    </td>
+                    <td>{p.sectionTitle}</td>
+                    <td className={local.numCol}>{p.replacesCount}</td>
                   </tr>
                 ))}
               </tbody>

@@ -245,10 +245,8 @@ export default function Items() {
                       />
                     </td>
                   )}
-                  <td data-cell="title">{item.title}</td>
-                  <td data-cell="meta" className={styles.itemYear}>
-                    {item.year || EMPTY}
-                  </td>
+                  <td>{item.title}</td>
+                  <td className={styles.itemYear}>{item.year || EMPTY}</td>
                 </tr>
               ))}
             </tbody>

@@ -343,7 +343,7 @@ function KindView({ kind }: { kind: Kind }) {
                           onChange={() => toggle(p.subject)}
                         />
                       </td>
-                      <td data-cell="title">
+                      <td>
                         {p.link ? (
                           <Link className={shared.cellLink} to={p.link}>
                             {p.title}
@@ -352,7 +352,7 @@ function KindView({ kind }: { kind: Kind }) {
                           p.title
                         )}
                       </td>
-                      <td data-cell="meta">
+                      <td>
                         <span className={shared.cellMuted}>{p.detail}</span>
                         {p.fixPending && (
                           <span className={styles.pending}>
@@ -361,7 +361,7 @@ function KindView({ kind }: { kind: Kind }) {
                         )}
                         {p.kind === "episodeOrdering" && <OrderingEvidence problem={p} />}
                       </td>
-                      <td data-cell="hide" className={styles.actionsCell}>
+                      <td className={styles.actionsCell}>
                         <RowActions label={`Actions for ${p.title}`} actions={rowActions} />
                       </td>
                     </tr>

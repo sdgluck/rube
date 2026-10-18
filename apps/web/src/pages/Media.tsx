@@ -129,38 +129,34 @@ const AUDIO_CHANNELS_LABELS: Record<number, string> = {
 };
 
 const ALL_COLUMNS: TableColumn<MediaItem, SortKey>[] = [
-  { id: "title", label: "Title", render: (item) => item.title, mobile: "title" },
-  { id: "section", label: "Section", render: (item) => item.sectionTitle, mobile: "meta" },
-  { id: "type", label: "Type", render: (item) => item.type, mobile: "meta" },
-  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : EMPTY), mono: true, mobile: "meta" },
+  { id: "title", label: "Title", render: (item) => item.title },
+  { id: "section", label: "Section", render: (item) => item.sectionTitle },
+  { id: "type", label: "Type", render: (item) => item.type },
+  { id: "year", label: "Year", render: (item) => (item.year ? String(item.year) : EMPTY), mono: true },
   {
     id: "added",
     label: "Added",
     // Plex's addedAt is in seconds — see the schema note on the column.
     render: (item) => (item.addedAt ? <RelativeTime timestamp={item.addedAt} seconds /> : EMPTY),
     mono: true,
-    mobile: "meta",
   },
   {
     id: "resolution",
     label: "Resolution",
     render: (item) => item.videoResolution?.toUpperCase() || EMPTY,
     mono: true,
-    mobile: "hide",
   },
   {
     id: "videoCodec",
     label: "Video Codec",
     render: (item) => item.videoCodec?.toUpperCase() || EMPTY,
     mono: true,
-    mobile: "hide",
   },
   {
     id: "audioCodec",
     label: "Audio Codec",
     render: (item) => item.audioCodec?.toUpperCase() || EMPTY,
     mono: true,
-    mobile: "hide",
   },
   {
     id: "audioChannels",
@@ -168,14 +164,12 @@ const ALL_COLUMNS: TableColumn<MediaItem, SortKey>[] = [
     render: (item) =>
       item.audioChannels ? AUDIO_CHANNELS_LABELS[item.audioChannels] || String(item.audioChannels) : EMPTY,
     mono: true,
-    mobile: "hide",
   },
   {
     id: "container",
     label: "Container",
     render: (item) => item.container?.toUpperCase() || EMPTY,
     mono: true,
-    mobile: "hide",
   },
   {
     id: "size",
@@ -185,7 +179,6 @@ const ALL_COLUMNS: TableColumn<MediaItem, SortKey>[] = [
     // 0 B would have read as "empty".
     render: (item) => (item.fileSize != null ? formatFileSize(item.fileSize) : EMPTY),
     mono: true,
-    mobile: "hide",
   },
 ];
 
@@ -271,7 +264,6 @@ function ChildrenRows({
                 visibleColumns.map((col, colIdx) => (
                   <td
                     key={col.id}
-                    data-cell={col.mobile ?? "meta"}
                     className={colIdx === 0 ? mediaStyles.childRowDepth2 : col.mono ? styles.cellMuted : undefined}
                   >
                     {col.render(childToMediaItem(child))}
@@ -733,7 +725,6 @@ export default function Media() {
                       {visibleColumns.map((col, colIdx) => (
                         <td
                           key={col.id}
-                          data-cell={col.mobile ?? "meta"}
                           className={
                             col.id === "year"
                               ? `${styles.cellNum} ${styles.itemYear}`

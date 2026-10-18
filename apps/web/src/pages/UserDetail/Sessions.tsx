@@ -48,19 +48,19 @@ export default function Sessions() {
           <tbody>
             {sessions.map((session) => (
               <tr key={session.sessionKey ?? session.sessionId}>
-                <td data-cell="title">
+                <td>
                   {session.grandparentTitle ? `${session.grandparentTitle} — ${session.title}` : session.title}
                   <span className={local.dim}> · {session.state}</span>
                 </td>
-                <td data-cell="meta" className={local.dim}>
+                <td className={local.dim}>
                   {session.player}
                   {session.platform ? ` · ${session.platform}` : ""}
                 </td>
-                <td data-cell="meta" className={local.dim}>
+                <td className={local.dim}>
                   {session.decision}
                   {session.videoResolution ? ` · ${session.videoResolution}` : ""}
                 </td>
-                <td data-cell="meta">
+                <td>
                   {/* Plex identifies a terminable stream by `Session.id`, which
                       older servers omit. Without it there is nothing to send,
                       so the button says why rather than failing on click. */}

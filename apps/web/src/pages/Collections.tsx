@@ -272,7 +272,6 @@ export default function Collections() {
       {
         id: "poster",
         label: "Poster",
-        mobile: "hide",
         // The checker box is always drawn and the image fades in over it, so a
         // collection with no art and one whose thumb Plex no longer serves
         // both read as "no poster" rather than as a broken image.
@@ -289,27 +288,24 @@ export default function Collections() {
           </div>
         ),
       },
-      { id: "title", label: "Title", sortKey: "title", mobile: "title", render: (col) => col.title },
+      { id: "title", label: "Title", sortKey: "title", render: (col) => col.title },
       {
         id: "section",
         label: "Section",
         sortKey: "sectionTitle",
-        mobile: "meta",
         render: (col) => col.sectionTitle,
       },
       {
         id: "items",
         label: "Items",
         sortKey: "childCount",
-        mobile: "meta",
         mono: true,
         render: (col) => col.childCount.toLocaleString(),
       },
-      { id: "smart", label: "Smart", sortKey: "smart", mobile: "hide", render: (col) => (col.smart ? "Yes" : "No") },
+      { id: "smart", label: "Smart", sortKey: "smart", render: (col) => (col.smart ? "Yes" : "No") },
       {
         id: "pinned",
         label: "Pinned",
-        mobile: "hide",
         // Absence is left blank rather than marked "No": on a library where
         // three collections of five hundred are pinned, a column of "No" is
         // four hundred and ninety-seven pieces of noise.
@@ -326,7 +322,6 @@ export default function Collections() {
         id: "labels",
         label: "Labels",
         sortKey: "labels",
-        mobile: "hide",
         render: (col) =>
           parseLabels(col.labels)
             .filter((l) => !l.startsWith("Rule:"))
@@ -342,7 +337,6 @@ export default function Collections() {
       {
         id: "rule",
         label: "Rule",
-        mobile: "hide",
         render: (col) => {
           const rid = findRuleId(parseLabels(col.labels));
           if (!rid) return <span className={styles.muted}>{EMPTY}</span>;
@@ -365,7 +359,6 @@ export default function Collections() {
       {
         id: "summary",
         label: "Summary",
-        mobile: "hide",
         render: (col) =>
           col.summary ? (
             <span className={collectionStyles.summaryCell} title={col.summary}>
@@ -378,7 +371,6 @@ export default function Collections() {
       {
         id: "artwork",
         label: "Artwork",
-        mobile: "hide",
         render: (col) => {
           const flags = artworkFlags[col.plexRatingKey];
           if (flags?.posterLocked) return <span className={styles.metaChip}>Set by hand</span>;
@@ -390,7 +382,6 @@ export default function Collections() {
         id: "added",
         label: "Added",
         sortKey: "addedAt",
-        mobile: "meta",
         mono: true,
         render: (col) => (col.addedAt ? <RelativeTime timestamp={col.addedAt} seconds /> : EMPTY),
       },
@@ -400,7 +391,6 @@ export default function Collections() {
         // can actually back — a week-old install says 7d, not 90d.
         label: playsWindowDays != null ? `Plays, ${playsWindowDays}d` : "Plays",
         sortKey: "plays",
-        mobile: "hide",
         mono: true,
         render: (col) =>
           col.performance ? (
@@ -415,7 +405,6 @@ export default function Collections() {
         id: "lastPlayed",
         label: "Last played",
         sortKey: "lastPlayedAt",
-        mobile: "hide",
         mono: true,
         render: (col) =>
           col.performance?.lastPlayedAt ? (
@@ -427,11 +416,10 @@ export default function Collections() {
       {
         id: "synced",
         label: "Last synced",
-        mobile: "hide",
         mono: true,
         render: (col) => <RelativeTime timestamp={col.syncedAt} />,
       },
-      { id: "ratingKey", label: "Rating key", mobile: "hide", mono: true, render: (col) => col.plexRatingKey },
+      { id: "ratingKey", label: "Rating key", mono: true, render: (col) => col.plexRatingKey },
     ],
     [pinnedSet, pinnedQuery.isLoading, artworkFlags, ruleNameById, playsWindowDays],
   );
@@ -758,7 +746,6 @@ export default function Collections() {
                       >
                         <td
                           className={styles.checkboxCell}
-                          data-cell="hide"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleCheckboxClick(i, e);
@@ -772,15 +759,11 @@ export default function Collections() {
                           />
                         </td>
                         {shownColumns.map((def) => (
-                          <td
-                            key={def.id}
-                            data-cell={def.mobile ?? "hide"}
-                            className={def.mono ? styles.cellMuted : undefined}
-                          >
+                          <td key={def.id} className={def.mono ? styles.cellMuted : undefined}>
                             {def.render(col)}
                           </td>
                         ))}
-                        <td data-cell="hide">
+                        <td>
                           <RowActions
                             label={`Actions for ${col.title}`}
                             actions={[

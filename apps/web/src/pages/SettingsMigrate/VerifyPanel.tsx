@@ -111,7 +111,7 @@ export default function VerifyPanel() {
                 if ("error" in v) {
                   return (
                     <tr key={entry.ruleId}>
-                      <td data-cell="title">{entry.ruleName}</td>
+                      <td>{entry.ruleName}</td>
                       <td colSpan={4} className={local.errorHint}>
                         {v.error}
                       </td>
@@ -122,7 +122,7 @@ export default function VerifyPanel() {
                 const status = share >= GOOD ? "ok" : share >= POOR ? "warn" : "bad";
                 return (
                   <tr key={entry.ruleId}>
-                    <td data-cell="title">
+                    <td>
                       {v.ruleName}
                       {v.onlyInTinkerbell && v.onlyInTinkerbell.length > 0 && (
                         <div className={local.rowHint}>
@@ -131,16 +131,10 @@ export default function VerifyPanel() {
                         </div>
                       )}
                     </td>
-                    <td data-cell="meta" className={local.numCol}>
-                      {v.kometa}
-                    </td>
-                    <td data-cell="meta" className={local.numCol}>
-                      {v.tinkerbell}
-                    </td>
-                    <td data-cell="meta" className={local.numCol}>
-                      {v.common}
-                    </td>
-                    <td data-cell="meta">
+                    <td className={local.numCol}>{v.kometa}</td>
+                    <td className={local.numCol}>{v.tinkerbell}</td>
+                    <td className={local.numCol}>{v.common}</td>
+                    <td>
                       <span className={local.verdictChip} data-status={status}>
                         {Math.round(share * 100)}%
                       </span>

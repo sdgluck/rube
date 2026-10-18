@@ -341,21 +341,21 @@ export default function StressTest() {
                   const isFailed = isLast && !!step.reason;
                   return (
                     <tr key={step.step} className={isFailed ? styles.stepFailed : ""}>
-                      <td data-cell="title">{step.step}</td>
-                      <td data-cell="meta">
+                      <td>{step.step}</td>
+                      <td>
                         {step.sessions}
                         {step.sessionsSeen != null && step.sessionsSeen !== step.sessions
                           ? ` (${step.sessionsSeen} seen)`
                           : ""}
                       </td>
-                      <td data-cell="meta">
+                      <td>
                         <SpeedCell speed={step.avgTranscodeSpeed} />
                       </td>
                       {/* The total across sessions where it was recorded, not
                           the per-session mean the column used to show — "what
                           is my server pushing" is the only question this is
                           asked, and the mean cannot answer it. */}
-                      <td data-cell="meta">
+                      <td>
                         {step.totalKbps != null ? (
                           formatBandwidth(step.totalKbps)
                         ) : step.avgBandwidth > 0 ? (
@@ -366,10 +366,8 @@ export default function StressTest() {
                           EMPTY
                         )}
                       </td>
-                      <td data-cell="meta">{step.errors + (step.streamErrors ?? 0)}</td>
-                      <td data-cell="meta" className={styles.reason}>
-                        {step.reason || EMPTY}
-                      </td>
+                      <td>{step.errors + (step.streamErrors ?? 0)}</td>
+                      <td className={styles.reason}>{step.reason || EMPTY}</td>
                     </tr>
                   );
                 })}
@@ -432,15 +430,15 @@ export default function StressTest() {
                       className={`${styles.clickableRow} ${selectedRunId === run.id ? styles.selectedRow : ""}`}
                       onClick={() => setSelectedRunId(run.id === selectedRunId ? null : run.id)}
                     >
-                      <td data-cell="title">{formatTime(run.startedAt)}</td>
-                      <td data-cell="pill">
+                      <td>{formatTime(run.startedAt)}</td>
+                      <td>
                         <StatusBadge status={run.status} />
                       </td>
-                      <td data-cell="pill">
+                      <td>
                         <span className={styles.badge}>{run.config.mode}</span>
                       </td>
-                      <td data-cell="meta">{run.maxSessions ?? "?"}</td>
-                      <td data-cell="meta" className={styles.duration}>
+                      <td>{run.maxSessions ?? "?"}</td>
+                      <td className={styles.duration}>
                         {run.finishedAt ? formatElapsed(run.startedAt, run.finishedAt) : "…"}
                       </td>
                     </tr>

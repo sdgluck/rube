@@ -268,7 +268,7 @@ export default function Users() {
                   <tbody>
                     {users.map((user) => (
                       <tr key={user.userId}>
-                        <td data-cell="title">
+                        <td>
                           <Link to={`/users/${user.userId}`} className={sharedStyles.cellLink}>
                             {user.username}
                           </Link>
@@ -282,7 +282,7 @@ export default function Users() {
                           )}
                           {!user.accepted && <span className={styles.badge}>pending</span>}
                         </td>
-                        <td data-cell="meta">
+                        <td>
                           <EditableName
                             userId={user.userId}
                             value={user.name}
@@ -303,7 +303,7 @@ export default function Users() {
                             onSettled={() => utils.users.list.invalidate()}
                           />
                         </td>
-                        <td data-cell="pill">
+                        <td>
                           <span
                             className={`${sharedStyles.statusPill} ${user.optedIn ? styles.pillOptedIn : styles.pillOptedOut}`}
                           >
@@ -311,14 +311,14 @@ export default function Users() {
                             {user.optedIn ? "opted in" : "opted out"}
                           </span>
                         </td>
-                        <td data-cell="meta" className={sharedStyles.cellNum}>
+                        <td className={sharedStyles.cellNum}>
                           {!user.optedIn && user.collectionCount === 0 ? (
                             <span className={styles.hint}>—</span>
                           ) : (
                             user.collectionCount
                           )}
                         </td>
-                        <td data-cell="meta" className={sharedStyles.cellNum}>
+                        <td className={sharedStyles.cellNum}>
                           {(() => {
                             const totals = playbackByUser.get(user.userId);
                             if (!totals || totals.plays === 0) return <span className={styles.hint}>—</span>;
@@ -332,7 +332,7 @@ export default function Users() {
                             );
                           })()}
                         </td>
-                        <td data-cell="meta">
+                        <td>
                           {user.lastWatchedTitle ? (
                             <span>
                               {/* Rows synced before the rating key was recorded have a title but
@@ -355,7 +355,7 @@ export default function Users() {
                             <span className={styles.hint}>—</span>
                           )}
                         </td>
-                        <td data-cell="meta">
+                        <td>
                           {/* Nothing here for the owner: Plex refuses every one
                               of these against the account that owns the server. */}
                           {!user.isOwner && (

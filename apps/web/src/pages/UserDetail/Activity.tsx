@@ -40,7 +40,7 @@ export default function Activity() {
         <tbody>
           {items.map((item, i) => (
             <tr key={`${item.ratingKey}-${item.viewedAt ?? i}`}>
-              <td data-cell="title">
+              <td>
                 {item.ratingKey ? (
                   <Link to={`/media/${item.ratingKey}`} className={shared.cellLink}>
                     {item.grandparentTitle ? `${item.grandparentTitle} — ${item.title}` : item.title}
@@ -49,10 +49,8 @@ export default function Activity() {
                   (item.grandparentTitle ?? item.title)
                 )}
               </td>
-              <td data-cell="meta" className={local.dim}>
-                {item.type}
-              </td>
-              <td data-cell="meta">
+              <td className={local.dim}>{item.type}</td>
+              <td>
                 {item.viewedAt ? (
                   <RelativeTime timestamp={item.viewedAt} seconds />
                 ) : (

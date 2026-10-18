@@ -142,21 +142,21 @@ export default function ReviewStep({ proposed, unmappable, selected, onToggle, o
                 <tbody>
                   {items.map((p) => (
                     <tr key={p.key}>
-                      <td data-cell="meta">
+                      <td>
                         <input type="checkbox" checked={selected.has(p.key)} onChange={() => onToggle(p.key)} />
                       </td>
-                      <td data-cell="title">
+                      <td>
                         <div>{p.ruleName}</div>
                         <div className={local.rowHint}>
                           {p.origin.builders?.length ? p.origin.builders.join(", ") : p.origin.definition}
                           {p.origin.line ? ` · line ${p.origin.line}` : ""}
                         </div>
                       </td>
-                      <td data-cell="meta">
+                      <td>
                         <code>{p.ruleType}</code>
                       </td>
-                      <td data-cell="meta">{p.sectionTitle}</td>
-                      <td data-cell="meta">
+                      <td>{p.sectionTitle}</td>
+                      <td>
                         <span className={local.confidenceChip} data-confidence={p.confidence}>
                           {CONFIDENCE_LABEL[p.confidence]}
                         </span>

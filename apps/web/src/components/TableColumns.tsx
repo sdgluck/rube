@@ -18,12 +18,6 @@ export interface TableColumn<T, Id extends string = string> {
   render: (row: T) => ReactNode;
   /** Machine-produced values are set in mono, like everywhere else in the app. */
   mono?: boolean;
-  /**
-   * Role this cell takes when the table becomes cards on mobile. Columns are
-   * user-configurable, so the role travels with the column rather than being
-   * inferred from its position in the row.
-   */
-  mobile?: "title" | "meta" | "hide";
   /** Sort key, when this column is sortable. Absent means it isn't. */
   sortKey?: string;
 }
