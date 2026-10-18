@@ -1523,6 +1523,9 @@ importers:
       '@tinkerbell/ports':
         specifier: workspace:*
         version: link:../../packages/ports
+      '@tinkerbell/radarr':
+        specifier: workspace:*
+        version: link:../../clients/radarr
       '@tinkerbell/sonarr':
         specifier: workspace:*
         version: link:../../clients/sonarr

@@ -57,13 +57,16 @@ export const PROBLEM_META: Record<ProblemKind, ProblemKindMeta> = {
   inArrNotInPlex: {
     label: "Downloaded, not in Plex",
     explanation:
-      "On disk, but no Plex item matches — often an unscanned library, or an item Plex matched to something else.",
+      "On disk, but no Plex item matches — often an unscanned library, or an item Plex matched to something else. Fixing asks Plex to scan the folder, at the path Plex knows it by.",
     severity: "fault",
+    fixLabel: "Scan in Plex",
   },
   failedImport: {
     label: "Failed to import",
-    explanation: "Grabbed more than a day ago, but never imported.",
+    explanation:
+      "Grabbed more than a day ago, but never imported, and nothing else has been imported for it since. Fixing marks the grab failed in Radarr or Sonarr, which blocklists the release and lets it search for another.",
     severity: "fault",
+    fixLabel: "Mark failed",
   },
   unknownSize: {
     label: "File sizes unknown",

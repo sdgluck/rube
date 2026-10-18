@@ -23,6 +23,7 @@
     "@tinkerbell/domain.rules": "workspace:*",
     "@tinkerbell/plex": "workspace:*",
     "@tinkerbell/ports": "workspace:*",
+    "@tinkerbell/radarr": "workspace:*",
     "@tinkerbell/sonarr": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },

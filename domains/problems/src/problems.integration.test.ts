@@ -9,9 +9,10 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
-import { arrSeries, mediaItems, ruleRuns, rules, showChecks } from "@tinkerbell/db";
+import { arrActivity, arrSeries, mediaItems, ruleRuns, rules, showChecks } from "@tinkerbell/db";
 import { createConfigStore, type ArrInstance } from "@tinkerbell/core";
 import { createPlexClient } from "@tinkerbell/plex";
+import { eq } from "drizzle-orm";
 import { createArrLibrary } from "@tinkerbell/domain.arr-library";
 import { startMockPlex, startMockSonarr, type MockArr, type MockPlex, type MockShow } from "@tinkerbell/test-support";
 import type { ChangeRecord } from "@tinkerbell/ports";
@@ -303,5 +304,84 @@ describe("problems", () => {
       .map((p) => `${p.kind}:${p.title}`)
       .sort();
     assert.deepEqual(kinds, ["ruleEmpty:Oscar Winners", "ruleFailing:Broken"]);
+  });
+
+  describe("*Arr fixes", () => {
+    /** Sonarr's root is `/series`; Plex mounts the same folders at `/tv`. */
+    function sonarrHolds(arrId: number, title: string, plexRatingKey: string | null) {
+      t.db
+        .insert(arrSeries)
+        .values({
+          instanceId: "sonarr",
+          arrId,
+          title,
+          path: `/series/${title}`,
+          rootFolderPath: "/series",
+          plexRatingKey,
+          episodeFileCount: 3,
+          syncedAt: 0,
+        })
+        .onConflictDoUpdate({
+          target: [arrSeries.instanceId, arrSeries.arrId],
+          set: { path: `/series/${title}`, rootFolderPath: "/series" },
+        })
+        .run();
+    }
+
+    it("scans an unmatched show at the path Plex knows its root folder by", async () => {
+      const problems = await setup();
+      sonarrHolds(7, "The Office (US)", "100");
+      sonarrHolds(8, "Parks and Recreation", null);
+
+      const found = problems.list().problems.find((p) => p.kind === "inArrNotInPlex");
+      assert.equal(found?.subject, "sonarr:8");
+      assert.equal(found?.fixable, true);
+
+      const fix = await problems.fix("inArrNotInPlex", "sonarr:8");
+      // Learnt from The Office: Sonarr's /series is Plex's /tv.
+      assert.deepEqual(plex.journal.pathScans, [{ sectionId: "2", path: "/tv/Parks and Recreation" }]);
+      assert.match(fix.message, /\/tv\/Parks and Recreation/);
+    });
+
+    it("offers no scan for a root folder nothing in Plex has come from", async () => {
+      const problems = await setup();
+      t.db.update(arrSeries).set({ plexRatingKey: null }).where(eq(arrSeries.arrId, 7)).run();
+      sonarrHolds(8, "Parks and Recreation", null);
+      const found = problems.list().problems.find((p) => p.subject === "sonarr:8");
+      assert.equal(found?.fixable, false);
+    });
+
+    it("marks every stale grab of an episode failed in Sonarr", async () => {
+      const problems = await setup();
+      const old = Date.now() - 10 * 24 * 60 * 60 * 1000;
+      for (const [historyId, downloadId] of [
+        [41, "a"],
+        [42, "b"],
+      ] as const) {
+        t.db
+          .insert(arrActivity)
+          .values({
+            instanceId: "sonarr",
+            service: "sonarr",
+            arrHistoryId: historyId,
+            eventType: "grabbed",
+            arrId: 1002,
+            parentArrId: 7,
+            sourceTitle: `The.Office.S04E03.${downloadId}`,
+            downloadId,
+            date: old + historyId,
+            syncedAt: old,
+          })
+          .run();
+      }
+
+      const found = problems.list().problems.find((p) => p.kind === "failedImport");
+      assert.equal(found?.title, "The Office (US)");
+      assert.equal(found?.fixable, true);
+
+      const fix = await problems.fix("failedImport", found!.subject);
+      assert.deepEqual(sonarr.journal.failedHistory, [42, 41]);
+      assert.match(fix.message, /Marked 2 grabs/);
+    });
   });
 });

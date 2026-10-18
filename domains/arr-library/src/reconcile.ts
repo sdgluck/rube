@@ -11,7 +11,7 @@
  * another thing that can be stale and wrong.
  */
 
-import { and, eq, gt, isNull, isNotNull, ne, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, isNotNull, ne, sql } from "drizzle-orm";
 import { arrActivity, arrMovies, arrSeries, mediaItems, type Db } from "@tinkerbell/db";
 import type { ProblemKind } from "@tinkerbell/contracts";
 
@@ -31,10 +31,33 @@ export interface ArrIssue {
   ratingKey?: string;
   title: string;
   detail: string;
+  /**
+   * For a failed import: the *Arr history ids of every grab of this item that
+   * never imported, newest first — what marking it failed acts on.
+   */
+  grabHistoryIds?: number[];
+  /** For an item on disk: its folder, and the *Arr root folder it sits under. */
+  path?: string;
+  rootFolderPath?: string;
 }
 
 /** A cap per issue kind, so one pathological library cannot produce 40k rows. */
 const PER_KIND_LIMIT = 200;
+
+/**
+ * History events that mean a download became a file. Sonarr and Radarr name
+ * their folder imports differently; a name one service never writes matches
+ * nothing and costs nothing.
+ */
+const IMPORT_EVENTS = [
+  "downloadFolderImported",
+  "episodeFileImported",
+  "seriesFolderImported",
+  "movieFolderImported",
+] as const;
+
+/** History events that mean the *Arr has already dealt with a download that didn't import. */
+const SETTLED_EVENTS = ["downloadFailed", "downloadIgnored"] as const;
 
 export function createArrReconcile(deps: { db: Db }) {
   const { db } = deps;
@@ -52,6 +75,7 @@ export function createArrReconcile(deps: { db: Db }) {
         arrId: arrMovies.arrId,
         title: arrMovies.title,
         path: arrMovies.path,
+        rootFolderPath: arrMovies.rootFolderPath,
       })
       .from(arrMovies)
       .where(and(isNull(arrMovies.deletedAt), eq(arrMovies.hasFile, true), isNull(arrMovies.plexRatingKey)))
@@ -64,6 +88,7 @@ export function createArrReconcile(deps: { db: Db }) {
         arrId: arrSeries.arrId,
         title: arrSeries.title,
         path: arrSeries.path,
+        rootFolderPath: arrSeries.rootFolderPath,
       })
       .from(arrSeries)
       .where(and(isNull(arrSeries.deletedAt), gt(arrSeries.episodeFileCount, 0), isNull(arrSeries.plexRatingKey)))
@@ -79,6 +104,8 @@ export function createArrReconcile(deps: { db: Db }) {
       service: r.service,
       arrId: r.arrId,
       title: r.title,
+      path: r.path,
+      rootFolderPath: r.rootFolderPath,
       detail: r.path ? `On disk at ${r.path}, but Plex has no matching item` : "On disk, but Plex has no matching item",
     }));
   }
@@ -156,22 +183,43 @@ export function createArrReconcile(deps: { db: Db }) {
   }
 
   /**
-   * A grab that never became an import.
+   * A grab that never became an import, one row per episode or film.
    *
    * `arr_activity` is append-only, so this is a self-join: a `grabbed` event
    * with no later import carrying the same `downloadId`. The download id is
    * what makes it exact rather than a guess about titles.
    *
+   * Matching on the download id alone over-reported badly. The usual reason a
+   * grab never imports is that it failed, and then the *Arr blocklisted it and
+   * a different release imported for the same episode — under a different
+   * download id. So a grab also stops counting once:
+   *
+   * - anything later imported for the same item (`arr_id` is the episode in
+   *   Sonarr's history, the film in Radarr's);
+   * - its download was marked failed or ignored — the *Arr already knows,
+   *   and has already acted on it;
+   * - the *Arr no longer has the film or series at all.
+   *
    * Grabs newer than the grace window are skipped — something grabbed ten
-   * minutes ago has not failed, it is downloading.
+   * minutes ago has not failed, it is downloading. Several stale grabs of one
+   * item are one problem, not several: the fix acts on all of them.
    */
   function failedImports(graceMs = 24 * 60 * 60 * 1000): ArrIssue[] {
     const cutoff = Date.now() - graceMs;
     const rows = db
       .select({
         instanceId: arrActivity.instanceId,
+        service: arrActivity.service,
+        historyId: arrActivity.arrHistoryId,
         arrId: arrActivity.arrId,
-        title: arrActivity.title,
+        title: sql<string>`coalesce(
+          (select m.title from ${arrMovies} m
+            where ${arrActivity.service} = 'radarr' and m.instance_id = ${arrActivity.instanceId} and m.arr_id = ${arrActivity.arrId}),
+          (select s.title from ${arrSeries} s
+            where ${arrActivity.service} = 'sonarr' and s.instance_id = ${arrActivity.instanceId} and s.arr_id = ${arrActivity.parentArrId}),
+          nullif(${arrActivity.title}, ''),
+          ${arrActivity.sourceTitle}
+        )`,
         sourceTitle: arrActivity.sourceTitle,
         downloadId: arrActivity.downloadId,
         date: arrActivity.date,
@@ -186,21 +234,63 @@ export function createArrReconcile(deps: { db: Db }) {
             select 1 from ${arrActivity} later
             where later.download_id = ${arrActivity.downloadId}
               and later.instance_id = ${arrActivity.instanceId}
-              and later.event_type in ('downloadFolderImported', 'episodeFileImported')
+              and later.event_type in (${sql.join(
+                [...IMPORT_EVENTS, ...SETTLED_EVENTS].map((e) => sql`${e}`),
+                sql`, `,
+              )})
               and later.date >= ${arrActivity.date}
+          )`,
+          sql`(${arrActivity.arrId} = 0 or not exists (
+            select 1 from ${arrActivity} later
+            where later.instance_id = ${arrActivity.instanceId}
+              and later.arr_id = ${arrActivity.arrId}
+              and later.event_type in (${sql.join(
+                IMPORT_EVENTS.map((e) => sql`${e}`),
+                sql`, `,
+              )})
+              and later.date >= ${arrActivity.date}
+          ))`,
+          // Still tracked. An id of 0 means the history row didn't say, and
+          // is kept rather than guessed away.
+          sql`(
+            (${arrActivity.service} = 'radarr' and (${arrActivity.arrId} = 0 or exists (
+              select 1 from ${arrMovies} m
+              where m.instance_id = ${arrActivity.instanceId} and m.arr_id = ${arrActivity.arrId} and m.deleted_at is null
+            )))
+            or (${arrActivity.service} = 'sonarr' and (${arrActivity.parentArrId} = 0 or exists (
+              select 1 from ${arrSeries} s
+              where s.instance_id = ${arrActivity.instanceId} and s.arr_id = ${arrActivity.parentArrId} and s.deleted_at is null
+            )))
           )`,
         ),
       )
-      .limit(PER_KIND_LIMIT)
+      .orderBy(desc(arrActivity.date))
       .all();
 
-    return rows.map((r) => ({
-      kind: "failedImport" as const,
-      instanceId: r.instanceId,
-      arrId: r.arrId,
-      title: r.title || r.sourceTitle,
-      detail: `Grabbed ${new Date(r.date).toISOString().slice(0, 10)} but never imported`,
-    }));
+    // Newest first, so the first grab seen for an item is the one the row describes.
+    const byItem = new Map<string, { row: (typeof rows)[number]; historyIds: number[] }>();
+    for (const row of rows) {
+      const itemKey = `${row.instanceId}\u0000${row.arrId || `d:${row.downloadId}`}`;
+      const entry = byItem.get(itemKey);
+      if (entry) entry.historyIds.push(row.historyId);
+      else byItem.set(itemKey, { row, historyIds: [row.historyId] });
+    }
+
+    return [...byItem.values()].slice(0, PER_KIND_LIMIT).map(({ row: r, historyIds }) => {
+      const when = new Date(r.date).toISOString().slice(0, 10);
+      const release = r.sourceTitle && r.sourceTitle !== r.title ? ` as ${r.sourceTitle}` : "";
+      const more =
+        historyIds.length > 1 ? ` (and ${historyIds.length - 1} earlier grab${historyIds.length > 2 ? "s" : ""})` : "";
+      return {
+        kind: "failedImport" as const,
+        instanceId: r.instanceId,
+        service: r.service === "radarr" ? ("radarr" as const) : ("sonarr" as const),
+        arrId: r.arrId,
+        title: r.title,
+        detail: `Grabbed ${when}${release}${more} but never imported`,
+        grabHistoryIds: historyIds,
+      };
+    });
   }
 
   return { inArrNotInPlex, inPlexNotInArr, duplicateAcrossInstances, failedImports };

@@ -25,7 +25,8 @@ import type { ChangeRecorder, EventBus } from "@tinkerbell/ports";
 import type { RuleConflict } from "@tinkerbell/domain.rules";
 import { isTvdbOrdering, type PlexClient } from "@tinkerbell/plex";
 import type { SonarrClient } from "@tinkerbell/sonarr";
-import { createProviders, type ArrReconcile, type Problem } from "./providers.ts";
+import { arrSubject, createProviders, type ArrReconcile, type Problem } from "./providers.ts";
+import { ArrFixError, createArrFixes, type MarkGrabFailed } from "./arr-fixes.ts";
 import { createShowScan } from "./scan.ts";
 
 export interface ProblemsDeps {
@@ -40,6 +41,8 @@ export interface ProblemsDeps {
   now: () => number;
   /** For tests; production builds a client per instance. */
   sonarrClient?: (instance: ArrInstance, signal?: AbortSignal) => SonarrClient;
+  /** For tests; production asks the instance's own client. */
+  markGrabFailed?: MarkGrabFailed;
 }
 
 export interface ProblemView extends Problem {
@@ -77,11 +80,19 @@ const key = (kind: string, subject: string) => `${kind}|${subject}`;
 
 export function createProblems(deps: ProblemsDeps) {
   const { db } = deps;
+  const arrFixes = createArrFixes({
+    db,
+    plex: () => deps.plex(),
+    arrInstances: deps.arrInstances,
+    now: deps.now,
+    markGrabFailed: deps.markGrabFailed,
+  });
   const providers = createProviders({
     db,
     reconcile: deps.reconcile,
     ruleConflicts: deps.ruleConflicts,
     arrInstances: deps.arrInstances,
+    arrFixes,
   });
   const scan = createShowScan({
     db,
@@ -150,9 +161,23 @@ export function createProblems(deps: ProblemsDeps) {
   async function fix(kind: ProblemKind, subject: string): Promise<FixResult> {
     const problem = find(kind, subject);
     if (!problem.fixable) throw new ProblemFixError(`"${problem.title}" has no automatic fix.`);
+    cachedCount = null;
+
+    if (kind === "inArrNotInPlex" || kind === "failedImport") {
+      const source = kind === "inArrNotInPlex" ? deps.reconcile.inArrNotInPlex() : deps.reconcile.failedImports();
+      const issue = source.find((i) => arrSubject(i) === subject);
+      if (!issue) throw new ProblemFixError("That problem is no longer reported.");
+      try {
+        const message = kind === "inArrNotInPlex" ? await arrFixes.scanInPlex(issue) : await arrFixes.markFailed(issue);
+        return { message };
+      } catch (err) {
+        if (err instanceof ArrFixError) throw new ProblemFixError(err.message);
+        throw err;
+      }
+    }
+
     const ratingKey = ratingKeyOf(subject);
     const plex = deps.plex();
-    cachedCount = null;
 
     switch (kind) {
       case "episodeOrdering": {

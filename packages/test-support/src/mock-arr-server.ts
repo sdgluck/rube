@@ -85,6 +85,8 @@ export interface ArrJournal {
   grabs: Array<Record<string, unknown>>;
   /** Every `POST /command` body. */
   commands: Array<Record<string, unknown>>;
+  /** History ids marked failed, by `POST /history/failed/:id`. */
+  failedHistory: number[];
   /** Every request, in order, as `METHOD path`. */
   requests: string[];
 }
@@ -194,6 +196,7 @@ function startMockArr(opts: Options): Promise<MockArr> {
     lookups: [],
     settingsWrites: [],
     unhandled: [],
+    failedHistory: [],
     grabs: [],
     commands: [],
     requests: [],
@@ -517,6 +520,13 @@ function startMockArr(opts: Options): Promise<MockArr> {
         });
         return;
       }
+    }
+
+    const failedHistory = path.match(/^\/api\/v3\/history\/failed\/(\d+)$/);
+    if (failedHistory && method === "POST") {
+      journal.failedHistory.push(Number(failedHistory[1]));
+      json({});
+      return;
     }
 
     journal.unhandled.push(`${method} ${path}`);

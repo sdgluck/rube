@@ -16,6 +16,7 @@ import type { ArrIssue, ArrLibrary } from "@tinkerbell/domain.arr-library";
 import type { RuleConflict } from "@tinkerbell/domain.rules";
 import { isTvdbOrdering } from "@tinkerbell/plex";
 import type { OrderingEvidence } from "./ordering.ts";
+import type { createArrFixes } from "./arr-fixes.ts";
 
 export interface Problem {
   kind: ProblemKind;
@@ -46,6 +47,14 @@ export interface ProvidersDeps {
   reconcile: ArrReconcile;
   ruleConflicts: () => RuleConflict[];
   arrInstances: () => ArrInstance[];
+  arrFixes: Pick<ReturnType<typeof createArrFixes>, "rootsWithMatches" | "canScan">;
+}
+
+/** What an *Arr problem is about: the Plex item where there is one, else the *Arr's own row. */
+export function arrSubject(issue: ArrIssue): string {
+  if (issue.ratingKey) return `plex:${issue.ratingKey}`;
+  if (issue.arrId != null) return `${issue.instanceId}:${issue.arrId}`;
+  return `title:${issue.title}`;
 }
 
 /** Same cap per kind as reconciliation: one pathological library must not produce 40k rows. */
@@ -165,17 +174,22 @@ export function createProviders(deps: ProvidersDeps) {
       ...deps.reconcile.inPlexNotInArr(),
       ...deps.reconcile.duplicateAcrossInstances(),
     ];
+    const roots = deps.arrFixes.rootsWithMatches();
+    const configured = new Set(deps.arrInstances().map((i) => i.id));
+    const fixable = (issue: ArrIssue) => {
+      if (issue.kind === "inArrNotInPlex") return deps.arrFixes.canScan(issue, roots);
+      if (issue.kind === "failedImport") return configured.has(issue.instanceId) && !!issue.grabHistoryIds?.length;
+      return false;
+    };
     return issues.map((issue) => ({
       kind: issue.kind,
-      subject: issue.ratingKey
-        ? `plex:${issue.ratingKey}`
-        : issue.arrId != null
-          ? `${issue.instanceId}:${issue.arrId}`
-          : `title:${issue.title}`,
+      subject: arrSubject(issue),
       title: issue.title,
       detail: issue.detail,
       link: arrLink(issue),
-      fixable: false,
+      fixable: fixable(issue),
+      // A failed import's detail now names its newest grab, so a fresh grab of
+      // the same episode is a new occurrence and comes back from a dismissal.
       fingerprint: fingerprintOf(issue.detail),
     }));
   }
