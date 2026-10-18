@@ -36,7 +36,7 @@ struct UsersView: View {
             }
             Section(total.map { "\($0) users" } ?? "Users") {
                 ForEach(users, id: \.userId) { user in
-                    NavigationLink(value: AdminRoute.user(id: user.userId, name: user.label)) {
+                    NavigationLink(value: AdminRoute.user(id: user.userId, name: user.username)) {
                         UserRow(user: user, playback: playback[user.userId])
                     }
                     .onAppear { if user.userId == users.last?.userId { Task { await more() } } }
@@ -105,10 +105,10 @@ struct UserRow: View {
 
     var body: some View {
         HStack(spacing: 12) {
-            Avatar(url: user.thumb, name: user.label)
+            Avatar(url: user.thumb, name: user.username)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    Text(user.label).font(.headline)
+                    Text(user.username).font(.headline)
                     if user.isOwner { Text("Owner").font(.caption2.weight(.semibold)).foregroundStyle(.secondary) }
                     if user.isProtected { Image(systemName: "lock.shield").font(.caption).foregroundStyle(.secondary) }
                 }
@@ -157,9 +157,9 @@ struct UserDetailView: View {
             List {
                 Section {
                     HStack(spacing: 14) {
-                        Avatar(url: detail.user.thumb, name: detail.user.label).scaleEffect(1.4).frame(width: 52, height: 52)
+                        Avatar(url: detail.user.thumb, name: detail.user.username).scaleEffect(1.4).frame(width: 52, height: 52)
                         VStack(alignment: .leading) {
-                            Text(detail.user.label).font(.title3.bold())
+                            Text(detail.user.username).font(.title3.bold())
                             if let email = detail.user.email { Text(email).font(.caption).foregroundStyle(.secondary) }
                         }
                     }
