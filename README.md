@@ -209,7 +209,7 @@ part, with a switch between the two.
 
 **Upgrading from the old apps.** Tinkerbell used to have two separate phone
 apps, "Tinkerbell" and "Tinkerbell Portal". They are replaced by the one app
-above. Installed copies keep working for one more release, then stop: install
+above, and no longer work with this version of the server. Install
 the new app and connect it with the code in **Settings → Mobile app**.
 
 The app's sign-in hands the session back to the app itself, so the server

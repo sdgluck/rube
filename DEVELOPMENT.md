@@ -230,18 +230,6 @@ cd native/android
   `test lint assembleDebug` on Linux. The UI tests run locally only. Signing
   and store upload are manual, and the keys stay outside the repo.
 
-### The old Capacitor apps
-
-The SPAs no longer build into Capacitor apps. Copies already installed carry
-their own bundle, so for one more release the server still supports them in
-three ways:
-
-- the `auth.start({ client: "native" })` handshake;
-- CORS for their fixed origins (`apps/server/src/cors.ts`);
-- `?access_token=` media tokens.
-
-All three go in the following release.
-
 ## Release
 
 ```sh

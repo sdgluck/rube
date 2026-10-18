@@ -192,12 +192,10 @@ tests are unchanged, and the portal never advertises the admin address. See
   ever reads a session from a response body.
 - **Bearer sessions** are accepted by both context factories alongside the
   cookie.
-- **The Capacitor apps are gone, but the server still serves them for one
-  release.** Installed copies carry their own SPA bundle, so the server keeps
-  three things until the next release: `apps/server/src/cors.ts` with
-  `NATIVE_APPS`, the `auth.start({ client: "native" })` handshake, and the
-  `admin-media` tokens accepted as `?access_token=`. Don't build on any of
-  them.
+- **No CORS, no media tokens.** The retired Capacitor apps needed both; the
+  native app sends no `Origin` and puts its bearer token on image requests
+  too, so neither server answers CORS and nothing is accepted from a query
+  string. `handlers.test.ts` guards the first.
 
 ### The phone layout
 
