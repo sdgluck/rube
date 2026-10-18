@@ -2,7 +2,9 @@ import { fieldKind, fieldLabel, SMART_FILTER_FIELD_DEFS } from "@tinkerbell/cont
 import { hasLocalLeaves, isLocalField } from "@tinkerbell/plex-smart-filter";
 import controls from "#/styles/controls.module.css";
 import shared from "#/styles/shared.module.css";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SettingsPageLink from "#components/SettingsPageLink";
 import { useToast } from "#components/Toast";
 import { trpc } from "#/trpc";
 import FilterValueInput from "#components/smart-filter/FilterValueInput.tsx";
@@ -67,11 +69,118 @@ export default function SmartFilterSource({ form, setForm, tagSectionId = null }
           />
         </div>
       )}
+      <DescribeFilter current={form.smartFilter} sectionId={tagSectionId} onDraft={setRoot} />
       <div className={styles.field}>
         <label>Filter</label>
         <GroupEditor group={form.smartFilter} onChange={setRoot} depth={0} sectionId={tagSectionId} />
       </div>
     </>
+  );
+}
+
+// ─── Describe it ─────────────────────────────────────────────────────────────
+
+/**
+ * A sentence in, clauses out — straight into the editor below, where they are
+ * the admin's to read and change like any others. Nothing is saved here.
+ *
+ * Replacing a filter someone already built is one click from being undone:
+ * the tree it replaced is kept until the next draft, rather than asking first
+ * and making the common case — an empty filter — pay for the rare one.
+ */
+function DescribeFilter({
+  current,
+  sectionId,
+  onDraft,
+}: {
+  current: SmartFilterGroup;
+  sectionId: string | null;
+  onDraft: (next: SmartFilterGroup) => void;
+}) {
+  const { addToast } = useToast();
+  const [text, setText] = useState("");
+  const [notes, setNotes] = useState<string[]>([]);
+  const [previous, setPrevious] = useState<SmartFilterGroup | null>(null);
+  const availability = trpc.rules.draftAvailability.useQuery(undefined, {
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+  const draft = trpc.rules.draftFilter.useMutation();
+  const unavailable = availability.data?.unavailableReason ?? null;
+
+  if (!availability.data) return null;
+
+  const submit = () => {
+    if (!sectionId) return;
+    draft.mutate(
+      { description: text, sectionId },
+      {
+        onSuccess: (result) => {
+          setPrevious(current.children.length > 0 ? current : null);
+          setNotes(result.notes);
+          onDraft(result.filter);
+        },
+        onError: (err) => addToast(err.message, "error"),
+      },
+    );
+  };
+
+  return (
+    <div className={styles.field}>
+      <label htmlFor="rule-smart-filter-describe">Describe it (optional)</label>
+      <textarea
+        id="rule-smart-filter-describe"
+        className={shared.textarea}
+        rows={2}
+        value={text}
+        maxLength={1000}
+        disabled={!!unavailable || draft.isPending}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && (e.metaKey || e.ctrlKey) && text.trim().length >= 3) submit();
+        }}
+        placeholder="e.g. 90s action films under two hours that nobody has watched"
+      />
+      {unavailable ? (
+        <span className={styles.hint}>
+          {unavailable} <SettingsPageLink to="/settings/ai" />.
+        </span>
+      ) : (
+        <span style={{ display: "flex", gap: "0.8rem", alignItems: "center", flexWrap: "wrap", marginTop: "0.6rem" }}>
+          <button
+            type="button"
+            className={`${controls.btn} ${controls.btnSecondary} ${controls.btnSm}`}
+            disabled={draft.isPending || !sectionId || text.trim().length < 3}
+            onClick={submit}
+          >
+            {draft.isPending ? "Drafting…" : "Draft filter"}
+          </button>
+          {previous && !draft.isPending && (
+            <button
+              type="button"
+              className={styles.summaryEdit}
+              onClick={() => {
+                onDraft(previous);
+                setPrevious(null);
+                setNotes([]);
+              }}
+            >
+              Undo — put back the filter it replaced
+            </button>
+          )}
+          <span className={styles.hint} style={{ margin: 0 }}>
+            The AI writes the clauses below. Check them before saving.
+          </span>
+        </span>
+      )}
+      {notes.length > 0 && (
+        <ul className={styles.hint} role="status" style={{ margin: "0.6rem 0 0", paddingLeft: "1.6rem" }}>
+          {notes.map((n) => (
+            <li key={n}>{n}</li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 

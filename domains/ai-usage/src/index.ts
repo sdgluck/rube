@@ -26,6 +26,8 @@ import type { Clock } from "@tinkerbell/ports";
 export const LLM_FEATURES = [
   "rule",
   "rule-preview",
+  // The wizard's "Describe it": one short call per draft, while the admin waits.
+  "rule-draft",
   "because-you-watched",
   // Settings → AI "Try it". Its own line so an evening of experiments isn't
   // read as the nightly job getting more expensive.

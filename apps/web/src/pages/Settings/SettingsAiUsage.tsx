@@ -21,6 +21,7 @@ import styles from "./SettingsAiUsage.module.css";
 const FEATURE_LABELS: Record<string, string> = {
   rule: "AI rules",
   "rule-preview": "Rule previews",
+  "rule-draft": "Rule drafts",
   "because-you-watched": "Because you watched",
   "because-you-watched-preview": "Because you watched (Try it)",
   "we-think-youd-like": "We think you'd like",

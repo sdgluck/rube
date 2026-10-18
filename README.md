@@ -11,7 +11,9 @@ and notifications on a schedule.
 - **Rules**: build Plex collections from your library on a schedule, with a
   history of every run.
 - **Smart filters**: match on Plex metadata, IMDb ratings, Overseerr
-  requests, or let AI build with prompts.
+  requests, or let AI build with prompts. Describe a filter in a sentence and
+  AI drafts the clauses for you to check, using your library's own genres and
+  users.
 - **Collections**: sort order, pinning to the home screen, and shuffled hubs.
 - **Overlays**: draw ratings, badges and labels on posters.
 - **Because you watched**: recommendation collections for each user.

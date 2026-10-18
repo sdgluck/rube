@@ -1,6 +1,7 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { RuleLockedError } from "@tinkerbell/domain.rules";
+import { RuleDraftError } from "@tinkerbell/domain.rule-drafts";
 import { type PersistedTestResult, type RuleRunPhase } from "@tinkerbell/domain.rule-runs";
 
 import { TRPCError } from "@trpc/server";
@@ -39,7 +40,7 @@ export function assertValidRuleConfig(config: Record<string, unknown>, ruleType?
 }
 
 export function createRulesRouter(
-  deps: Pick<TrpcDeps, "clients" | "collections" | "jobs" | "ruleRuns" | "rules" | "sections">,
+  deps: Pick<TrpcDeps, "clients" | "collections" | "jobs" | "ruleDrafts" | "ruleRuns" | "rules" | "sections">,
 ) {
   const { queueRuleRun, setLastTestResult, getLastTestResult, hasLastTestResult, clearLastTestResult } = deps.ruleRuns;
   const { runSingleRule, testRule } = deps.jobs;
@@ -190,6 +191,28 @@ export function createRulesRouter(
      * banner rather than per row.
      */
     conflicts: procedure.query(() => findRuleConflicts()),
+
+    /** Whether the wizard can offer "Describe it", and if not, why. Costs no model call. */
+    draftAvailability: procedure.query(() => ({ unavailableReason: deps.ruleDrafts.unavailableReason() })),
+
+    /**
+     * A smart filter drafted from a sentence, for the wizard to load into its
+     * editor. Saves nothing. A mutation, not a query, because it spends tokens:
+     * a refetch on window focus would pay for the same draft again.
+     */
+    draftFilter: procedure
+      .input(z.object({ description: z.string().trim().min(3).max(1000), sectionId: z.string().min(1) }))
+      .mutation(async ({ input }) => {
+        try {
+          return await deps.ruleDrafts.draftSmartFilter(input);
+        } catch (err) {
+          if (err instanceof RuleDraftError) {
+            const why = err.notes.length > 0 ? ` ${err.notes.join(" ")}` : "";
+            throw new TRPCError({ code: "BAD_REQUEST", message: `${err.message}${why}` });
+          }
+          throw err;
+        }
+      }),
 
     /**
      * Rules already building a collection of this name.

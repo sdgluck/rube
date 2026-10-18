@@ -1639,6 +1639,43 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
+  domains/rule-drafts:
+    dependencies:
+      '@tinkerbell/container':
+        specifier: workspace:*
+        version: link:../../packages/container
+      '@tinkerbell/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
+      '@tinkerbell/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@tinkerbell/db':
+        specifier: workspace:*
+        version: link:../../packages/db
+      '@tinkerbell/domain.ai-usage':
+        specifier: workspace:*
+        version: link:../ai-usage
+      '@tinkerbell/llm':
+        specifier: workspace:*
+        version: link:../../packages/llm
+      '@tinkerbell/plex':
+        specifier: workspace:*
+        version: link:../../clients/plex
+      '@tinkerbell/plex-smart-filter':
+        specifier: workspace:*
+        version: link:../../packages/plex-smart-filter
+    devDependencies:
+      '@tinkerbell/test-support':
+        specifier: workspace:*
+        version: link:../../packages/test-support
+      '@types/node':
+        specifier: ^25.2.3
+        version: 25.9.1
+      typescript:
+        specifier: ^7.0.2
+        version: 7.0.2
+
   domains/rule-history:
     dependencies:
       '@tinkerbell/container':
@@ -2047,6 +2084,9 @@ importers:
       '@tinkerbell/domain.registry':
         specifier: workspace:*
         version: link:../../domains/registry
+      '@tinkerbell/domain.rule-drafts':
+        specifier: workspace:*
+        version: link:../../domains/rule-drafts
       '@tinkerbell/domain.rule-history':
         specifier: workspace:*
         version: link:../../domains/rule-history
@@ -2675,6 +2715,9 @@ importers:
       '@tinkerbell/domain.registry':
         specifier: workspace:*
         version: link:../../domains/registry
+      '@tinkerbell/domain.rule-drafts':
+        specifier: workspace:*
+        version: link:../../domains/rule-drafts
       '@tinkerbell/domain.rule-runs':
         specifier: workspace:*
         version: link:../../domains/rule-runs

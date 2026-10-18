@@ -68,6 +68,7 @@ import { QualitySwapsToken, type QualitySwaps } from "@tinkerbell/domain.quality
 import { RecommendationsToken, type Recommendations } from "@tinkerbell/domain.recommendations";
 import { RegistryToken, type Registry as RuleRegistry } from "@tinkerbell/domain.registry";
 import { RuleHistoryToken, type RuleHistory } from "@tinkerbell/domain.rule-history";
+import { RuleDraftsToken, type RuleDrafts } from "@tinkerbell/domain.rule-drafts";
 import { RuleRunsToken, type RuleRuns } from "@tinkerbell/domain.rule-runs";
 import { RulesToken, type Rules } from "@tinkerbell/domain.rules";
 import { SearchToken, type Search } from "@tinkerbell/domain.search";
@@ -130,6 +131,7 @@ export interface Services {
   recommendations: Recommendations;
   registry: RuleRegistry;
   ruleHistory: RuleHistory;
+  ruleDrafts: RuleDrafts;
   ruleRuns: RuleRuns;
   rules: Rules;
   search: Search;
@@ -188,6 +190,7 @@ export function registerServices(r: Registry): void {
     recommendations: c.resolve(RecommendationsToken),
     registry: c.resolve(RegistryToken),
     ruleHistory: c.resolve(RuleHistoryToken),
+    ruleDrafts: c.resolve(RuleDraftsToken),
     ruleRuns: c.resolve(RuleRunsToken),
     rules: c.resolve(RulesToken),
     search: c.resolve(SearchToken),

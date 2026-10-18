@@ -48,6 +48,7 @@
     "@tinkerbell/domain.preview": "workspace:*",
     "@tinkerbell/domain.problems": "workspace:*",
     "@tinkerbell/domain.registry": "workspace:*",
+    "@tinkerbell/domain.rule-drafts": "workspace:*",
     "@tinkerbell/domain.rule-runs": "workspace:*",
     "@tinkerbell/domain.rules": "workspace:*",
     "@tinkerbell/domain.search": "workspace:*",

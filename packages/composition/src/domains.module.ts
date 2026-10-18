@@ -52,6 +52,7 @@ import { createQualitySwaps, QualitySwapsToken } from "@tinkerbell/domain.qualit
 import { createRecommendations, RecommendationsToken } from "@tinkerbell/domain.recommendations";
 import { createRegistry, RegistryToken } from "@tinkerbell/domain.registry";
 import { createRuleHistory, RuleHistoryToken } from "@tinkerbell/domain.rule-history";
+import { createRuleDrafts, RuleDraftsToken } from "@tinkerbell/domain.rule-drafts";
 import { createRuleRuns, RuleRunsToken } from "@tinkerbell/domain.rule-runs";
 import { createRules, RulesToken } from "@tinkerbell/domain.rules";
 import { createSearch, SearchToken } from "@tinkerbell/domain.search";
@@ -247,6 +248,16 @@ export function registerDomains(r: Registry): void {
     createRegistry({ config: c.resolve(ConfigStoreToken), rules: c.resolve(RulesToken) }),
   );
   r.register(RuleHistoryToken, (c) => createRuleHistory({ db: c.resolve(DbToken) }));
+  r.register(RuleDraftsToken, (c) =>
+    createRuleDrafts({
+      db: c.resolve(DbToken),
+      config: c.resolve(ConfigStoreToken),
+      aiUsage: c.resolve(AiUsageToken),
+      // Resolved per call: an unconfigured Plex fails the draft, not the page.
+      plex: (opts) => c.resolve(ClientsToken).getPlexClient(opts),
+      now: c.resolve(ClockToken),
+    }),
+  );
   r.register(RuleRunsToken, (c) => createRuleRuns({ db: c.resolve(DbToken), scope: c.owner }));
   r.register(RulesToken, (c) =>
     createRules({

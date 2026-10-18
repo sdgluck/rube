@@ -352,6 +352,23 @@ export function startMockPlex(opts: {
     }
 
     // ── Tag writes and section listings ─────────────────────────────────────
+    // A facet's values: `/library/sections/1/genre`. Only `genre` is modelled,
+    // from the items' own genres; any other facet 404s, as a real server does
+    // for one the section's type doesn't have.
+    const facet = path.match(/^\/library\/sections\/([^/]+)\/([a-zA-Z]+)$/);
+    if (facet && method === "GET" && !["all", "refresh", "prefs", "collections", "label"].includes(facet[2])) {
+      if (facet[2] !== "genre") {
+        res.writeHead(404);
+        res.end();
+        return;
+      }
+      const genres = [
+        ...new Set([...items.values()].filter((i) => i.sectionId === facet[1] && i.genre).map((i) => i.genre!)),
+      ];
+      json({ size: genres.length, Directory: genres.map((title, i) => ({ key: String(1000 + i), title })) });
+      return;
+    }
+
     const sectionAll = path.match(/^\/library\/sections\/([^/]+)\/all$/);
     if (sectionAll) {
       const sectionId = sectionAll[1];
