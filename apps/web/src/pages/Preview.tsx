@@ -132,6 +132,10 @@ export default function Preview() {
     isLoading: fastQuery.isLoading,
     error: fullQuery.error ?? fastQuery.error,
   };
+  // keepPreviousData leaves the last user's (or library's) hubs on screen
+  // while the new home loads, which on a slow Plex reads as the picker having
+  // done nothing. Mark that window so the stale rows are visibly stale.
+  const isSwitching = fastQuery.isPlaceholderData && fastQuery.isFetching;
 
   const unpinMutation = trpc.preview.unpinCollection.useMutation({
     onMutate: async ({ hubIdentifier }) => {
@@ -186,6 +190,8 @@ export default function Preview() {
   });
 
   const users = usersQuery.data?.items ?? [];
+  const selectedUser = userId == null ? null : users.find((u) => u.userId === userId);
+  const viewingAs = userId == null ? "Admin" : selectedUser ? selectedUser.name || selectedUser.username : "user";
   const sections = (sectionsQuery.data ?? []).filter((s) => s.type === "movie" || s.type === "show");
 
   const orderedHubs = useMemo(() => {
@@ -299,7 +305,13 @@ export default function Preview() {
       }
     >
       {/* The stage is Plex's, not ours: dark, chrome-free, posters dominant. */}
-      <div className={styles.page}>
+      <div className={styles.page} aria-busy={isSwitching}>
+        {isSwitching && (
+          <div className={styles.switching}>
+            <Spinner size="xs" variant="inverse" label={`Loading ${viewingAs}'s home`} />
+            Loading {viewingAs}&rsquo;s home…
+          </div>
+        )}
         {shuffleStatus && <div className={styles.warnings}>{shuffleStatus}</div>}
 
         {previewQuery.isLoading && <PreviewSkeleton />}

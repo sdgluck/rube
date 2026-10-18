@@ -152,6 +152,32 @@
   font-size: 1.25rem;
 }
 
+/* Shown while a new user's or library's home loads over the previous one.
+   Sticky so it stays in view when the switch happens scrolled down a long
+   home; the rows underneath fade and stop taking clicks, since clicking a
+   poster from the old user's home would open something the new one may not
+   even see. */
+.switching {
+  position: sticky;
+  top: var(--sticky-top);
+  z-index: 1;
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  padding: 0.6rem 1.2rem;
+  border-radius: var(--r-pill);
+  background: color-mix(in srgb, var(--plex) 18%, #1f2326);
+  color: #f0d9a4;
+  font-size: 1.25rem;
+}
+
+.page[aria-busy="true"] > :not(.switching) {
+  opacity: 0.45;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+
 /* ─── Hub rows ────────────────────────────────────────────────────────────── */
 
 .hub {
