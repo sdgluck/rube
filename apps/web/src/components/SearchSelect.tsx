@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
-import { useIsPhone } from "#hooks/useMediaQuery";
-import PickerSheet, { type PickerOption } from "./PickerSheet";
 import styles from "./SearchSelect.module.css";
+
+export interface SearchSelectOption {
+  value: string;
+  label: string;
+  /** A second line, also matched by the search. */
+  detail?: string;
+}
 
 interface SearchSelectProps {
   /** The trigger's id, for a `<label htmlFor>`. */
   id?: string;
   value: string;
   onChange: (value: string) => void;
-  options: PickerOption[];
-  /** Accessible name, and the phone sheet's title. */
+  options: SearchSelectOption[];
+  /** Accessible name. */
   ariaLabel: string;
   /** Added to the trigger, which already looks like a small `select`. */
   className?: string;
@@ -24,7 +29,7 @@ interface SearchSelectProps {
  * a model name, wrong for a user id, where only a listed option is valid.
  *
  * The trigger is styled as the shared `select` so it sits beside real ones
- * without looking like a different control; on a phone it opens a picker sheet.
+ * without looking like a different control. The same popover serves a phone.
  */
 export default function SearchSelect({ id, value, onChange, options, ariaLabel, className }: SearchSelectProps) {
   const [open, setOpen] = useState(false);
@@ -34,7 +39,6 @@ export default function SearchSelect({ id, value, onChange, options, ariaLabel, 
   const triggerRef = useRef<HTMLButtonElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const listId = useId();
-  const isPhone = useIsPhone();
 
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -60,13 +64,13 @@ export default function SearchSelect({ id, value, onChange, options, ariaLabel, 
   };
 
   useEffect(() => {
-    if (!open || isPhone) return;
+    if (!open) return;
     const onPointerDown = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) close(false);
     };
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [open, close, isPhone]);
+  }, [open, close]);
 
   // Keep the keyboard's row in view as it moves through a long list.
   useEffect(() => {
@@ -109,22 +113,12 @@ export default function SearchSelect({ id, value, onChange, options, ariaLabel, 
         onClick={() => (open ? close(false) : openMenu())}
         aria-haspopup="listbox"
         aria-expanded={open}
-        aria-controls={open && !isPhone ? listId : undefined}
+        aria-controls={open ? listId : undefined}
         aria-label={`${ariaLabel}: ${label}`}
       >
         {label}
       </button>
-      {isPhone && (
-        <PickerSheet
-          open={open}
-          onClose={() => close(false)}
-          title={ariaLabel}
-          options={options}
-          selected={[value]}
-          onToggle={onChange}
-        />
-      )}
-      {open && !isPhone && (
+      {open && (
         <div className={styles.menu} onKeyDown={onKeyDown}>
           <input
             className={styles.filter}
