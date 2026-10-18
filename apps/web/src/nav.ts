@@ -130,8 +130,6 @@ export const UNHIDEABLE = "/settings";
 
 /**
  * The `nav_*` config keys the menu reads, as the resolvers below want them.
- * `nav_bottom_tabs` is left out: it chose the phone tab bar's routes, and that
- * bar went with the admin app's native-app emulation.
  */
 export type NavPrefs = {
   hidden?: string[];

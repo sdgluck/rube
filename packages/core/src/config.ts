@@ -605,18 +605,6 @@ export const configSchema = z.object({
    */
   nav_section_order: z.array(z.string()).max(20),
   /**
-   * Routes occupying the mobile tab bar, in order. "More" is not listed — it is
-   * the bar's escape hatch and is always last.
-   *
-   * The one nav key that is a positive pick rather than a difference from the
-   * default: a tab bar has a fixed number of slots, so "a route added later
-   * should appear here" is not something anyone wants of it. Empty means the
-   * defaults, which is also what Reset writes — every one of these four keys
-   * treats `[]` and absent identically, so resetting is one write rather than a
-   * delete path `configRouter` does not have.
-   */
-  nav_bottom_tabs: z.array(z.string()).max(4),
-  /**
    * Which colour scheme the admin UI draws in. `system` follows
    * `prefers-color-scheme`; the other two pin it.
    *
@@ -1029,7 +1017,6 @@ export const UNLOGGED_CONFIG_KEYS = new Set<ConfigKey>([
   "nav_items_hidden",
   "nav_item_order",
   "nav_section_order",
-  "nav_bottom_tabs",
   "ui_theme",
   "ui_scale",
   // Credential artefacts

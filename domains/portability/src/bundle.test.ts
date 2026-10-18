@@ -176,6 +176,26 @@ describe("the round trip", () => {
     }
   });
 
+  test("a setting this version no longer has is skipped and counted, not a failed import", async () => {
+    const target = containerWithTags();
+    try {
+      const bundle = {
+        formatVersion: 1,
+        exportedAt: Date.now(),
+        tinkerbellVersion: "0.43.0",
+        containsSecrets: false,
+        // `nav_bottom_tabs` went with the admin app's phone tab bar.
+        config: { nav_bottom_tabs: ["/rules"], ui_theme: "dark" },
+      } as unknown as Bundle;
+      const summary = await target.resolve(PortabilityToken).applyImport(bundle, {});
+      assert.deepEqual(summary.failed, []);
+      assert.equal(summary.skipped, 1);
+      assert.equal(target.resolve(ConfigStoreToken).getConfig("ui_theme"), "dark");
+    } finally {
+      await target.dispose();
+    }
+  });
+
   test("a tag this server has never heard of is reported, not silently dropped", async () => {
     const target = containerWithTags();
     try {

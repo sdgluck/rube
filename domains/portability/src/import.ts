@@ -24,7 +24,14 @@ import {
   type TagLookup,
   translateSmartFilterTags,
 } from "@tinkerbell/contracts";
-import { createLogger, errorMessage, runAsActor, type ConfigKey, type ConfigStore } from "@tinkerbell/core";
+import {
+  configSchema,
+  createLogger,
+  errorMessage,
+  runAsActor,
+  type ConfigKey,
+  type ConfigStore,
+} from "@tinkerbell/core";
 
 const log = createLogger("portability");
 
@@ -361,6 +368,20 @@ export function createImport(deps: ImportDeps) {
     }
 
     for (const [key, value] of Object.entries(bundle.config ?? {})) {
+      // A bundle from an older version can carry a setting since removed
+      // (`nav_bottom_tabs` went with the phone tab bar). There is no schema to
+      // read or write it through, so it is listed and skipped rather than
+      // failing the import with a TypeError from deep inside `setConfig`.
+      if (!(key in configSchema.shape)) {
+        items.push({
+          kind: "config",
+          key: `config:${key}`,
+          label: key,
+          verdict: "new",
+          blocked: "This version of Tinkerbell has no such setting.",
+        });
+        continue;
+      }
       const current = config.getConfig(key as ConfigKey);
       items.push({
         kind: "config",
@@ -613,6 +634,10 @@ export function createImport(deps: ImportDeps) {
       for (const [configKey, value] of Object.entries(bundle.config ?? {})) {
         const item = byKey.get(`config:${configKey}`);
         if (!item) continue;
+        if (item.blocked) {
+          summary.skipped++;
+          continue;
+        }
         if (item.verdict === "identical" || (item.verdict === "differs" && decide(item.key) !== "overwrite")) {
           summary.skipped++;
           continue;
