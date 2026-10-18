@@ -7,6 +7,7 @@ import { type Services } from "@tinkerbell/composition";
 import { and, eq, desc, inArray, sql, type InferSelectModel } from "drizzle-orm";
 import { jobs, jobRuns } from "@tinkerbell/db";
 import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
+import { QUIET_INTERNAL_JOBS } from "./internal-jobs.ts";
 
 type Job = InferSelectModel<typeof jobs>;
 type JobRun = InferSelectModel<typeof jobRuns>;
@@ -175,6 +176,18 @@ export function createQueries(deps: Pick<Services, "db">) {
       .all();
   }
 
+  /**
+   * The newest runs across every job, less the routine ones.
+   *
+   * A routine run is a quiet job's completed run that said exactly what that
+   * job's previous run said — the same test the runner uses to keep it out of
+   * the events feed. Without it the pollers own the list: `playback-poll`
+   * every 30s and `healthcheck`, `rule-schedules` and `arr-poll` every minute
+   * filled forty rows in seven minutes, and the panel's rollup only merges
+   * runs that sit next to each other, which interleaved pollers never do. A
+   * failure, or a poll that found something, still shows. Filtered before the
+   * limit, so the list reaches back to the work that mattered.
+   */
   function getRecentRuns(limit = 8): Array<{
     id: string;
     jobId: string;
@@ -198,6 +211,18 @@ export function createQueries(deps: Pick<Services, "db">) {
       })
       .from(jobRuns)
       .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
+      .where(
+        sql`NOT (${jobRuns.status} = 'completed'
+          AND ${jobs.command} IN (${sql.join(
+            QUIET_INTERNAL_JOBS.map((c) => sql`${c}`),
+            sql`, `,
+          )})
+          AND ${jobRuns.message} IS (
+            SELECT prev.message FROM job_runs prev
+            WHERE prev.job_id = ${jobRuns.jobId} AND prev.started_at < ${jobRuns.startedAt}
+            ORDER BY prev.started_at DESC LIMIT 1
+          ))`,
+      )
       .orderBy(desc(jobRuns.startedAt))
       .limit(limit)
       .all();

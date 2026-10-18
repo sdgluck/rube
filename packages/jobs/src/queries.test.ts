@@ -158,4 +158,28 @@ describe("getRecentRuns", () => {
     assert.equal(getRecentRuns(3).length, 3);
     assert.equal(getRecentRuns(50).length, 12);
   });
+
+  it("leaves out a quiet job's runs that repeat the previous run's outcome", () => {
+    db.insert(jobs)
+      .values({ id: "healthcheck", name: "Healthcheck", command: "healthcheck", schedule: "", enabled: 1, config: {} })
+      .run();
+    const t0 = Date.now() - 60_000;
+    const poll = (id: string, status: string, message: string, at: number) =>
+      db
+        .insert(jobRuns)
+        .values({ id, jobId: "healthcheck", status, log: "", progress: 1, message, startedAt: at })
+        .run();
+    poll("h1", "completed", "Plex: ok", t0);
+    poll("h2", "completed", "Plex: ok", t0 + 1000);
+    poll("h3", "completed", "Plex: down", t0 + 2000);
+    poll("h4", "completed", "Plex: down", t0 + 3000);
+    poll("h5", "failed", "Plex: down", t0 + 4000);
+    // A loud job keeps every run, repeated outcome or not.
+    insertRun("s1", "completed", "", t0 + 500);
+    insertRun("s2", "completed", "", t0 + 1500);
+
+    const ids = getRecentRuns(50).map((r) => r.id);
+    // h1 is the first of its kind, h3 changed the outcome, h5 failed.
+    assert.deepEqual(ids, ["h5", "h3", "s2", "s1", "h1"]);
+  });
 });

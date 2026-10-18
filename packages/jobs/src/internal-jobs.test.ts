@@ -11,7 +11,7 @@ import { ServicesToken } from "@tinkerbell/composition";
 import { DbToken } from "@tinkerbell/db";
 import { jobRuns, jobs } from "@tinkerbell/db";
 import { createRunner } from "./runner.ts";
-import { createInternalJobs } from "./internal-jobs.ts";
+import { createInternalJobs, QUIET_INTERNAL_JOBS } from "./internal-jobs.ts";
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -189,5 +189,15 @@ describe("internal jobs", () => {
     assert.equal(internalJobs.healthcheck.quiet, true);
     // Everything else is loud by default — quiet is opt-in, per job.
     assert.equal((internalJobs["purge-runs"] as { quiet?: boolean }).quiet, undefined);
+  });
+
+  it("lists every quiet job in QUIET_INTERNAL_JOBS, and nothing else", () => {
+    // The run list hides a quiet job's repeated runs by this list. A job marked
+    // quiet but missing here would flood it again; one listed but not quiet
+    // would hide runs that do emit events.
+    const quiet = Object.entries(internalJobs)
+      .filter(([, d]) => (d as { quiet?: boolean }).quiet)
+      .map(([name]) => name);
+    assert.deepEqual([...QUIET_INTERNAL_JOBS].sort(), quiet.sort());
   });
 });

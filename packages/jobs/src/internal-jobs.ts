@@ -52,6 +52,22 @@ export interface InternalJobDescriptor {
   quiet?: boolean;
 }
 
+/**
+ * The internal jobs marked `quiet` below, by command, for code that has no
+ * `Services` to build the descriptors with — `getRecentRuns` filters on it.
+ * `internal-jobs.test.ts` holds the two lists equal.
+ */
+export const QUIET_INTERNAL_JOBS: readonly string[] = [
+  "healthcheck",
+  "registry-updates",
+  "rule-schedules",
+  "seerr-poll",
+  "quality-swaps",
+  "watchlist-sync",
+  "arr-poll",
+  "playback-poll",
+];
+
 export type InternalJobs = ReturnType<typeof createInternalJobs>["internalJobs"];
 export type InternalJobName = keyof InternalJobs;
 
