@@ -317,9 +317,9 @@ struct ProblemsView: View {
         }
         .swipeActions(edge: .trailing) {
             if p.dismissed {
-                Button("Restore", systemImage: "eye") { act { _ = try await model.client.call(AdminAPI.problemsUndismiss, .init(kind: .init(rawValue: p.kind.rawValue), subject: p.subject)) } }
+                Button("Restore", systemImage: "eye") { act { _ = try await model.client.call(AdminAPI.problemsUndismiss, .init(kind: p.kind, subject: p.subject)) } }
             } else {
-                Button("Dismiss", systemImage: "eye.slash") { act { _ = try await model.client.call(AdminAPI.problemsDismiss, .init(kind: .init(rawValue: p.kind.rawValue), subject: p.subject)) } }
+                Button("Dismiss", systemImage: "eye.slash") { act { _ = try await model.client.call(AdminAPI.problemsDismiss, .init(kind: p.kind, subject: p.subject)) } }
                     .tint(.gray)
             }
         }
@@ -336,7 +336,7 @@ struct ProblemsView: View {
 
     func fix(_ p: Problem) {
         act {
-            let result = try await model.client.call(AdminAPI.problemsFix, .init(kind: .init(rawValue: p.kind.rawValue), subject: p.subject))
+            let result = try await model.client.call(AdminAPI.problemsFix, .init(kind: p.kind, subject: p.subject))
             notice = result.message
         }
     }

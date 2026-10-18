@@ -2563,14 +2563,14 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
       zod-native-ir:
-        specifier: github:sdgluck/zod-native-ir#v0.1.1
-        version: git+https://github.com/sdgluck/zod-native-ir.git#4398b49faaedc315fd0f0798b25e74ad2de7b586(zod@4.4.3)
+        specifier: github:sdgluck/zod-native-ir#v0.1.2
+        version: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3)
       zod-to-kotlin:
-        specifier: github:sdgluck/zod-to-kotlin#v0.1.1
-        version: git+https://github.com/sdgluck/zod-to-kotlin.git#008b1449e371aadb4ebf0df9d0205f700a72c4bc(zod-native-ir@git+https://github.com/sdgluck/zod-native-ir.git#4398b49faaedc315fd0f0798b25e74ad2de7b586(zod@4.4.3))(zod@4.4.3)
+        specifier: github:sdgluck/zod-to-kotlin#v0.1.2
+        version: https://codeload.github.com/sdgluck/zod-to-kotlin/tar.gz/55efa437d9d07ad6c649785a9f12060d533737ad(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3))(zod@4.4.3)
       zod-to-swift:
-        specifier: github:sdgluck/zod-to-swift#v0.1.1
-        version: git+https://github.com/sdgluck/zod-to-swift.git#eb03abb8179add61bbf1495cf9cc55b6de7fc8a0(zod-native-ir@git+https://github.com/sdgluck/zod-native-ir.git#4398b49faaedc315fd0f0798b25e74ad2de7b586(zod@4.4.3))(zod@4.4.3)
+        specifier: github:sdgluck/zod-to-swift#v0.1.2
+        version: https://codeload.github.com/sdgluck/zod-to-swift/tar.gz/4d0cce751393bdecf00897d3e706f65315604c5a(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3))(zod@4.4.3)
 
   packages/overlays:
     dependencies:
@@ -6367,28 +6367,28 @@ packages:
   yauzl@2.10.0:
     resolution: {integrity: sha512-p4a9I6X6nu6IhoGmBqAcbJy1mlC4j27vEPZX9F4L4/vZT3Lyq1VkFHw/V/PUcB9Buo+DG3iHkT0x3Qya58zc3g==}
 
-  zod-native-ir@git+https://github.com/sdgluck/zod-native-ir.git#4398b49faaedc315fd0f0798b25e74ad2de7b586:
-    resolution: {commit: 4398b49faaedc315fd0f0798b25e74ad2de7b586, repo: https://github.com/sdgluck/zod-native-ir.git, type: git}
-    version: 0.1.1
+  zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0:
+    resolution: {gitHosted: true, tarball: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0}
+    version: 0.1.2
     engines: {node: '>=22.18'}
     peerDependencies:
       zod: ^4.3.6
 
-  zod-to-kotlin@git+https://github.com/sdgluck/zod-to-kotlin.git#008b1449e371aadb4ebf0df9d0205f700a72c4bc:
-    resolution: {commit: 008b1449e371aadb4ebf0df9d0205f700a72c4bc, repo: https://github.com/sdgluck/zod-to-kotlin.git, type: git}
-    version: 0.1.1
+  zod-to-kotlin@https://codeload.github.com/sdgluck/zod-to-kotlin/tar.gz/55efa437d9d07ad6c649785a9f12060d533737ad:
+    resolution: {gitHosted: true, integrity: sha512-RlC0KxMksBeFwBheKwJd9oodiB651M26AqGsYvxulg/PUy4NwtrUX+Hm4RlcGhlH25RvAU48VzwgWpfE2AzGuA==, tarball: https://codeload.github.com/sdgluck/zod-to-kotlin/tar.gz/55efa437d9d07ad6c649785a9f12060d533737ad}
+    version: 0.1.2
     engines: {node: '>=22.18'}
     peerDependencies:
       zod: ^4.3.6
-      zod-native-ir: github:sdgluck/zod-native-ir#v0.1.1
+      zod-native-ir: github:sdgluck/zod-native-ir#v0.1.2
 
-  zod-to-swift@git+https://github.com/sdgluck/zod-to-swift.git#eb03abb8179add61bbf1495cf9cc55b6de7fc8a0:
-    resolution: {commit: eb03abb8179add61bbf1495cf9cc55b6de7fc8a0, repo: https://github.com/sdgluck/zod-to-swift.git, type: git}
-    version: 0.1.1
+  zod-to-swift@https://codeload.github.com/sdgluck/zod-to-swift/tar.gz/4d0cce751393bdecf00897d3e706f65315604c5a:
+    resolution: {gitHosted: true, integrity: sha512-lpYSCPj133fhAhhiHtGunprrUssilhj931Doxvxa3SfPkk95I8+KN5m4cM48xbXiOj+BzxntdOJR+XxgKv5bLA==, tarball: https://codeload.github.com/sdgluck/zod-to-swift/tar.gz/4d0cce751393bdecf00897d3e706f65315604c5a}
+    version: 0.1.2
     engines: {node: '>=22.18'}
     peerDependencies:
       zod: ^4.3.6
-      zod-native-ir: github:sdgluck/zod-native-ir#v0.1.1
+      zod-native-ir: github:sdgluck/zod-native-ir#v0.1.2
 
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
@@ -9513,18 +9513,18 @@ snapshots:
       buffer-crc32: 0.2.13
       fd-slicer: 1.1.0
 
-  zod-native-ir@git+https://github.com/sdgluck/zod-native-ir.git#4398b49faaedc315fd0f0798b25e74ad2de7b586(zod@4.4.3):
+  zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3):
     dependencies:
       zod: 4.4.3
 
-  zod-to-kotlin@git+https://github.com/sdgluck/zod-to-kotlin.git#008b1449e371aadb4ebf0df9d0205f700a72c4bc(zod-native-ir@git+https://github.com/sdgluck/zod-native-ir.git#4398b49faaedc315fd0f0798b25e74ad2de7b586(zod@4.4.3))(zod@4.4.3):
+  zod-to-kotlin@https://codeload.github.com/sdgluck/zod-to-kotlin/tar.gz/55efa437d9d07ad6c649785a9f12060d533737ad(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3))(zod@4.4.3):
     dependencies:
       zod: 4.4.3
-      zod-native-ir: git+https://github.com/sdgluck/zod-native-ir.git#4398b49faaedc315fd0f0798b25e74ad2de7b586(zod@4.4.3)
+      zod-native-ir: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3)
 
-  zod-to-swift@git+https://github.com/sdgluck/zod-to-swift.git#eb03abb8179add61bbf1495cf9cc55b6de7fc8a0(zod-native-ir@git+https://github.com/sdgluck/zod-native-ir.git#4398b49faaedc315fd0f0798b25e74ad2de7b586(zod@4.4.3))(zod@4.4.3):
+  zod-to-swift@https://codeload.github.com/sdgluck/zod-to-swift/tar.gz/4d0cce751393bdecf00897d3e706f65315604c5a(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3))(zod@4.4.3):
     dependencies:
       zod: 4.4.3
-      zod-native-ir: git+https://github.com/sdgluck/zod-native-ir.git#4398b49faaedc315fd0f0798b25e74ad2de7b586(zod@4.4.3)
+      zod-native-ir: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3)
 
   zod@4.4.3: {}

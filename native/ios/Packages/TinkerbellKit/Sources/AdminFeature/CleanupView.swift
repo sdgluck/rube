@@ -20,7 +20,7 @@ struct CleanupView: View {
     @State private var selection: Set<String> = []
     @State private var editMode: EditMode = .inactive
     @State private var toApprove: Admin.CleanupQueueItem?
-    @State private var undo: [Admin.CleanupHoldManyOutput.Previou]?
+    @State private var undo: [Admin.CleanupHoldManyOutput.PreviousItem]?
     @State private var error: APIError?
     @State private var done = 0
 
@@ -166,7 +166,7 @@ struct CleanupView: View {
         }
     }
 
-    func restore(_ previous: [Admin.CleanupHoldManyOutput.Previou]) {
+    func restore(_ previous: [Admin.CleanupHoldManyOutput.PreviousItem]) {
         act {
             _ = try await model.client.call(AdminAPI.cleanupRestoreHolds, .init(items: previous.map { .init(ruleId: $0.ruleId, ratingKey: $0.ratingKey, heldUntil: $0.heldUntil) }))
             undo = nil

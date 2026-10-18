@@ -113,6 +113,34 @@ data class PlexSession(
     val sourceAudioCodec: String? = null,
 )
 
+@Serializable(with = ProblemKind.Companion::class)
+enum class ProblemKind(val raw: String) {
+    EPISODE_ORDERING("episodeOrdering"),
+    MISSING_EPISODES("missingEpisodes"),
+    IN_ARR_NOT_IN_PLEX("inArrNotInPlex"),
+    FAILED_IMPORT("failedImport"),
+    UNKNOWN_SIZE("unknownSize"),
+    RULE_FAILING("ruleFailing"),
+    RULE_EMPTY("ruleEmpty"),
+    RULE_CONFLICT("ruleConflict"),
+    LEGACY_AGENT("legacyAgent"),
+    UNMATCHED("unmatched"),
+    IN_PLEX_NOT_IN_ARR("inPlexNotInArr"),
+    DUPLICATE_ACROSS_INSTANCES("duplicateAcrossInstances"),
+    /** A value this build doesn't know — a newer server's. */
+    UNKNOWN("");
+
+    companion object : KSerializer<ProblemKind> {
+        val known: List<ProblemKind> = ProblemKind.entries.filter { it != UNKNOWN }
+        override val descriptor = PrimitiveSerialDescriptor("dev.tinkerbell.model.ProblemKind", PrimitiveKind.STRING)
+        override fun deserialize(decoder: Decoder): ProblemKind {
+            val raw = decoder.decodeString()
+            return ProblemKind.entries.firstOrNull { it != UNKNOWN && it.raw == raw } ?: UNKNOWN
+        }
+        override fun serialize(encoder: Encoder, value: ProblemKind) = encoder.encodeString(value.raw)
+    }
+}
+
 @Serializable(with = RuleRunPhase.Companion::class)
 enum class RuleRunPhase(val raw: String) {
     RUN("run"),
@@ -586,7 +614,7 @@ object Portal {
         val deckSize: Long,
         val me: Me,
         val members: List<Member>,
-        val matches: List<Matche>,
+        val matches: List<Match>,
         val unanimousCount: Long,
         val swipedCount: Long,
         val votes: List<Vote>,
@@ -615,7 +643,7 @@ object Portal {
         )
 
         @Serializable
-        data class Matche(
+        data class Match(
             val ratingKey: String,
             val title: String,
             val year: Long?,
@@ -934,7 +962,7 @@ object Admin {
     ) {
         @Serializable
         data class Problem(
-            val kind: Kind,
+            val kind: ProblemKind,
             val subject: String,
             val title: String,
             val detail: String,
@@ -946,34 +974,6 @@ object Admin {
             val fingerprint: String,
             val dismissed: Boolean,
         ) {
-            @Serializable(with = Kind.Companion::class)
-            enum class Kind(val raw: String) {
-                DUPLICATE_ACROSS_INSTANCES("duplicateAcrossInstances"),
-                EPISODE_ORDERING("episodeOrdering"),
-                FAILED_IMPORT("failedImport"),
-                IN_ARR_NOT_IN_PLEX("inArrNotInPlex"),
-                IN_PLEX_NOT_IN_ARR("inPlexNotInArr"),
-                LEGACY_AGENT("legacyAgent"),
-                MISSING_EPISODES("missingEpisodes"),
-                RULE_CONFLICT("ruleConflict"),
-                RULE_EMPTY("ruleEmpty"),
-                RULE_FAILING("ruleFailing"),
-                UNKNOWN_SIZE("unknownSize"),
-                UNMATCHED("unmatched"),
-                /** A value this build doesn't know — a newer server's. */
-                UNKNOWN("");
-
-                companion object : KSerializer<Kind> {
-                    val known: List<Kind> = Kind.entries.filter { it != UNKNOWN }
-                    override val descriptor = PrimitiveSerialDescriptor("dev.tinkerbell.model.Admin.ProblemsListOutput.Problem.Kind", PrimitiveKind.STRING)
-                    override fun deserialize(decoder: Decoder): Kind {
-                        val raw = decoder.decodeString()
-                        return Kind.entries.firstOrNull { it != UNKNOWN && it.raw == raw } ?: UNKNOWN
-                    }
-                    override fun serialize(encoder: Encoder, value: Kind) = encoder.encodeString(value.raw)
-                }
-            }
-
             @Serializable
             data class Evidence(
                 val seasons: List<Season>,
@@ -1002,38 +1002,9 @@ object Admin {
 
     @Serializable
     data class ProblemsFixInput(
-        val kind: Kind,
+        val kind: ProblemKind,
         val subject: String,
-    ) {
-        @Serializable(with = Kind.Companion::class)
-        enum class Kind(val raw: String) {
-            EPISODE_ORDERING("episodeOrdering"),
-            MISSING_EPISODES("missingEpisodes"),
-            IN_ARR_NOT_IN_PLEX("inArrNotInPlex"),
-            FAILED_IMPORT("failedImport"),
-            UNKNOWN_SIZE("unknownSize"),
-            RULE_FAILING("ruleFailing"),
-            RULE_EMPTY("ruleEmpty"),
-            RULE_CONFLICT("ruleConflict"),
-            LEGACY_AGENT("legacyAgent"),
-            UNMATCHED("unmatched"),
-            IN_PLEX_NOT_IN_ARR("inPlexNotInArr"),
-            DUPLICATE_ACROSS_INSTANCES("duplicateAcrossInstances"),
-            /** A value this build doesn't know — a newer server's. */
-            UNKNOWN("");
-
-            companion object : KSerializer<Kind> {
-                val known: List<Kind> = Kind.entries.filter { it != UNKNOWN }
-                override val descriptor = PrimitiveSerialDescriptor("dev.tinkerbell.model.Admin.ProblemsFixInput.Kind", PrimitiveKind.STRING)
-                override fun deserialize(decoder: Decoder): Kind {
-                    val raw = decoder.decodeString()
-                    return Kind.entries.firstOrNull { it != UNKNOWN && it.raw == raw } ?: UNKNOWN
-                }
-                override fun serialize(encoder: Encoder, value: Kind) = encoder.encodeString(value.raw)
-            }
-        }
-
-    }
+    )
 
     @Serializable
     data class ProblemsFixOutput(
@@ -1042,38 +1013,9 @@ object Admin {
 
     @Serializable
     data class ProblemsFixAllInput(
-        val kind: Kind,
+        val kind: ProblemKind,
         val subjects: List<String>? = null,
-    ) {
-        @Serializable(with = Kind.Companion::class)
-        enum class Kind(val raw: String) {
-            EPISODE_ORDERING("episodeOrdering"),
-            MISSING_EPISODES("missingEpisodes"),
-            IN_ARR_NOT_IN_PLEX("inArrNotInPlex"),
-            FAILED_IMPORT("failedImport"),
-            UNKNOWN_SIZE("unknownSize"),
-            RULE_FAILING("ruleFailing"),
-            RULE_EMPTY("ruleEmpty"),
-            RULE_CONFLICT("ruleConflict"),
-            LEGACY_AGENT("legacyAgent"),
-            UNMATCHED("unmatched"),
-            IN_PLEX_NOT_IN_ARR("inPlexNotInArr"),
-            DUPLICATE_ACROSS_INSTANCES("duplicateAcrossInstances"),
-            /** A value this build doesn't know — a newer server's. */
-            UNKNOWN("");
-
-            companion object : KSerializer<Kind> {
-                val known: List<Kind> = Kind.entries.filter { it != UNKNOWN }
-                override val descriptor = PrimitiveSerialDescriptor("dev.tinkerbell.model.Admin.ProblemsFixAllInput.Kind", PrimitiveKind.STRING)
-                override fun deserialize(decoder: Decoder): Kind {
-                    val raw = decoder.decodeString()
-                    return Kind.entries.firstOrNull { it != UNKNOWN && it.raw == raw } ?: UNKNOWN
-                }
-                override fun serialize(encoder: Encoder, value: Kind) = encoder.encodeString(value.raw)
-            }
-        }
-
-    }
+    )
 
     @Serializable
     data class ProblemsFixAllOutput(
@@ -1090,73 +1032,15 @@ object Admin {
 
     @Serializable
     data class ProblemsDismissInput(
-        val kind: Kind,
+        val kind: ProblemKind,
         val subject: String,
-    ) {
-        @Serializable(with = Kind.Companion::class)
-        enum class Kind(val raw: String) {
-            EPISODE_ORDERING("episodeOrdering"),
-            MISSING_EPISODES("missingEpisodes"),
-            IN_ARR_NOT_IN_PLEX("inArrNotInPlex"),
-            FAILED_IMPORT("failedImport"),
-            UNKNOWN_SIZE("unknownSize"),
-            RULE_FAILING("ruleFailing"),
-            RULE_EMPTY("ruleEmpty"),
-            RULE_CONFLICT("ruleConflict"),
-            LEGACY_AGENT("legacyAgent"),
-            UNMATCHED("unmatched"),
-            IN_PLEX_NOT_IN_ARR("inPlexNotInArr"),
-            DUPLICATE_ACROSS_INSTANCES("duplicateAcrossInstances"),
-            /** A value this build doesn't know — a newer server's. */
-            UNKNOWN("");
-
-            companion object : KSerializer<Kind> {
-                val known: List<Kind> = Kind.entries.filter { it != UNKNOWN }
-                override val descriptor = PrimitiveSerialDescriptor("dev.tinkerbell.model.Admin.ProblemsDismissInput.Kind", PrimitiveKind.STRING)
-                override fun deserialize(decoder: Decoder): Kind {
-                    val raw = decoder.decodeString()
-                    return Kind.entries.firstOrNull { it != UNKNOWN && it.raw == raw } ?: UNKNOWN
-                }
-                override fun serialize(encoder: Encoder, value: Kind) = encoder.encodeString(value.raw)
-            }
-        }
-
-    }
+    )
 
     @Serializable
     data class ProblemsUndismissInput(
-        val kind: Kind,
+        val kind: ProblemKind,
         val subject: String,
-    ) {
-        @Serializable(with = Kind.Companion::class)
-        enum class Kind(val raw: String) {
-            EPISODE_ORDERING("episodeOrdering"),
-            MISSING_EPISODES("missingEpisodes"),
-            IN_ARR_NOT_IN_PLEX("inArrNotInPlex"),
-            FAILED_IMPORT("failedImport"),
-            UNKNOWN_SIZE("unknownSize"),
-            RULE_FAILING("ruleFailing"),
-            RULE_EMPTY("ruleEmpty"),
-            RULE_CONFLICT("ruleConflict"),
-            LEGACY_AGENT("legacyAgent"),
-            UNMATCHED("unmatched"),
-            IN_PLEX_NOT_IN_ARR("inPlexNotInArr"),
-            DUPLICATE_ACROSS_INSTANCES("duplicateAcrossInstances"),
-            /** A value this build doesn't know — a newer server's. */
-            UNKNOWN("");
-
-            companion object : KSerializer<Kind> {
-                val known: List<Kind> = Kind.entries.filter { it != UNKNOWN }
-                override val descriptor = PrimitiveSerialDescriptor("dev.tinkerbell.model.Admin.ProblemsUndismissInput.Kind", PrimitiveKind.STRING)
-                override fun deserialize(decoder: Decoder): Kind {
-                    val raw = decoder.decodeString()
-                    return Kind.entries.firstOrNull { it != UNKNOWN && it.raw == raw } ?: UNKNOWN
-                }
-                override fun serialize(encoder: Encoder, value: Kind) = encoder.encodeString(value.raw)
-            }
-        }
-
-    }
+    )
 
     @Serializable
     data class ProblemsRescanInput(
@@ -1607,7 +1491,7 @@ object Admin {
     )
 
     @Serializable
-    data class RulesRunDetailOutputRulesRunDetailOutput(
+    data class RulesRunDetail(
         val id: String,
         val ruleId: String,
         val phase: RuleRunPhase,
@@ -1675,7 +1559,7 @@ object Admin {
     )
 
     @Serializable
-    data class CleanupCountsOutputCleanupCountsOutput(
+    data class CleanupCountsValue(
         val queued: Double,
         val actioned: Double,
     )
@@ -1721,10 +1605,10 @@ object Admin {
     data class CleanupHoldManyOutput(
         val ok: Boolean,
         val count: Long,
-        val previous: List<Previou>,
+        val previous: List<PreviousItem>,
     ) {
         @Serializable
-        data class Previou(
+        data class PreviousItem(
             val ruleId: String,
             val ratingKey: String,
             val heldUntil: Double?,
@@ -2362,11 +2246,11 @@ object AdminApi {
     val rulesActiveRuns = Endpoint("rules.activeRuns", Endpoint.Kind.QUERY, NoInput.serializer(), ListSerializer(RuleRunSummary.serializer()))
     val rulesRuns = Endpoint("rules.runs", Endpoint.Kind.QUERY, Admin.RulesRunsInput.serializer(), ListSerializer(Admin.RulesRunsItem.serializer()))
     val rulesRecentRuns = Endpoint("rules.recentRuns", Endpoint.Kind.QUERY, Admin.RulesRecentRunsInput.serializer(), ListSerializer(RuleRunSummary.serializer()))
-    val rulesRunDetail = Endpoint("rules.runDetail", Endpoint.Kind.QUERY, Admin.RulesRunDetailInput.serializer(), Admin.RulesRunDetailOutputRulesRunDetailOutput.serializer().nullable)
+    val rulesRunDetail = Endpoint("rules.runDetail", Endpoint.Kind.QUERY, Admin.RulesRunDetailInput.serializer(), Admin.RulesRunDetail.serializer().nullable)
     val rulesRunLog = Endpoint("rules.runLog", Endpoint.Kind.QUERY, Admin.RulesRunLogInput.serializer(), Admin.RulesRunLogOutput.serializer())
     val rulesRunsForJobRun = Endpoint("rules.runsForJobRun", Endpoint.Kind.QUERY, Admin.RulesRunsForJobRunInput.serializer(), ListSerializer(RuleRunSummary.serializer()))
     val cleanupQueue = Endpoint("cleanup.queue", Endpoint.Kind.QUERY, Admin.CleanupQueueInput.serializer(), ListSerializer(Admin.CleanupQueueItem.serializer()))
-    val cleanupCounts = Endpoint("cleanup.counts", Endpoint.Kind.QUERY, NoInput.serializer(), MapSerializer(String.serializer(), Admin.CleanupCountsOutputCleanupCountsOutput.serializer()))
+    val cleanupCounts = Endpoint("cleanup.counts", Endpoint.Kind.QUERY, NoInput.serializer(), MapSerializer(String.serializer(), Admin.CleanupCountsValue.serializer()))
     val cleanupApprove = Endpoint("cleanup.approve", Endpoint.Kind.MUTATION, Admin.CleanupApproveInput.serializer(), Admin.CleanupApproveOutput.serializer())
     val cleanupHold = Endpoint("cleanup.hold", Endpoint.Kind.MUTATION, Admin.CleanupHoldInput.serializer(), Admin.CleanupHoldOutput.serializer())
     val cleanupHoldMany = Endpoint("cleanup.holdMany", Endpoint.Kind.MUTATION, Admin.CleanupHoldManyInput.serializer(), Admin.CleanupHoldManyOutput.serializer())

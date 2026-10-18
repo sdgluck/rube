@@ -576,7 +576,7 @@ internal fun RuleRunScreen(runId: String) {
     val model = LocalAdmin.current
     val nav = LocalAdminNav.current
     val error = rememberActionError()
-    var run by remember { mutableStateOf<LoadState<Admin.RulesRunDetailOutputRulesRunDetailOutput?>>(LoadState.Loading) }
+    var run by remember { mutableStateOf<LoadState<Admin.RulesRunDetail?>>(LoadState.Loading) }
     val c = model.client
 
     suspend fun load() {

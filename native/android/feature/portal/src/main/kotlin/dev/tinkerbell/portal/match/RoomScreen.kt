@@ -83,7 +83,7 @@ class RoomContext(val client: TrpcClient, val posterBase: String, val isGuest: B
 }
 
 internal typealias RoomState = Portal.MatchStateOutput
-internal typealias MatchFilm = Portal.MatchStateOutput.Matche
+internal typealias MatchFilm = Portal.MatchStateOutput.Match
 
 private const val POLL_MS = 3_000L
 

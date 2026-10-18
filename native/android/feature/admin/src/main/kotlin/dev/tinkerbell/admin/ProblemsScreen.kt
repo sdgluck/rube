@@ -49,6 +49,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import dev.tinkerbell.api.ApiError
 import dev.tinkerbell.model.Admin
+import dev.tinkerbell.model.ProblemKind
 import dev.tinkerbell.model.AdminApi
 import dev.tinkerbell.platform.Links
 import dev.tinkerbell.platform.ui.ActionErrorDialog
@@ -126,11 +127,11 @@ internal fun ProblemsScreen() {
     }
 
     fun fix(p: Problem) = act {
-        notice = c.call(AdminApi.problemsFix, Admin.ProblemsFixInput(fixKind(p.kind.raw), p.subject)).message
+        notice = c.call(AdminApi.problemsFix, Admin.ProblemsFixInput(p.kind, p.subject)).message
     }
 
-    fun dismiss(p: Problem) = act { c.call(AdminApi.problemsDismiss, Admin.ProblemsDismissInput(dismissKind(p.kind.raw), p.subject)) }
-    fun restore(p: Problem) = act { c.call(AdminApi.problemsUndismiss, Admin.ProblemsUndismissInput(undismissKind(p.kind.raw), p.subject)) }
+    fun dismiss(p: Problem) = act { c.call(AdminApi.problemsDismiss, Admin.ProblemsDismissInput(p.kind, p.subject)) }
+    fun restore(p: Problem) = act { c.call(AdminApi.problemsUndismiss, Admin.ProblemsUndismissInput(p.kind, p.subject)) }
 
     fun rescan(subject: String? = null) = act {
         notice = when (val r = c.call(AdminApi.problemsRescan, Admin.ProblemsRescanInput(subject))) {
@@ -142,7 +143,7 @@ internal fun ProblemsScreen() {
     }
 
     fun fixAll(kind: String, problems: List<Problem>) = act {
-        val result = c.call(AdminApi.problemsFixAll, Admin.ProblemsFixAllInput(fixAllKind(kind), problems.filter { it.fixable }.map { it.subject }))
+        val result = c.call(AdminApi.problemsFixAll, Admin.ProblemsFixAllInput(problemKind(kind), problems.filter { it.fixable }.map { it.subject }))
         notice = "Fixed ${result.fixed.toLong()}." + if (result.failed.isEmpty()) "" else " ${result.failed.size} failed: " + result.failed.joinToString("; ") { "${it.title} (${it.error})" }
     }
 
@@ -234,12 +235,8 @@ internal fun ProblemsScreen() {
     ActionErrorDialog(error)
 }
 
-// The problem kinds are one enum on the server but a separate generated type
-// per procedure's input; these move a kind between them by its wire value.
-private fun fixKind(raw: String) = Admin.ProblemsFixInput.Kind.entries.firstOrNull { it.raw == raw } ?: Admin.ProblemsFixInput.Kind.UNKNOWN
-private fun fixAllKind(raw: String) = Admin.ProblemsFixAllInput.Kind.entries.firstOrNull { it.raw == raw } ?: Admin.ProblemsFixAllInput.Kind.UNKNOWN
-private fun dismissKind(raw: String) = Admin.ProblemsDismissInput.Kind.entries.firstOrNull { it.raw == raw } ?: Admin.ProblemsDismissInput.Kind.UNKNOWN
-private fun undismissKind(raw: String) = Admin.ProblemsUndismissInput.Kind.entries.firstOrNull { it.raw == raw } ?: Admin.ProblemsUndismissInput.Kind.UNKNOWN
+// A group's kind, read back from the wire value the list is grouped by.
+private fun problemKind(raw: String) = ProblemKind.entries.firstOrNull { it.raw == raw } ?: ProblemKind.UNKNOWN
 
 @Composable
 internal fun HealthScreen() {

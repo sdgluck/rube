@@ -15,11 +15,15 @@
  */
 import { z } from "zod";
 import { int } from "./int.ts";
+import { PROBLEM_KINDS } from "../problems.ts";
 
 export const RuleRunTrigger = z
   .enum(["manual", "job", "cron", "chain", "item-added", "item-watched", "item-removed", "request-fulfilled"])
   .meta({ id: "RuleRunTrigger" });
 export type RuleRunTrigger = z.infer<typeof RuleRunTrigger>;
+
+/** One named type, so the native models share it between `problems.list` and the fix/dismiss inputs. */
+export const ProblemKind = z.enum(PROBLEM_KINDS).meta({ id: "ProblemKind" });
 
 export const RuleRunPhase = z.enum(["run", "test"]).meta({ id: "RuleRunPhase" });
 export type RuleRunPhase = z.infer<typeof RuleRunPhase>;

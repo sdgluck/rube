@@ -93,7 +93,7 @@ internal fun CleanupScreen() {
     val error = rememberActionError()
     val snackbar = remember { SnackbarHostState() }
     var queue by remember { mutableStateOf<LoadState<List<Item>>>(LoadState.Loading) }
-    var counts by remember { mutableStateOf<Map<String, Admin.CleanupCountsOutputCleanupCountsOutput>>(emptyMap()) }
+    var counts by remember { mutableStateOf<Map<String, Admin.CleanupCountsValue>>(emptyMap()) }
     var held by remember { mutableStateOf(false) }
     var selecting by remember { mutableStateOf(false) }
     val selection = remember { mutableStateListOf<String>() }

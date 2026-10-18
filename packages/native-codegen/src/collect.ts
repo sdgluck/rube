@@ -27,8 +27,16 @@ const NAMESPACE = { portal: "Portal", admin: "Admin" } as const;
 
 const typeName = (path: string, which: "Input" | "Output") => `${pascal(path)}${which}`;
 
-/** `LeavingSoonOutput = [LeavingSoonItem]`, not `[LeavingSoonOutputItem]`. */
-const itemName = (root: string) => (root.endsWith("Output") ? `${root.slice(0, -"Output".length)}Item` : `${root}Item`);
+/**
+ * The shape an output wraps, named after the procedure rather than the alias:
+ * `LeavingSoonOutput = [LeavingSoonItem]`, `RulesRunDetailOutput =
+ * RulesRunDetail?`, `CleanupCountsOutput = [String: CleanupCountsValue]`.
+ */
+const itemName = (root: string, wrapper: "array" | "record" | "nullable") => {
+  const base = root.endsWith("Output") ? root.slice(0, -"Output".length) : root;
+  if (wrapper === "array") return `${base}Item`;
+  return wrapper === "nullable" && base !== root ? base : `${base}Value`;
+};
 
 export function namedSchemas(sources: ProcedureSource[]): NamedSchema[] {
   return sources.flatMap((s) => {

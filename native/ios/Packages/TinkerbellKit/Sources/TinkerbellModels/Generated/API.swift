@@ -352,6 +352,70 @@ public struct PlexSession: Codable, Sendable, Hashable {
     }
 }
 
+public enum ProblemKind: Codable, Sendable, Hashable, RawRepresentable {
+    case episodeOrdering
+    case missingEpisodes
+    case inArrNotInPlex
+    case failedImport
+    case unknownSize
+    case ruleFailing
+    case ruleEmpty
+    case ruleConflict
+    case legacyAgent
+    case unmatched
+    case inPlexNotInArr
+    case duplicateAcrossInstances
+    /** A value this build doesn't know — a newer server's. */
+    case unknown(String)
+
+    public static let known: [ProblemKind] = [.episodeOrdering, .missingEpisodes, .inArrNotInPlex, .failedImport, .unknownSize, .ruleFailing, .ruleEmpty, .ruleConflict, .legacyAgent, .unmatched, .inPlexNotInArr, .duplicateAcrossInstances]
+
+    public init(rawValue: String) {
+        switch rawValue {
+        case "episodeOrdering": self = .episodeOrdering
+        case "missingEpisodes": self = .missingEpisodes
+        case "inArrNotInPlex": self = .inArrNotInPlex
+        case "failedImport": self = .failedImport
+        case "unknownSize": self = .unknownSize
+        case "ruleFailing": self = .ruleFailing
+        case "ruleEmpty": self = .ruleEmpty
+        case "ruleConflict": self = .ruleConflict
+        case "legacyAgent": self = .legacyAgent
+        case "unmatched": self = .unmatched
+        case "inPlexNotInArr": self = .inPlexNotInArr
+        case "duplicateAcrossInstances": self = .duplicateAcrossInstances
+        default: self = .unknown(rawValue)
+        }
+    }
+
+    public var rawValue: String {
+        switch self {
+        case .episodeOrdering: "episodeOrdering"
+        case .missingEpisodes: "missingEpisodes"
+        case .inArrNotInPlex: "inArrNotInPlex"
+        case .failedImport: "failedImport"
+        case .unknownSize: "unknownSize"
+        case .ruleFailing: "ruleFailing"
+        case .ruleEmpty: "ruleEmpty"
+        case .ruleConflict: "ruleConflict"
+        case .legacyAgent: "legacyAgent"
+        case .unmatched: "unmatched"
+        case .inPlexNotInArr: "inPlexNotInArr"
+        case .duplicateAcrossInstances: "duplicateAcrossInstances"
+        case .unknown(let raw): raw
+        }
+    }
+
+    public init(from decoder: Decoder) throws {
+        self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.singleValueContainer()
+        try c.encode(rawValue)
+    }
+}
+
 public enum RuleRunPhase: Codable, Sendable, Hashable, RawRepresentable {
     case run
     case test
@@ -1902,7 +1966,7 @@ extension Portal {
             }
         }
 
-        public struct Matche: Codable, Sendable, Hashable {
+        public struct Match: Codable, Sendable, Hashable {
 
             public var ratingKey: String
             public var title: String
@@ -1989,7 +2053,7 @@ extension Portal {
         public var deckSize: Int
         public var me: Me
         public var members: [Member]
-        public var matches: [Matche]
+        public var matches: [Match]
         public var unanimousCount: Int
         public var swipedCount: Int
         public var votes: [Vote]
@@ -1997,7 +2061,7 @@ extension Portal {
         public var link: String
         public var plexServerId: String?
 
-        public init(code: String, invite: String, library: String, filters: MatchFilters, deckSize: Int, me: Me, members: [Member], matches: [Matche], unanimousCount: Int, swipedCount: Int, votes: [Vote], myVote: String? = nil, link: String, plexServerId: String? = nil) {
+        public init(code: String, invite: String, library: String, filters: MatchFilters, deckSize: Int, me: Me, members: [Member], matches: [Match], unanimousCount: Int, swipedCount: Int, votes: [Vote], myVote: String? = nil, link: String, plexServerId: String? = nil) {
             self.code = code
             self.invite = invite
             self.library = library
@@ -2907,70 +2971,6 @@ extension Admin {
 
     public struct ProblemsListOutput: Codable, Sendable, Hashable {
         public struct Problem: Codable, Sendable, Hashable {
-            public enum Kind: Codable, Sendable, Hashable, RawRepresentable {
-                case duplicateAcrossInstances
-                case episodeOrdering
-                case failedImport
-                case inArrNotInPlex
-                case inPlexNotInArr
-                case legacyAgent
-                case missingEpisodes
-                case ruleConflict
-                case ruleEmpty
-                case ruleFailing
-                case unknownSize
-                case unmatched
-                /** A value this build doesn't know — a newer server's. */
-                case unknown(String)
-
-                public static let known: [Kind] = [.duplicateAcrossInstances, .episodeOrdering, .failedImport, .inArrNotInPlex, .inPlexNotInArr, .legacyAgent, .missingEpisodes, .ruleConflict, .ruleEmpty, .ruleFailing, .unknownSize, .unmatched]
-
-                public init(rawValue: String) {
-                    switch rawValue {
-                    case "duplicateAcrossInstances": self = .duplicateAcrossInstances
-                    case "episodeOrdering": self = .episodeOrdering
-                    case "failedImport": self = .failedImport
-                    case "inArrNotInPlex": self = .inArrNotInPlex
-                    case "inPlexNotInArr": self = .inPlexNotInArr
-                    case "legacyAgent": self = .legacyAgent
-                    case "missingEpisodes": self = .missingEpisodes
-                    case "ruleConflict": self = .ruleConflict
-                    case "ruleEmpty": self = .ruleEmpty
-                    case "ruleFailing": self = .ruleFailing
-                    case "unknownSize": self = .unknownSize
-                    case "unmatched": self = .unmatched
-                    default: self = .unknown(rawValue)
-                    }
-                }
-
-                public var rawValue: String {
-                    switch self {
-                    case .duplicateAcrossInstances: "duplicateAcrossInstances"
-                    case .episodeOrdering: "episodeOrdering"
-                    case .failedImport: "failedImport"
-                    case .inArrNotInPlex: "inArrNotInPlex"
-                    case .inPlexNotInArr: "inPlexNotInArr"
-                    case .legacyAgent: "legacyAgent"
-                    case .missingEpisodes: "missingEpisodes"
-                    case .ruleConflict: "ruleConflict"
-                    case .ruleEmpty: "ruleEmpty"
-                    case .ruleFailing: "ruleFailing"
-                    case .unknownSize: "unknownSize"
-                    case .unmatched: "unmatched"
-                    case .unknown(let raw): raw
-                    }
-                }
-
-                public init(from decoder: Decoder) throws {
-                    self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
-                }
-
-                public func encode(to encoder: Encoder) throws {
-                    var c = encoder.singleValueContainer()
-                    try c.encode(rawValue)
-                }
-            }
-
             public struct Evidence: Codable, Sendable, Hashable {
                 public struct Season: Codable, Sendable, Hashable {
 
@@ -3048,7 +3048,7 @@ extension Admin {
                 }
             }
 
-            public var kind: Kind
+            public var kind: ProblemKind
             public var subject: String
             public var title: String
             public var detail: String
@@ -3060,7 +3060,7 @@ extension Admin {
             public var fingerprint: String
             public var dismissed: Bool
 
-            public init(kind: Kind, subject: String, title: String, detail: String, link: String? = nil, fixable: Bool, fixLabel: String? = nil, evidence: Evidence? = nil, fixPending: Bool? = nil, fingerprint: String, dismissed: Bool) {
+            public init(kind: ProblemKind, subject: String, title: String, detail: String, link: String? = nil, fixable: Bool, fixLabel: String? = nil, evidence: Evidence? = nil, fixPending: Bool? = nil, fingerprint: String, dismissed: Bool) {
                 self.kind = kind
                 self.subject = subject
                 self.title = title
@@ -3125,74 +3125,11 @@ extension Admin {
     }
 
     public struct ProblemsFixInput: Codable, Sendable, Hashable {
-        public enum Kind: Codable, Sendable, Hashable, RawRepresentable {
-            case episodeOrdering
-            case missingEpisodes
-            case inArrNotInPlex
-            case failedImport
-            case unknownSize
-            case ruleFailing
-            case ruleEmpty
-            case ruleConflict
-            case legacyAgent
-            case unmatched
-            case inPlexNotInArr
-            case duplicateAcrossInstances
-            /** A value this build doesn't know — a newer server's. */
-            case unknown(String)
 
-            public static let known: [Kind] = [.episodeOrdering, .missingEpisodes, .inArrNotInPlex, .failedImport, .unknownSize, .ruleFailing, .ruleEmpty, .ruleConflict, .legacyAgent, .unmatched, .inPlexNotInArr, .duplicateAcrossInstances]
-
-            public init(rawValue: String) {
-                switch rawValue {
-                case "episodeOrdering": self = .episodeOrdering
-                case "missingEpisodes": self = .missingEpisodes
-                case "inArrNotInPlex": self = .inArrNotInPlex
-                case "failedImport": self = .failedImport
-                case "unknownSize": self = .unknownSize
-                case "ruleFailing": self = .ruleFailing
-                case "ruleEmpty": self = .ruleEmpty
-                case "ruleConflict": self = .ruleConflict
-                case "legacyAgent": self = .legacyAgent
-                case "unmatched": self = .unmatched
-                case "inPlexNotInArr": self = .inPlexNotInArr
-                case "duplicateAcrossInstances": self = .duplicateAcrossInstances
-                default: self = .unknown(rawValue)
-                }
-            }
-
-            public var rawValue: String {
-                switch self {
-                case .episodeOrdering: "episodeOrdering"
-                case .missingEpisodes: "missingEpisodes"
-                case .inArrNotInPlex: "inArrNotInPlex"
-                case .failedImport: "failedImport"
-                case .unknownSize: "unknownSize"
-                case .ruleFailing: "ruleFailing"
-                case .ruleEmpty: "ruleEmpty"
-                case .ruleConflict: "ruleConflict"
-                case .legacyAgent: "legacyAgent"
-                case .unmatched: "unmatched"
-                case .inPlexNotInArr: "inPlexNotInArr"
-                case .duplicateAcrossInstances: "duplicateAcrossInstances"
-                case .unknown(let raw): raw
-                }
-            }
-
-            public init(from decoder: Decoder) throws {
-                self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
-            }
-
-            public func encode(to encoder: Encoder) throws {
-                var c = encoder.singleValueContainer()
-                try c.encode(rawValue)
-            }
-        }
-
-        public var kind: Kind
+        public var kind: ProblemKind
         public var subject: String
 
-        public init(kind: Kind, subject: String) {
+        public init(kind: ProblemKind, subject: String) {
             self.kind = kind
             self.subject = subject
         }
@@ -3228,74 +3165,11 @@ extension Admin {
     }
 
     public struct ProblemsFixAllInput: Codable, Sendable, Hashable {
-        public enum Kind: Codable, Sendable, Hashable, RawRepresentable {
-            case episodeOrdering
-            case missingEpisodes
-            case inArrNotInPlex
-            case failedImport
-            case unknownSize
-            case ruleFailing
-            case ruleEmpty
-            case ruleConflict
-            case legacyAgent
-            case unmatched
-            case inPlexNotInArr
-            case duplicateAcrossInstances
-            /** A value this build doesn't know — a newer server's. */
-            case unknown(String)
 
-            public static let known: [Kind] = [.episodeOrdering, .missingEpisodes, .inArrNotInPlex, .failedImport, .unknownSize, .ruleFailing, .ruleEmpty, .ruleConflict, .legacyAgent, .unmatched, .inPlexNotInArr, .duplicateAcrossInstances]
-
-            public init(rawValue: String) {
-                switch rawValue {
-                case "episodeOrdering": self = .episodeOrdering
-                case "missingEpisodes": self = .missingEpisodes
-                case "inArrNotInPlex": self = .inArrNotInPlex
-                case "failedImport": self = .failedImport
-                case "unknownSize": self = .unknownSize
-                case "ruleFailing": self = .ruleFailing
-                case "ruleEmpty": self = .ruleEmpty
-                case "ruleConflict": self = .ruleConflict
-                case "legacyAgent": self = .legacyAgent
-                case "unmatched": self = .unmatched
-                case "inPlexNotInArr": self = .inPlexNotInArr
-                case "duplicateAcrossInstances": self = .duplicateAcrossInstances
-                default: self = .unknown(rawValue)
-                }
-            }
-
-            public var rawValue: String {
-                switch self {
-                case .episodeOrdering: "episodeOrdering"
-                case .missingEpisodes: "missingEpisodes"
-                case .inArrNotInPlex: "inArrNotInPlex"
-                case .failedImport: "failedImport"
-                case .unknownSize: "unknownSize"
-                case .ruleFailing: "ruleFailing"
-                case .ruleEmpty: "ruleEmpty"
-                case .ruleConflict: "ruleConflict"
-                case .legacyAgent: "legacyAgent"
-                case .unmatched: "unmatched"
-                case .inPlexNotInArr: "inPlexNotInArr"
-                case .duplicateAcrossInstances: "duplicateAcrossInstances"
-                case .unknown(let raw): raw
-                }
-            }
-
-            public init(from decoder: Decoder) throws {
-                self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
-            }
-
-            public func encode(to encoder: Encoder) throws {
-                var c = encoder.singleValueContainer()
-                try c.encode(rawValue)
-            }
-        }
-
-        public var kind: Kind
+        public var kind: ProblemKind
         public var subjects: [String]?
 
-        public init(kind: Kind, subjects: [String]? = nil) {
+        public init(kind: ProblemKind, subjects: [String]? = nil) {
             self.kind = kind
             self.subjects = subjects
         }
@@ -3356,74 +3230,11 @@ extension Admin {
     }
 
     public struct ProblemsDismissInput: Codable, Sendable, Hashable {
-        public enum Kind: Codable, Sendable, Hashable, RawRepresentable {
-            case episodeOrdering
-            case missingEpisodes
-            case inArrNotInPlex
-            case failedImport
-            case unknownSize
-            case ruleFailing
-            case ruleEmpty
-            case ruleConflict
-            case legacyAgent
-            case unmatched
-            case inPlexNotInArr
-            case duplicateAcrossInstances
-            /** A value this build doesn't know — a newer server's. */
-            case unknown(String)
 
-            public static let known: [Kind] = [.episodeOrdering, .missingEpisodes, .inArrNotInPlex, .failedImport, .unknownSize, .ruleFailing, .ruleEmpty, .ruleConflict, .legacyAgent, .unmatched, .inPlexNotInArr, .duplicateAcrossInstances]
-
-            public init(rawValue: String) {
-                switch rawValue {
-                case "episodeOrdering": self = .episodeOrdering
-                case "missingEpisodes": self = .missingEpisodes
-                case "inArrNotInPlex": self = .inArrNotInPlex
-                case "failedImport": self = .failedImport
-                case "unknownSize": self = .unknownSize
-                case "ruleFailing": self = .ruleFailing
-                case "ruleEmpty": self = .ruleEmpty
-                case "ruleConflict": self = .ruleConflict
-                case "legacyAgent": self = .legacyAgent
-                case "unmatched": self = .unmatched
-                case "inPlexNotInArr": self = .inPlexNotInArr
-                case "duplicateAcrossInstances": self = .duplicateAcrossInstances
-                default: self = .unknown(rawValue)
-                }
-            }
-
-            public var rawValue: String {
-                switch self {
-                case .episodeOrdering: "episodeOrdering"
-                case .missingEpisodes: "missingEpisodes"
-                case .inArrNotInPlex: "inArrNotInPlex"
-                case .failedImport: "failedImport"
-                case .unknownSize: "unknownSize"
-                case .ruleFailing: "ruleFailing"
-                case .ruleEmpty: "ruleEmpty"
-                case .ruleConflict: "ruleConflict"
-                case .legacyAgent: "legacyAgent"
-                case .unmatched: "unmatched"
-                case .inPlexNotInArr: "inPlexNotInArr"
-                case .duplicateAcrossInstances: "duplicateAcrossInstances"
-                case .unknown(let raw): raw
-                }
-            }
-
-            public init(from decoder: Decoder) throws {
-                self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
-            }
-
-            public func encode(to encoder: Encoder) throws {
-                var c = encoder.singleValueContainer()
-                try c.encode(rawValue)
-            }
-        }
-
-        public var kind: Kind
+        public var kind: ProblemKind
         public var subject: String
 
-        public init(kind: Kind, subject: String) {
+        public init(kind: ProblemKind, subject: String) {
             self.kind = kind
             self.subject = subject
         }
@@ -3441,74 +3252,11 @@ extension Admin {
     }
 
     public struct ProblemsUndismissInput: Codable, Sendable, Hashable {
-        public enum Kind: Codable, Sendable, Hashable, RawRepresentable {
-            case episodeOrdering
-            case missingEpisodes
-            case inArrNotInPlex
-            case failedImport
-            case unknownSize
-            case ruleFailing
-            case ruleEmpty
-            case ruleConflict
-            case legacyAgent
-            case unmatched
-            case inPlexNotInArr
-            case duplicateAcrossInstances
-            /** A value this build doesn't know — a newer server's. */
-            case unknown(String)
 
-            public static let known: [Kind] = [.episodeOrdering, .missingEpisodes, .inArrNotInPlex, .failedImport, .unknownSize, .ruleFailing, .ruleEmpty, .ruleConflict, .legacyAgent, .unmatched, .inPlexNotInArr, .duplicateAcrossInstances]
-
-            public init(rawValue: String) {
-                switch rawValue {
-                case "episodeOrdering": self = .episodeOrdering
-                case "missingEpisodes": self = .missingEpisodes
-                case "inArrNotInPlex": self = .inArrNotInPlex
-                case "failedImport": self = .failedImport
-                case "unknownSize": self = .unknownSize
-                case "ruleFailing": self = .ruleFailing
-                case "ruleEmpty": self = .ruleEmpty
-                case "ruleConflict": self = .ruleConflict
-                case "legacyAgent": self = .legacyAgent
-                case "unmatched": self = .unmatched
-                case "inPlexNotInArr": self = .inPlexNotInArr
-                case "duplicateAcrossInstances": self = .duplicateAcrossInstances
-                default: self = .unknown(rawValue)
-                }
-            }
-
-            public var rawValue: String {
-                switch self {
-                case .episodeOrdering: "episodeOrdering"
-                case .missingEpisodes: "missingEpisodes"
-                case .inArrNotInPlex: "inArrNotInPlex"
-                case .failedImport: "failedImport"
-                case .unknownSize: "unknownSize"
-                case .ruleFailing: "ruleFailing"
-                case .ruleEmpty: "ruleEmpty"
-                case .ruleConflict: "ruleConflict"
-                case .legacyAgent: "legacyAgent"
-                case .unmatched: "unmatched"
-                case .inPlexNotInArr: "inPlexNotInArr"
-                case .duplicateAcrossInstances: "duplicateAcrossInstances"
-                case .unknown(let raw): raw
-                }
-            }
-
-            public init(from decoder: Decoder) throws {
-                self.init(rawValue: try decoder.singleValueContainer().decode(String.self))
-            }
-
-            public func encode(to encoder: Encoder) throws {
-                var c = encoder.singleValueContainer()
-                try c.encode(rawValue)
-            }
-        }
-
-        public var kind: Kind
+        public var kind: ProblemKind
         public var subject: String
 
-        public init(kind: Kind, subject: String) {
+        public init(kind: ProblemKind, subject: String) {
             self.kind = kind
             self.subject = subject
         }
@@ -4876,7 +4624,7 @@ extension Admin {
         }
     }
 
-    public struct RulesRunDetailOutputRulesRunDetailOutput: Codable, Sendable, Hashable {
+    public struct RulesRunDetail: Codable, Sendable, Hashable {
 
         public var id: String
         public var ruleId: String
@@ -4950,7 +4698,7 @@ extension Admin {
         }
     }
 
-    public typealias RulesRunDetailOutput = RulesRunDetailOutputRulesRunDetailOutput?
+    public typealias RulesRunDetailOutput = RulesRunDetail?
     public struct RulesRunLogInput: Codable, Sendable, Hashable {
 
         public var runId: String
@@ -5139,7 +4887,7 @@ extension Admin {
     }
 
     public typealias CleanupQueueOutput = [CleanupQueueItem]
-    public struct CleanupCountsOutputCleanupCountsOutput: Codable, Sendable, Hashable {
+    public struct CleanupCountsValue: Codable, Sendable, Hashable {
 
         public var queued: Double
         public var actioned: Double
@@ -5161,7 +4909,7 @@ extension Admin {
         }
     }
 
-    public typealias CleanupCountsOutput = [String: CleanupCountsOutputCleanupCountsOutput]
+    public typealias CleanupCountsOutput = [String: CleanupCountsValue]
     public struct CleanupApproveInput: Codable, Sendable, Hashable {
 
         public var ruleId: String
@@ -5294,7 +5042,7 @@ extension Admin {
     }
 
     public struct CleanupHoldManyOutput: Codable, Sendable, Hashable {
-        public struct Previou: Codable, Sendable, Hashable {
+        public struct PreviousItem: Codable, Sendable, Hashable {
 
             public var ruleId: String
             public var ratingKey: String
@@ -5322,9 +5070,9 @@ extension Admin {
 
         public var ok: Bool
         public var count: Int
-        public var previous: [Previou]
+        public var previous: [PreviousItem]
 
-        public init(ok: Bool, count: Int, previous: [Previou]) {
+        public init(ok: Bool, count: Int, previous: [PreviousItem]) {
             self.ok = ok
             self.count = count
             self.previous = previous

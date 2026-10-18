@@ -26,7 +26,7 @@ public struct RoomContext: Sendable {
 }
 
 typealias RoomState = Portal.MatchStateOutput
-typealias MatchFilm = Portal.MatchStateOutput.Matche
+typealias MatchFilm = Portal.MatchStateOutput.Match
 
 struct RoomView: View {
     let room: RoomContext

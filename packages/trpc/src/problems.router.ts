@@ -1,13 +1,12 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { PROBLEM_KINDS } from "@tinkerbell/contracts";
 import { ProblemFixError } from "@tinkerbell/domain.problems";
 
 import { t, procedure } from "./_base.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin, ProblemKind } from "@tinkerbell/contracts/native-api";
 
-const target = z.object({ kind: z.enum(PROBLEM_KINDS), subject: z.string().min(1) });
+const target = z.object({ kind: ProblemKind, subject: z.string().min(1) });
 
 /**
  * A fix that can't be attempted is the caller's problem (412); one that
@@ -39,7 +38,7 @@ export function createProblemsRouter(deps: Pick<TrpcDeps, "problems" | "jobs">) 
 
     /** Every open fixable problem of a kind, or only `subjects` — a selection on the page. */
     fixAll: procedure
-      .input(z.object({ kind: z.enum(PROBLEM_KINDS), subjects: z.array(z.string().min(1)).max(2000).optional() }))
+      .input(z.object({ kind: ProblemKind, subjects: z.array(z.string().min(1)).max(2000).optional() }))
       .output(NativeAdmin.ProblemsFixAllOutput)
       .mutation(({ input }) => mapFixErrors(() => problems.fixAll(input.kind, input.subjects))),
 

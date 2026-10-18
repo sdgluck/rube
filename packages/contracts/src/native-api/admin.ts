@@ -18,6 +18,7 @@ import { int } from "./int.ts";
 import {
   RuleRunTrigger,
   RuleRunPhase,
+  ProblemKind,
   PlexSession,
   UserSummary,
   RuleRunSummary,
@@ -129,20 +130,7 @@ export const HealthCheckOutput = z.object({ ok: z.boolean() });
 export const ProblemsListOutput = z.object({
   problems: z.array(
     z.object({
-      kind: z.enum([
-        "duplicateAcrossInstances",
-        "episodeOrdering",
-        "failedImport",
-        "inArrNotInPlex",
-        "inPlexNotInArr",
-        "legacyAgent",
-        "missingEpisodes",
-        "ruleConflict",
-        "ruleEmpty",
-        "ruleFailing",
-        "unknownSize",
-        "unmatched",
-      ]),
+      kind: ProblemKind,
       subject: z.string(),
       title: z.string(),
       detail: z.string(),
