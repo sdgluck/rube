@@ -79,6 +79,10 @@ jobs:
         if: always()
         run: pnpm typecheck
 
+      - name: Native models are current
+        if: always()
+        run: pnpm native:codegen --check
+
   test:
     runs-on: ubuntu-latest
     strategy:

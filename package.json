@@ -26,6 +26,7 @@
     "prepare": "husky",
     "lint:css": "git ls-files -z '*.css' | xargs -0 stylelint",
     "lint:css:report": "git ls-files -z '*.css' | xargs -0 stylelint --report-needless-disables --report-invalid-scope-disables",
+    "native:codegen": "node packages/native-codegen/src/cli.ts",
     "native:assets": "node scripts/native-assets.mjs",
     "native:sync": "pnpm --filter @tinkerbell/web --filter @tinkerbell/portal run native:sync",
     "native:ios": "node scripts/native.mjs ios",

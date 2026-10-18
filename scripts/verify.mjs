@@ -37,6 +37,9 @@ const CHECKS = [
   { name: "format", cmd: FORMAT_CHECK },
   { name: "lint", cmd: LINT },
   { name: "typecheck", cmd: "node scripts/typecheck.mjs" },
+  // The Swift/Kotlin models are generated from the server's schemas and
+  // committed; a schema change that wasn't regenerated fails here, not on a phone.
+  { name: "native", cmd: "node packages/native-codegen/src/cli.ts --check" },
   // The long pole, and the only one worth abandoning early.
   { name: "test", cmd: "node scripts/test.mjs", long: true },
 ];
