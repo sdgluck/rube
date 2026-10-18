@@ -3,7 +3,7 @@ import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 
 import { getPreviewForUser, type PreviewResult } from "@tinkerbell/domain.preview";
-import { shuffleAllSections } from "@tinkerbell/domain.shuffle-hubs";
+import { shuffleSectionHubs } from "@tinkerbell/domain.shuffle-hubs";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 
 // Process-local TTL cache for preview results. The underlying Plex calls
@@ -43,6 +43,13 @@ export function createPreviewRouter(deps: TrpcDeps) {
   const { config } = deps;
   const { getConfig } = config;
 
+  /** The same libraries the scheduled shuffle job reorders. */
+  async function shuffleSections() {
+    const sections = await getPlexClient().getSections();
+    const configuredLibraries = getConfig("global_plex_libraries");
+    return configuredLibraries ? sections.filter((s) => configuredLibraries.includes(s.title)) : sections;
+  }
+
   const previewRouter = t.router({
     home: procedure
       .input(
@@ -75,17 +82,33 @@ export function createPreviewRouter(deps: TrpcDeps) {
         return { ok: true };
       }),
 
-    shuffleHubs: procedure.mutation(async () => {
-      const client = getPlexClient();
-      let sections = await client.getSections();
-      const configuredLibraries = getConfig("global_plex_libraries");
-      if (configuredLibraries) {
-        sections = sections.filter((s) => configuredLibraries.includes(s.title));
-      }
-      const results = await shuffleAllSections(client, sections);
-      const totalShuffled = results.reduce((sum, r) => sum + r.shuffled, 0);
+    /**
+     * Drops every cached home, for the page's Refresh. Without it a refresh
+     * inside the 30s TTL would ask the server again and get back the same
+     * cached answer, so the button would appear to work and change nothing.
+     */
+    refresh: procedure.mutation(() => {
       previewCache.clear();
-      return { results, totalShuffled, sections: sections.length };
+      return { ok: true };
+    }),
+
+    /**
+     * The libraries a shuffle reorders, so the page can shuffle them one at a
+     * time and say which it is on. One mutation for every library gave a
+     * spinner and nothing else for as long as Plex took — on a slow server, long
+     * enough to look hung while hubs were visibly disappearing from home.
+     */
+    shuffleTargets: procedure.query(async () => {
+      const sections = await shuffleSections();
+      return sections.map((s) => ({ key: s.key, title: s.title }));
+    }),
+
+    shuffleSection: procedure.input(z.object({ sectionKey: z.string() })).mutation(async ({ input }) => {
+      const section = (await shuffleSections()).find((s) => s.key === input.sectionKey);
+      if (!section) throw new Error(`Library ${input.sectionKey} is not one Tinkerbell manages`);
+      const result = await shuffleSectionHubs(getPlexClient(), section);
+      previewCache.clear();
+      return result;
     }),
   });
 

@@ -1,12 +1,16 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { RefreshCw } from "lucide-react";
 import { readStorage, writeStorage } from "#/storage";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
 import ConfirmModal from "#components/ConfirmModal";
 import PageShell, { StatusChip } from "#components/PageShell";
 import { PreviewHubRow, PreviewHubRowSkeleton } from "#components/PreviewHubRow";
+import RelativeTime from "#components/RelativeTime";
+import SearchSelect from "#components/SearchSelect";
 import Spinner from "#components/Spinner";
 import { useToast } from "#components/Toast";
+import { formatRelativeTime } from "#hooks/useRelativeTime";
 import { trpc } from "#/trpc";
 import styles from "./Preview.module.css";
 
@@ -64,18 +68,34 @@ function shuffleArray<T>(arr: T[]): T[] {
 const STORAGE_KEY = "preview.userId";
 const SECTION_STORAGE_KEY = "preview.sectionId";
 
-function readStoredUserId(): number | null {
-  const raw = readStorage(STORAGE_KEY);
+// The view lives in the URL (`?user=…&library=…`) so "what Bob sees" is a
+// link, and Back steps through the users you looked at. Storage still holds
+// the last view, for arriving at a bare /preview from the sidebar.
+const USER_PARAM = "user";
+const LIBRARY_PARAM = "library";
+
+function parseId(raw: string | null): number | null {
   if (!raw || raw === "null") return null;
   const n = Number(raw);
   return Number.isFinite(n) ? n : null;
 }
 
-function readStoredSectionId(): number | null {
-  const raw = readStorage(SECTION_STORAGE_KEY);
-  if (!raw || raw === "null") return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
+/** Last run, as one line for a chip's tooltip. */
+function describeRuleRun(rule: {
+  name: string;
+  enabled: number | boolean;
+  lastRunAt: number | null;
+  lastRunStatus: string | null;
+  lastRunItemCount: number | null;
+}): string {
+  const head = `Rule “${rule.name}”${rule.enabled ? "" : " (disabled)"}`;
+  if (!rule.lastRunAt) return `${head} — not run yet. Open in Rules.`;
+  const when = formatRelativeTime(rule.lastRunAt);
+  const run =
+    rule.lastRunStatus === "ok"
+      ? `last ran ${when}, ${rule.lastRunItemCount ?? 0} item${rule.lastRunItemCount === 1 ? "" : "s"}`
+      : `last run ${rule.lastRunStatus ?? "unknown"} ${when}`;
+  return `${head} — ${run}. Open in Rules.`;
 }
 
 function isWideHub(hub: { type: string; identifier: string; context?: string }): boolean {
@@ -91,14 +111,39 @@ function isWideHub(hub: { type: string; identifier: string; context?: string }):
   );
 }
 
+function viewParams(userId: number | null, sectionId: number | null): URLSearchParams {
+  const next = new URLSearchParams();
+  // Always named, admin included: a bare /preview means "the last view", so a
+  // history entry without it would come back as whoever was viewed most
+  // recently rather than what that entry showed.
+  next.set(USER_PARAM, userId == null ? "admin" : String(userId));
+  if (sectionId != null) next.set(LIBRARY_PARAM, String(sectionId));
+  return next;
+}
+
 export default function Preview() {
   const navigate = useNavigate();
   const utils = trpc.useUtils();
   const { addToast } = useToast();
-  const [userId, setUserId] = useState<number | null>(readStoredUserId);
-  const [sectionId, setSectionId] = useState<number | null>(readStoredSectionId);
+  const [params, setParams] = useSearchParams();
+  // A URL that names neither falls back to the last view rather than the
+  // admin's, read here rather than after a redirect so the first request is
+  // already for the right user.
+  const urlNamesView = params.has(USER_PARAM) || params.has(LIBRARY_PARAM);
+  const userId = urlNamesView ? parseId(params.get(USER_PARAM)) : parseId(readStorage(STORAGE_KEY));
+  const sectionId = urlNamesView ? parseId(params.get(LIBRARY_PARAM)) : parseId(readStorage(SECTION_STORAGE_KEY));
+  // ...and then writes that view into the URL, replacing the bare entry, so a
+  // copied link says what it shows and Back never lands on a bare entry.
+  useEffect(() => {
+    if (urlNamesView) return;
+    setParams(viewParams(userId, sectionId), { replace: true });
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- once, on arrival
+  }, []);
   const [hubOrder, setHubOrder] = useState<string[] | null>(null);
   const [shuffleStatus, setShuffleStatus] = useState<string | null>(null);
+  const [confirmShuffle, setConfirmShuffle] = useState(false);
+  const [shuffleProgress, setShuffleProgress] = useState<{ done: number; total: number; current: string } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [unpinTarget, setUnpinTarget] = useState<{
     sectionId: string;
     hubIdentifier: string;
@@ -136,6 +181,7 @@ export default function Preview() {
   // while the new home loads, which on a slow Plex reads as the picker having
   // done nothing. Mark that window so the stale rows are visibly stale.
   const isSwitching = fastQuery.isPlaceholderData && fastQuery.isFetching;
+  const updatedAt = Math.max(fastQuery.dataUpdatedAt, fullQuery.dataUpdatedAt);
 
   const unpinMutation = trpc.preview.unpinCollection.useMutation({
     onMutate: async ({ hubIdentifier }) => {
@@ -168,28 +214,42 @@ export default function Preview() {
     },
   });
 
-  // Names, not ids: the Rules link narrows that page by search term.
-  const ruleNameByCollectionKey = useMemo(() => {
-    const map = new Map<string, string>();
+  const ruleByCollectionKey = useMemo(() => {
+    const map = new Map<string, NonNullable<typeof rulesQuery.data>[number]>();
     for (const r of rulesQuery.data ?? []) {
-      if (r.lastCollectionRatingKey) map.set(r.lastCollectionRatingKey, r.name);
+      if (r.lastCollectionRatingKey) map.set(r.lastCollectionRatingKey, r);
     }
     return map;
   }, [rulesQuery.data]);
-  const shuffleMutation = trpc.preview.shuffleHubs.useMutation({
-    onSuccess: async (res) => {
-      setShuffleStatus(`Shuffled ${res.totalShuffled} hub${res.totalShuffled === 1 ? "" : "s"} on Plex.`);
+  const shuffleSection = trpc.preview.shuffleSection.useMutation();
+  const refreshMutation = trpc.preview.refresh.useMutation();
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    try {
+      // The server keeps homes for 30s; refetching without dropping them
+      // would hand back the same answer and look like the button did nothing.
+      await refreshMutation.mutateAsync();
       await utils.preview.home.invalidate();
-      setHubOrder(null);
-      setTimeout(() => setShuffleStatus(null), 4000);
-    },
-    onError: (err) => {
-      setShuffleStatus(`Shuffle failed: ${err.message}`);
-      setHubOrder(null);
-    },
-  });
+    } catch (err) {
+      addToast(`Refresh failed: ${err instanceof Error ? err.message : String(err)}`, "error");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const users = usersQuery.data?.items ?? [];
+  const userOptions = useMemo(
+    () => [
+      { value: "", label: "Admin (no filters)" },
+      ...users.map((u) => ({
+        value: String(u.userId),
+        label: u.name || u.username,
+        detail: u.name && u.name !== u.username ? u.username : undefined,
+      })),
+    ],
+    [users],
+  );
   const selectedUser = userId == null ? null : users.find((u) => u.userId === userId);
   const viewingAs = userId == null ? "Admin" : selectedUser ? selectedUser.name || selectedUser.username : "user";
   const sections = (sectionsQuery.data ?? []).filter((s) => s.type === "movie" || s.type === "show");
@@ -214,14 +274,53 @@ export default function Preview() {
     return out;
   }, [previewQuery.data, hubOrder]);
 
+  // A push, not a replace: Back should return to the user you were viewing.
   const onPickUser = (next: number | null) => {
-    setUserId(next);
+    setParams(viewParams(next, sectionId));
     writeStorage(STORAGE_KEY, next == null ? "null" : String(next));
   };
 
   const onPickSection = (next: number | null) => {
-    setSectionId(next);
+    setParams(viewParams(userId, next));
     writeStorage(SECTION_STORAGE_KEY, next == null ? "null" : String(next));
+  };
+
+  /**
+   * One library at a time, so the page can say which one Plex is on. Each
+   * library's shuffle puts its own hubs back if it fails partway, so stopping
+   * at the first failure leaves every library either shuffled or untouched.
+   */
+  const runShuffle = async () => {
+    let total = 0;
+    let done = 0;
+    let current = "";
+    try {
+      const targets = await utils.preview.shuffleTargets.fetch(undefined, { staleTime: 0 });
+      total = targets.length;
+      let shuffled = 0;
+      for (const target of targets) {
+        current = target.title;
+        setShuffleProgress({ done, total, current });
+        const res = await shuffleSection.mutateAsync({ sectionKey: target.key });
+        shuffled += res.shuffled;
+        done++;
+      }
+      setShuffleStatus(
+        `Shuffled ${shuffled} hub${shuffled === 1 ? "" : "s"} across ${total} librar${total === 1 ? "y" : "ies"} on Plex.`,
+      );
+      setTimeout(() => setShuffleStatus(null), 4000);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      setShuffleStatus(
+        current
+          ? `Shuffle stopped at ${current}: ${message}.${done > 0 ? ` The ${done} librar${done === 1 ? "y" : "ies"} before it ${done === 1 ? "was" : "were"} shuffled.` : ""}`
+          : `Shuffle failed: ${message}`,
+      );
+    } finally {
+      setShuffleProgress(null);
+      setHubOrder(null);
+      await utils.preview.home.invalidate();
+    }
   };
 
   const onShuffle = () => {
@@ -246,9 +345,10 @@ export default function Preview() {
       }
     }
     setHubOrder(newOrder);
-    setShuffleStatus("Shuffling on Plex…");
-    shuffleMutation.mutate();
+    setShuffleStatus(null);
+    void runShuffle();
   };
+  const isShuffling = shuffleProgress != null;
 
   return (
     <PageShell
@@ -274,28 +374,24 @@ export default function Preview() {
           <label className={styles.pickerLabel} htmlFor="preview-user">
             View as
           </label>
-          <select
+          <SearchSelect
             id="preview-user"
             className={styles.pickerSelect}
+            ariaLabel="View as"
             value={userId == null ? "" : String(userId)}
-            onChange={(e) => onPickUser(e.target.value === "" ? null : Number(e.target.value))}
-          >
-            <option value="">Admin (no filters)</option>
-            {users.map((u) => (
-              <option key={u.userId} value={u.userId}>
-                {u.name ? `${u.name} (${u.username})` : u.username}
-              </option>
-            ))}
-          </select>
+            options={userOptions}
+            onChange={(v) => onPickUser(v === "" ? null : Number(v))}
+          />
           <button
             className={styles.shuffleBtn}
-            onClick={onShuffle}
-            disabled={shuffleMutation.isPending}
+            onClick={() => setConfirmShuffle(true)}
+            disabled={isShuffling}
             title="Reorder pinned collection hubs on Plex (affects all users)"
           >
-            {shuffleMutation.isPending ? (
+            {shuffleProgress ? (
               <>
-                <Spinner size="xs" /> Shuffling…
+                <Spinner size="xs" /> Shuffling {Math.min(shuffleProgress.done + 1, shuffleProgress.total)}/
+                {shuffleProgress.total}…
               </>
             ) : (
               "Shuffle hubs"
@@ -310,6 +406,39 @@ export default function Preview() {
           <div className={styles.switching}>
             <Spinner size="xs" variant="inverse" label={`Loading ${viewingAs}'s home`} />
             Loading {viewingAs}&rsquo;s home…
+          </div>
+        )}
+        {(updatedAt > 0 || refreshing) && (
+          <div className={styles.stageBar}>
+            {updatedAt > 0 && (
+              <span className={styles.updated}>
+                Updated <RelativeTime timestamp={updatedAt} />
+              </span>
+            )}
+            <button
+              type="button"
+              className={styles.hubChip}
+              onClick={onRefresh}
+              disabled={refreshing || isShuffling}
+              title="Fetch this home from Plex again"
+            >
+              {refreshing ? <Spinner size="xs" variant="inverse" /> : <RefreshCw size="1.1rem" aria-hidden />}
+              Refresh
+            </button>
+          </div>
+        )}
+        {shuffleProgress && (
+          <div className={styles.warnings} role="status">
+            <div>
+              Shuffling {shuffleProgress.current} — library {shuffleProgress.done + 1} of {shuffleProgress.total}. Its
+              collection rows are briefly missing from Plex while they are re-pinned.
+            </div>
+            <progress
+              className={styles.shuffleProgress}
+              value={shuffleProgress.done}
+              max={shuffleProgress.total}
+              aria-label="Shuffle progress"
+            />
           </div>
         )}
         {shuffleStatus && <div className={styles.warnings}>{shuffleStatus}</div>}
@@ -337,15 +466,16 @@ export default function Preview() {
           const wide = isWideHub(hub);
           const collectionRatingKey = parseCollectionRatingKey(hub.identifier);
           const collectionSectionId = parseCollectionSectionId(hub.identifier);
-          const ruleName = collectionRatingKey ? ruleNameByCollectionKey.get(collectionRatingKey) : undefined;
+          const rule = collectionRatingKey ? ruleByCollectionKey.get(collectionRatingKey) : undefined;
           const isUnpinning = unpinMutation.isPending && unpinMutation.variables?.hubIdentifier === hub.identifier;
           const chips = collectionRatingKey ? (
             <>
-              {ruleName ? (
+              {rule ? (
                 <Link
-                  to={`/rules?q=${encodeURIComponent(ruleName)}`}
+                  // `q` narrows the list behind the editor to this rule; `edit` opens it.
+                  to={`/rules?q=${encodeURIComponent(rule.name)}&edit=${encodeURIComponent(rule.id)}`}
                   className={styles.hubProv}
-                  title="Generated by a Tinkerbell rule — open in Rules"
+                  title={describeRuleRun(rule)}
                 >
                   Rule
                 </Link>
@@ -397,6 +527,19 @@ export default function Preview() {
             />
           );
         })}
+
+        {confirmShuffle && (
+          <ConfirmModal
+            title="Shuffle hubs for everyone?"
+            message="This reorders the pinned collection rows on Plex's home for every user, not only the one you're viewing. Each library's rows are unpinned and pinned again in the new order, so for a few seconds they are missing from Plex."
+            confirmLabel="Shuffle"
+            onConfirm={() => {
+              setConfirmShuffle(false);
+              onShuffle();
+            }}
+            onCancel={() => setConfirmShuffle(false)}
+          />
+        )}
 
         {unpinTarget && (
           <ConfirmModal

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 
-function compute(ts: number): string {
+/** "5m ago" — for strings that can't hold a ticking hook, like a `title`. */
+export function formatRelativeTime(ts: number): string {
   const now = Date.now();
   const diffMs = now - ts;
   if (diffMs < 0) return "just now";
@@ -26,11 +27,11 @@ function compute(ts: number): string {
 }
 
 export default function useRelativeTime(tsMs: number): string {
-  const [text, setText] = useState(() => compute(tsMs));
+  const [text, setText] = useState(() => formatRelativeTime(tsMs));
 
   useEffect(() => {
-    setText(compute(tsMs));
-    const id = setInterval(() => setText(compute(tsMs)), 30000);
+    setText(formatRelativeTime(tsMs));
+    const id = setInterval(() => setText(formatRelativeTime(tsMs)), 30000);
     return () => clearInterval(id);
   }, [tsMs]);
 

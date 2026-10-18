@@ -110,18 +110,3 @@ export async function shuffleSectionHubs(
   log?.(`"${section.title}" — ${pinned} hubs shuffled.`);
   return { sectionTitle: section.title, shuffled: pinned, skipped };
 }
-
-export async function shuffleAllSections(
-  client: PlexClient,
-  sections: PlexSection[],
-  log?: (msg: string) => void,
-  progress?: (current: number, total: number, msg: string) => void,
-): Promise<ShuffleSectionResult[]> {
-  const results: ShuffleSectionResult[] = [];
-  for (let i = 0; i < sections.length; i++) {
-    const section = sections[i];
-    progress?.(i + 1, sections.length, `Shuffling "${section.title}"...`);
-    results.push(await shuffleSectionHubs(client, section, log));
-  }
-  return results;
-}

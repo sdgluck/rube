@@ -404,6 +404,24 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
     setIsEditing(false);
   }, [location.state]);
 
+  /**
+   * `?edit=<id>` opens that rule's editor — for links that mean one rule
+   * rather than a search (the Preview page's hub chips). `?q` alone narrowed
+   * by name, which also matched every rule whose name contained it.
+   *
+   * Consumed once and dropped, so closing the editor doesn't reopen it and a
+   * reload lands on the list.
+   */
+  const editParam = param("edit");
+  useEffect(() => {
+    if (!editParam || !rulesQuery.data) return;
+    const rule = ((rulesQuery.data ?? []) as RuleRow[]).find((r) => r.id === editParam);
+    setParam("edit", "");
+    if (rule) startEdit(rule);
+    else addToast("That rule no longer exists", "error");
+    // Not on startEdit: it is a plain function, and re-running on its identity would reopen the editor every render.
+  }, [editParam, rulesQuery.data]);
+
   function startEdit(rule: RuleRow) {
     const config = rule.config ?? {};
     const smartFilter = (config.smartFilter as SmartFilterGroup | undefined) ?? {

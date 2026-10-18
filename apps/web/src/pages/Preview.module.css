@@ -172,10 +172,32 @@
   font-size: 1.25rem;
 }
 
-.page[aria-busy="true"] > :not(.switching) {
+.page[aria-busy="true"] > :not(.switching, .stageBar) {
   opacity: 0.45;
   pointer-events: none;
   transition: opacity 150ms ease;
+}
+
+/* Freshness and Refresh, above the rows: the server keeps a home for 30s and
+   the page doesn't refetch on focus, so after a rule run the rows can be
+   older than they look. */
+.stageBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-bottom: -1.8rem;
+}
+
+.updated {
+  font-size: 1.15rem;
+  color: color-mix(in srgb, var(--on-accent) 50%, transparent);
+}
+
+.shuffleProgress {
+  width: 100%;
+  height: 0.4rem;
+  accent-color: var(--plex);
 }
 
 /* ─── Hub rows ────────────────────────────────────────────────────────────── */

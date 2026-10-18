@@ -1,0 +1,105 @@
+.wrapper {
+  position: relative;
+  display: inline-block;
+  min-width: 0;
+}
+
+/* A button dressed as the shared small select — chevron and all — so it can
+   stand beside a real `<select>` in a toolbar. */
+.trigger {
+  composes: select selectSm from "../styles/controls.module.css";
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  text-align: left;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+@keyframes menuIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Anchored right: the pickers that use this sit at the end of a page's
+   actions, where a left-anchored menu would run off the viewport. */
+.menu {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  right: 0;
+  z-index: var(--z-dropdown);
+  display: flex;
+  flex-direction: column;
+  width: 28rem;
+  max-width: calc(100vw - 3.2rem);
+  padding: 0.4rem;
+  border-radius: var(--r-sunken);
+  background: var(--surface);
+  box-shadow: var(--e-float);
+  transform-origin: top right;
+  animation: menuIn 120ms ease-out;
+}
+
+.filter {
+  composes: input inputSm from "../styles/controls.module.css";
+  margin-bottom: 0.4rem;
+}
+
+.list {
+  max-height: 32rem;
+  overflow-y: auto;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  width: 100%;
+  padding: 0.6rem 0.9rem;
+  border: none;
+  border-radius: var(--r-sm);
+  background: none;
+  text-align: left;
+  font-family: var(--font-sans);
+  font-size: 1.25rem;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* The keyboard's row and the pointer's are one highlight, so the two can
+   never point at different options. */
+.optionActive {
+  background: var(--fill-quiet);
+}
+
+.option[aria-selected="true"] {
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.optionLabel,
+.optionDetail {
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.optionDetail {
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: var(--ink-3);
+}
+
+.empty {
+  margin: 0;
+  padding: 0.8rem 0.9rem;
+  font-size: 1.2rem;
+  color: var(--ink-3);
+}
