@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
-import { NATIVE_APPS } from "@tinkerbell/contracts";
+import { isLoopbackAddress, nativeConnectLink } from "@tinkerbell/contracts";
 import {
   biometryAvailable,
-  connectLink,
   getConnection,
   getLockEnabled,
   isNative,
@@ -14,6 +13,7 @@ import CardSection from "#components/CardSection";
 import QrCode from "#components/QrCode";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { useToast } from "#components/Toast";
+import { trpc } from "#/trpc";
 import SettingsPageHeader from "./SettingsPageHeader";
 import settings from "./Settings.module.css";
 import styles from "./SettingsMobile.module.css";
@@ -29,7 +29,11 @@ import styles from "./SettingsMobile.module.css";
 export default function SettingsMobile() {
   const native = isNative();
   const server = getConnection()?.server ?? window.location.origin;
-  const link = connectLink(NATIVE_APPS.admin.scheme, server);
+  // The admin half is the address this page is open at; the portal half is
+  // its saved public address, so one scan sets up both parts of the app.
+  const portalUrl = trpc.auth.server.useQuery(undefined, { enabled: !native }).data?.portalUrl;
+  const link = nativeConnectLink({ admin: server, portal: portalUrl });
+  const loopback = isLoopbackAddress(server);
   const { addToast } = useToast();
 
   return (
@@ -45,6 +49,13 @@ export default function SettingsMobile() {
             this page is open at — so open Tinkerbell at an address your phone can reach first, not{" "}
             <code>localhost</code>.
           </p>
+          {loopback && (
+            <p className={settings.hint} role="alert">
+              This page is open at <code>{server}</code>, which on a phone means the phone itself. Open Tinkerbell at
+              this computer&apos;s network address instead — and if the server listens on <code>127.0.0.1</code> (the
+              default <code>HOST</code>), set <code>HOST=0.0.0.0</code> so the phone can reach it at all.
+            </p>
+          )}
           <div className={styles.connect}>
             <div className={styles.qr}>
               <QrCode value={link} label="QR code that connects the Tinkerbell app to this server" />
