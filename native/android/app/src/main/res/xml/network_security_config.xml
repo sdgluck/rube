@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Cleartext is allowed because Tinkerbell is self-hosted: most servers are a
+  box on the LAN at http://192.168.x.y:3000 with no certificate, and refusing
+  plain HTTP would make the app unusable for them. The app says so instead:
+  the connect screen and Settings flag an address that is plain HTTP *off*
+  the local network ("Not encrypted"), which is the case worth warning about.
+-->
+<network-security-config xmlns:tools="http://schemas.android.com/tools">
+    <base-config cleartextTrafficPermitted="true" tools:ignore="InsecureBaseConfiguration">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

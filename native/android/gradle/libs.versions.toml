@@ -1,0 +1,74 @@
+# One place for every version. compileSdk is 35, and that caps several of
+# these below their newest release: AndroidX publishes a minimum compileSdk in
+# each AAR, and core 1.17, activity 1.11, browser 1.9, navigation 2.10, Coil 3.5 and
+# Compose 1.12 all ask for 36 or more. Bumping any of them means bumping
+# compileSdk first, or `checkDebugAarMetadata` fails the build.
+[versions]
+agp = "9.4.1"
+kotlin = "2.4.21"
+coroutines = "1.11.0"
+serialization = "1.11.0"
+okhttp = "5.3.2"
+composeBom = "2026.06.01"
+# Material 3 Expressive (MaterialExpressiveTheme, the expressive motion scheme,
+# LoadingIndicator, button groups) is only public in the 1.5 line, which is
+# still pre-release. alpha18 is the newest 1.5 build that still compiles
+# against SDK 35 and Compose 1.11; alpha19 onwards wants compileSdk 37.
+material3 = "1.5.0-alpha18"
+activity = "1.10.1"
+coreKtx = "1.16.0"
+lifecycle = "2.10.0"
+navigation = "2.9.8"
+biometric = "1.1.0"
+browser = "1.8.0"
+datastore = "1.2.1"
+coil = "3.4.0"
+codeScanner = "16.1.0"
+junit = "4.13.2"
+androidxJunit = "1.3.0"
+testRunner = "1.7.0"
+uiautomator = "2.3.0"
+
+[libraries]
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+coroutines-android = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-android", version.ref = "coroutines" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
+okhttp-mockwebserver = { module = "com.squareup.okhttp3:mockwebserver3", version.ref = "okhttp" }
+
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-test-junit4 = { module = "androidx.compose.ui:ui-test-junit4" }
+compose-ui-test-manifest = { module = "androidx.compose.ui:ui-test-manifest" }
+compose-foundation = { module = "androidx.compose.foundation:foundation" }
+compose-material3 = { module = "androidx.compose.material3:material3", version.ref = "material3" }
+compose-material3-navigation-suite = { module = "androidx.compose.material3:material3-adaptive-navigation-suite", version.ref = "material3" }
+compose-material-icons = { module = "androidx.compose.material:material-icons-extended" }
+
+activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activity" }
+core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+lifecycle-process = { module = "androidx.lifecycle:lifecycle-process", version.ref = "lifecycle" }
+lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigation" }
+biometric = { module = "androidx.biometric:biometric", version.ref = "biometric" }
+browser = { module = "androidx.browser:browser", version.ref = "browser" }
+datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
+code-scanner = { module = "com.google.android.gms:play-services-code-scanner", version.ref = "codeScanner" }
+
+junit = { module = "junit:junit", version.ref = "junit" }
+androidx-junit = { module = "androidx.test.ext:junit", version.ref = "androidxJunit" }
+androidx-test-runner = { module = "androidx.test:runner", version.ref = "testRunner" }
+uiautomator = { module = "androidx.test.uiautomator:uiautomator", version.ref = "uiautomator" }
+
+[plugins]
+android-application = { id = "com.android.application", version.ref = "agp" }
+android-library = { id = "com.android.library", version.ref = "agp" }
+kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }

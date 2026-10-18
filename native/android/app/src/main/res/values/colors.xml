@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="launch_background">#FF0E1514</color>
+    <color name="icon_background">#FF0E1514</color>
+    <color name="icon_teal">#FF1AA79B</color>
+</resources>

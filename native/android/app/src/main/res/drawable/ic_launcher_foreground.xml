@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 108dp canvas, glyph inside the 66dp safe zone: a four-point sparkle and a small companion. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="@color/icon_teal"
+        android:pathData="M50,26 C52,40 56,46 70,50 C56,54 52,60 50,74 C48,60 44,54 30,50 C44,46 48,40 50,26 Z" />
+    <path
+        android:fillColor="@color/icon_teal"
+        android:pathData="M72,30 C73,35 74.5,36.5 79,38 C74.5,39.5 73,41 72,46 C71,41 69.5,39.5 65,38 C69.5,36.5 71,35 72,30 Z" />
+</vector>
