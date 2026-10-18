@@ -51,6 +51,16 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     requiresPersonalizedSharing: true,
   },
   {
+    id: "pick-it-back-up",
+    name: "Pick It Back Up",
+    command: "pick-it-back-up",
+    // Nightly, after BYW: who stopped watching what moves day by day, and a
+    // run is a few local queries, not a model call per person.
+    defaultSchedule: "30 2 * * *",
+    defaultConfig: {},
+    requiresPersonalizedSharing: true,
+  },
+  {
     id: "shuffle",
     name: "Shuffle Hubs",
     command: "shuffle",
@@ -84,6 +94,7 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
 const TEARDOWN_JOBS: Record<string, CommandName> = {
   "because-you-watched": "byw-remove",
   "we-think-youd-like": "wtyl-remove",
+  "pick-it-back-up": "pibu-remove",
 };
 
 function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {

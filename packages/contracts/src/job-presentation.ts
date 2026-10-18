@@ -49,7 +49,14 @@ export interface JobPresentation {
 }
 
 /** The opt-in jobs, in the order the wizard offers them. */
-export const FEATURE_IDS = ["because-you-watched", "we-think-youd-like", "shuffle", "overlays", "digest"] as const;
+export const FEATURE_IDS = [
+  "because-you-watched",
+  "we-think-youd-like",
+  "pick-it-back-up",
+  "shuffle",
+  "overlays",
+  "digest",
+] as const;
 export type FeatureId = (typeof FEATURE_IDS)[number];
 
 export function isFeatureId(id: string): id is FeatureId {
@@ -238,6 +245,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     description:
       "Builds one “We Think You'd Like” collection per library for each Plex user, from a taste profile of their whole recent watch history.",
   },
+  "pick-it-back-up": {
+    kind: "feature",
+    requires: "Personalized Home Screens and recorded watch history.",
+    description:
+      "Builds a “Pick It Back Up” collection in each TV library for each Plex user, of the shows they started and stopped watching partway through.",
+  },
   shuffle: {
     kind: "feature",
     description: "Randomises the order of items in shuffled hub collections so the homescreen stays fresh.",
@@ -278,6 +291,11 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "hidden",
     description:
       "Tears down We Think You'd Like: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
+  },
+  "pibu-remove": {
+    kind: "hidden",
+    description:
+      "Tears down Pick It Back Up: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
   },
   "personalize-enable": {
     kind: "hidden",

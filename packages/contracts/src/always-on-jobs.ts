@@ -22,6 +22,7 @@ export const ALWAYS_ON_JOB_IDS = [
   "label",
   "personalize-disable",
   "personalize-enable",
+  "pibu-remove",
   "playback-backfill",
   "posters-refresh",
   "preroll-process",

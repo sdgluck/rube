@@ -62,6 +62,26 @@ export function createReadiness(
     };
   }
 
+  /**
+   * The personal rows read Tinkerbell's own playback log, not Plex's history,
+   * so a fresh install has nothing to read until the poller has seen some
+   * viewing or the one-off import has run.
+   */
+  function watchHistory(): ReadinessItem {
+    const { sessions, days } = playback.watchHistoryCoverage();
+    return {
+      id: "watch-history",
+      label: "Watch history recorded",
+      met: sessions > 0,
+      detail:
+        sessions > 0
+          ? `${sessions} play${sessions === 1 ? "" : "s"} over ${days} day${days === 1 ? "" : "s"}.`
+          : "Run Import Plex Watch History to start from your past viewing.",
+      href: "/jobs/playback-backfill",
+      severity: "required",
+    };
+  }
+
   function itemsFor(job: { id: string; command: string; config: Record<string, unknown> | null }): ReadinessItem[] {
     const items: ReadinessItem[] = [];
     if (isCommandName(job.command)) items.push(plex());
@@ -71,24 +91,12 @@ export function createReadiness(
       case "because-you-watched":
         items.push(personalization(), ai("Picks the titles in each collection."));
         break;
-      case "we-think-youd-like": {
-        // The taste is read from Tinkerbell's own playback log, not Plex's
-        // history, so a fresh install has nothing to read until the poller has
-        // seen some viewing or the one-off import has run.
-        const { sessions, days } = playback.watchHistoryCoverage();
-        items.push(personalization(), ai("Reads each person's taste and picks the titles."), {
-          id: "watch-history",
-          label: "Watch history recorded",
-          met: sessions > 0,
-          detail:
-            sessions > 0
-              ? `${sessions} play${sessions === 1 ? "" : "s"} over ${days} day${days === 1 ? "" : "s"}.`
-              : "Run Import Plex Watch History to start from your past viewing.",
-          href: "/jobs/playback-backfill",
-          severity: "required",
-        });
+      case "we-think-youd-like":
+        items.push(personalization(), ai("Reads each person's taste and picks the titles."), watchHistory());
         break;
-      }
+      case "pick-it-back-up":
+        items.push(personalization(), watchHistory());
+        break;
       case "digest": {
         if (cfg.includeServerDigest !== false) {
           const services = notifications.servicesForEvent("digest.sent");

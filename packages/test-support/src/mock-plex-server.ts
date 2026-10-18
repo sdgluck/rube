@@ -611,8 +611,14 @@ export function startMockPlex(opts: {
         notFound();
         return;
       }
-      const rows = collection.memberKeys.map((k) => items.get(k)).filter((i): i is MockItem => !!i);
-      json({ size: rows.length, Metadata: rows.map(metadataFor) });
+      // A TV library's collection holds shows, which live apart from `items`.
+      const rows = collection.memberKeys.flatMap((k) => {
+        const item = items.get(k);
+        if (item) return [metadataFor(item)];
+        const show = shows.get(k);
+        return show ? [{ ratingKey: show.ratingKey, title: show.title, type: "show" }] : [];
+      });
+      json({ size: rows.length, Metadata: rows });
       return;
     }
 

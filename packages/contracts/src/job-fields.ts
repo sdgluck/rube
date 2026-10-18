@@ -31,6 +31,14 @@ export const WTYL_DEFAULTS = {
   minLibrarySize: 15,
 } as const;
 
+export const PIBU_DEFAULTS = {
+  stallDays: 14,
+  maxStallDays: 365,
+  minEpisodes: 2,
+  maxItems: 20,
+  pinToHomepage: true,
+} as const;
+
 export const DIGEST_DEFAULTS = {
   frequency: "weekly",
   minAddedItems: 1,
@@ -194,6 +202,49 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       help: "Libraries with fewer items than this are skipped.",
       control: { kind: "number", min: 1, unit: "items" },
       default: WTYL_DEFAULTS.minLibrarySize,
+      advanced: true,
+    },
+  ],
+  "pick-it-back-up": [
+    {
+      key: "users",
+      label: "Users",
+      help: "Leave empty for everyone on the Users page.",
+      control: { kind: "users", source: "plex-users" },
+    },
+    {
+      key: "stallDays",
+      label: "Stopped after",
+      help: "A show nobody has played for this long counts as stopped. Anything more recent is still being watched.",
+      control: { kind: "number", min: 3, max: 365, unit: "days" },
+      default: PIBU_DEFAULTS.stallDays,
+    },
+    {
+      key: "maxStallDays",
+      label: "Given up after",
+      help: "A show left longer than this is treated as dropped on purpose and left out. Playback retention caps it.",
+      control: { kind: "number", min: 30, max: 3650, unit: "days" },
+      default: PIBU_DEFAULTS.maxStallDays,
+    },
+    {
+      key: "pinToHomepage",
+      label: "Pin to home screen",
+      control: { kind: "boolean" },
+      default: PIBU_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "minEpisodes",
+      label: "Fewest episodes watched",
+      help: "Shows someone finished fewer episodes of are left out — trying a pilot isn't starting a show.",
+      control: { kind: "number", min: 1, max: 20, unit: "episodes" },
+      default: PIBU_DEFAULTS.minEpisodes,
+      advanced: true,
+    },
+    {
+      key: "maxItems",
+      label: "Most items",
+      control: { kind: "number", min: 1, max: 50 },
+      default: PIBU_DEFAULTS.maxItems,
       advanced: true,
     },
   ],

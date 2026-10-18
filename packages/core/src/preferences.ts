@@ -4,7 +4,7 @@
  * blob in `user_preferences` (keyed by Plex user id) and validated here.
  *
  * Used by:
- *   - BYW, WTYL and personalisable rule runs (to filter/steer per-user generation),
+ *   - BYW, WTYL, Pick It Back Up and personalisable rule runs (to filter/steer per-user generation),
  *   - the preferences tRPC router (to validate writes from the portal).
  */
 import { and, eq } from "drizzle-orm";

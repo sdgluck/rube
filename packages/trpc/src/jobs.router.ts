@@ -270,6 +270,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
 
     bywCollections: procedure.query(() => getBywCollectionsGroupedByUser()),
     wtylCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("WeThinkYoudLike")),
+    pibuCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("PickItBackUp")),
 
     featureCatalog: procedure.query(() => listFeatureCatalog()),
 

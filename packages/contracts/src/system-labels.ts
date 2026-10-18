@@ -11,4 +11,5 @@ export const SYSTEM_COLLECTION_LABELS: readonly string[] = [
   "generated",
   "becauseyouwatched",
   "wethinkyoudlike",
+  "pickitbackup",
 ];

@@ -13,13 +13,15 @@ import controls from "#/styles/controls.module.css";
 import { plexImageUrl } from "#lib/media";
 
 /**
- * The per-user rows an AI collection job made, grouped by person. One panel for
- * both jobs: they differ only in which label they own and in whether a row
- * carries a "why" worth showing.
+ * The per-user rows a personal-row job made, grouped by person. One panel for
+ * all three jobs: they differ only in which label they own and in whether a
+ * row carries a description worth showing.
  */
 const KINDS = {
   "because-you-watched": { name: "Because You Watched", showSummary: false },
   "we-think-youd-like": { name: "We Think You'd Like", showSummary: true },
+  // Its description lists each show's next episode.
+  "pick-it-back-up": { name: "Pick It Back Up", showSummary: true },
 } as const;
 
 export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof typeof KINDS }) {
@@ -39,14 +41,21 @@ export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof type
     refetchInterval: 10000,
     enabled: jobId === "we-think-youd-like",
   });
-  const collectionsQuery = jobId === "because-you-watched" ? bywQuery : wtylQuery;
+  const pibuQuery = trpc.jobs.pibuCollections.useQuery(undefined, {
+    refetchInterval: 10000,
+    enabled: jobId === "pick-it-back-up",
+  });
+  const collectionsQuery =
+    jobId === "because-you-watched" ? bywQuery : jobId === "we-think-youd-like" ? wtylQuery : pibuQuery;
   const [confirming, setConfirming] = useState<{ title: string; ratingKey: string } | null>(null);
 
   const deleteMutation = trpc.collections.delete.useMutation({
     onSuccess: () =>
       jobId === "because-you-watched"
         ? utils.jobs.bywCollections.invalidate()
-        : utils.jobs.wtylCollections.invalidate(),
+        : jobId === "we-think-youd-like"
+          ? utils.jobs.wtylCollections.invalidate()
+          : utils.jobs.pibuCollections.invalidate(),
   });
 
   const total = collectionsQuery.data?.reduce((n, g) => n + g.collections.length, 0);

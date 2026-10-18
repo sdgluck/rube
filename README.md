@@ -19,6 +19,8 @@ and notifications on a schedule.
 - **Because you watched**: recommendation collections for each user.
 - **We think you'd like**: one collection per user per library, picked by AI
   from their recent watch history. [More](#we-think-youd-like)
+- **Pick it back up**: one collection per user per TV library of the shows
+  they started and stopped watching. [More](#pick-it-back-up)
 - **Personalized home screens**: each Plex user sets their own tastes.
   [More](#personalized-home-screens)
 - **Movie match**: a group swipes through a movie library together until
@@ -239,6 +241,33 @@ Limits:
 - Users who watched fewer titles than the **Least history** setting in the
   window are skipped.
 - Playback retention limits how far back it can read.
+
+## Pick it back up
+
+Each user gets a "Pick It Back Up" collection in each TV library, holding the
+shows they started and then stopped watching. Plex's Continue Watching only
+holds what someone watched lately; this brings back the show they drifted away
+from three weeks ago. Install it from **Jobs**. It runs nightly and uses no AI.
+
+- A show is in it when the user last played it between **Stopped after** (14
+  days) and **Given up after** (365 days) ago, finished at least two episodes,
+  and still has episodes left. Shows they are still watching, only tried, have
+  finished or left long ago are not.
+- The collection's description in Plex names the next episode of the first few
+  shows. A show they stopped partway through an episode picks up on that
+  episode.
+- A run updates each collection in place, so it keeps its pin and position.
+  When nothing is left in it, the collection is removed. It comes back when
+  there is something to pick up.
+- **Not for me** on the row in the portal removes it, and the user's excluded
+  titles are left out.
+
+Limits:
+
+- It needs Personalized Home Screens and recorded watch history. On a new
+  install, run **Import Plex Watch History** first.
+- It reads Tinkerbell's own playback history, so playback retention limits how
+  far back **Given up after** can reach.
 
 ## Movie match
 

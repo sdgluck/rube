@@ -238,6 +238,7 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   { id: "metadata-undo", name: "Revert Metadata Changes", command: "metadata-undo", schedule: "", enabled: 1 },
   { id: "byw-remove", name: "Remove Because You Watched", command: "byw-remove", schedule: "", enabled: 1 },
   { id: "wtyl-remove", name: "Remove We Think You'd Like", command: "wtyl-remove", schedule: "", enabled: 1 },
+  { id: "pibu-remove", name: "Remove Pick It Back Up", command: "pibu-remove", schedule: "", enabled: 1 },
   {
     id: "personalize-enable",
     name: "Enable Personalized Home Screens",

@@ -85,6 +85,13 @@ export const COMMANDS = {
     lane: "default",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
+  // Local queries and one episode list per stopped show — no model. The
+  // default budget is far more than it needs.
+  "pick-it-back-up": {
+    load: () => import("./pick-it-back-up/index.ts"),
+    lane: "default",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
   // Local queries plus one network call per recipient. The default budget is
   // generous for that, and is really bounding a mail server that has stopped
   // answering rather than the work.
@@ -108,6 +115,7 @@ export const COMMANDS = {
   overlays: { load: () => import("./overlays.ts"), lane: "interactive", timeoutMs: 2 * HOUR_MS },
   "byw-remove": { load: () => import("./byw-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   "wtyl-remove": { load: () => import("./wtyl-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
+  "pibu-remove": { load: () => import("./pibu-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   // Both walk every item in the managed libraries. Batched labelling should
   // make that minutes, but a first pass on a large library or a slow server
   // took 30+ with one item per request, and the old 30-minute budget aborted

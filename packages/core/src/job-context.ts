@@ -84,6 +84,7 @@ export function deriveJobContext(
 export {
   bywJobConfigSchema,
   wtylJobConfigSchema,
+  pibuJobConfigSchema,
   collectionArtJobConfigSchema,
   collectionsSweepJobConfigSchema,
   commonJobConfigSchema,
@@ -94,6 +95,7 @@ export {
 export type {
   BywJobConfig,
   WtylJobConfig,
+  PibuJobConfig,
   CollectionArtJobConfig,
   CollectionsSweepJobConfig,
   CommonJobConfig,

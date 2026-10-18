@@ -66,6 +66,25 @@ export const wtylJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type WtylJobConfig = z.infer<typeof wtylJobConfigSchema>;
 
+/**
+ * Pick It Back Up: one row per person per TV library of the shows they started
+ * and stopped. No AI and no taste — what someone was halfway through is a fact
+ * in the playback log — so there is nothing to tune but where "stopped" starts
+ * and where it turns into "gave up".
+ */
+export const pibuJobConfigSchema = commonJobConfigSchema.extend({
+  users: z.array(z.string()).optional(),
+  /** Not watched for this long counts as stopped. Shorter is still being watched. */
+  stallDays: z.number().int().min(3).max(365).optional(),
+  /** Not watched for longer than this counts as given up, and is left alone. */
+  maxStallDays: z.number().int().min(30).max(3650).optional(),
+  /** Fewer finished episodes than this is a sampled pilot, not a show they were into. */
+  minEpisodes: z.number().int().min(1).max(20).optional(),
+  maxItems: z.number().int().min(1).max(50).optional(),
+  pinToHomepage: z.boolean().optional(),
+});
+export type PibuJobConfig = z.infer<typeof pibuJobConfigSchema>;
+
 export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
   /**
    * Report what would be deleted and stop. Off by default — the job's own log
@@ -147,6 +166,8 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   "byw-remove": bywJobConfigSchema,
   "we-think-youd-like": wtylJobConfigSchema,
   "wtyl-remove": wtylJobConfigSchema,
+  "pick-it-back-up": pibuJobConfigSchema,
+  "pibu-remove": pibuJobConfigSchema,
   "collections-sweep": collectionsSweepJobConfigSchema,
   "collection-art": collectionArtJobConfigSchema,
   overlays: overlaysJobConfigSchema,
@@ -169,6 +190,13 @@ export function configIssues(command: string, config: Record<string, unknown>): 
     const max = config.maxItems;
     if (typeof min === "number" && typeof max === "number" && min > max) {
       issues.push(`Minimum items (${min}) can't be more than maximum items (${max})`);
+    }
+  }
+  if (command === "pick-it-back-up") {
+    const from = config.stallDays;
+    const to = config.maxStallDays;
+    if (typeof from === "number" && typeof to === "number" && from >= to) {
+      issues.push(`"Stopped after" (${from} days) has to be shorter than "Given up after" (${to} days)`);
     }
   }
   return issues;

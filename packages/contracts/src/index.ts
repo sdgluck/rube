@@ -256,6 +256,7 @@ export {
   applyConfigPatch,
   bywJobConfigSchema,
   wtylJobConfigSchema,
+  pibuJobConfigSchema,
   collectionArtJobConfigSchema,
   collectionsSweepJobConfigSchema,
   commonJobConfigSchema,
@@ -273,6 +274,7 @@ export {
 export type {
   BywJobConfig,
   WtylJobConfig,
+  PibuJobConfig,
   CollectionArtJobConfig,
   CollectionsSweepJobConfig,
   CommonJobConfig,
@@ -293,6 +295,7 @@ export {
   allVariants,
   BYW_DEFAULTS,
   WTYL_DEFAULTS,
+  PIBU_DEFAULTS,
   commandsWithFields,
   DIGEST_DEFAULTS,
   fieldsFor,
