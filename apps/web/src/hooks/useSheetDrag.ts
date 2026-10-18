@@ -1,5 +1,4 @@
 import { useEffect, type RefObject } from "react";
-import { haptic } from "@tinkerbell/native-client";
 
 /**
  * Drag a bottom sheet down to dismiss it, the way every native sheet works.
@@ -77,7 +76,6 @@ export function useSheetDrag(
       panel.style.transition = "transform 280ms cubic-bezier(0.32, 0.72, 0, 1)";
       if (canDismiss && past) {
         panel.style.transform = "translateY(100%)";
-        haptic("light");
         window.setTimeout(onDismiss, 200);
       } else {
         panel.style.transform = "";

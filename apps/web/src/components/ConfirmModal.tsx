@@ -1,6 +1,5 @@
 import { useEffect, useRef } from "react";
 import Modal from "./Modal";
-import { haptic } from "@tinkerbell/native-client";
 import { useIsPhone } from "#hooks/useMediaQuery";
 import alertStyles from "./AlertActions.module.css";
 import styles from "./ConfirmModal.module.css";
@@ -52,7 +51,6 @@ export default function ConfirmModal({
             type="button"
             className={danger ? alertStyles.actionDanger : alertStyles.actionBold}
             onClick={() => {
-              if (danger) haptic("warning");
               onConfirm();
             }}
           >

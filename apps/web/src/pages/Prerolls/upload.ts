@@ -6,8 +6,6 @@
  * looks indistinguishable from a hung page.
  */
 
-import { apiUrl, authHeaders } from "@tinkerbell/native-client";
-
 export type UploadHandlers = {
   onProgress?: (fraction: number) => void;
   signal?: AbortSignal;
@@ -17,9 +15,7 @@ export function uploadPreroll(file: File, handlers: UploadHandlers = {}): Promis
   return new Promise((resolve, reject) => {
     const params = new URLSearchParams({ filename: file.name, name: stripExtension(file.name) });
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", apiUrl(`/api/prerolls/upload?${params}`));
-    // The native app's session; the browser's rides along as the cookie.
-    for (const [name, value] of Object.entries(authHeaders())) xhr.setRequestHeader(name, value);
+    xhr.open("POST", `/api/prerolls/upload?${params}`);
     xhr.responseType = "json";
 
     xhr.upload.addEventListener("progress", (event) => {

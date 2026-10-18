@@ -5,8 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "#/trpc";
 import { ToastProvider } from "#components/Toast";
 import AuthGate from "#/auth/AuthGate";
-import NativeGate from "#/auth/NativeGate";
-import { bootNative } from "@tinkerbell/native-client";
+import { watchKeyboard } from "@tinkerbell/native-client";
 import App from "#/App";
 import { startThemeWatch } from "#/theme";
 import { startUiScale } from "#/ui-scale";
@@ -62,30 +61,29 @@ const queryClient = new Client({
   },
 });
 
-// A no-op in a browser. In the native app it loads the stored server and
-// session before the first request is built — see `@tinkerbell/native-client`.
-// Rendered on its settling rather than awaited at the top level, which the
-// build target doesn't allow.
-void bootNative("admin").finally(render);
+// Phones in a browser too: the tab bar hides while the keyboard is up.
+void watchKeyboard();
 
-function render() {
-  createRoot(document.getElementById("root")!).render(
-    <StrictMode>
-      <trpc.Provider client={trpcClient} queryClient={queryClient}>
-        <QueryClientProvider client={queryClient}>
-          <TransitionRouter>
-            <ToastProvider>
-              {/* Inside the router and the toast provider: the sign-in screen
-                is a route-level swap, not a separate app. */}
-              <NativeGate>
-                <AuthGate>
-                  <App />
-                </AuthGate>
-              </NativeGate>
-            </ToastProvider>
-          </TransitionRouter>
-        </QueryClientProvider>
-      </trpc.Provider>
-    </StrictMode>,
-  );
-}
+// Back from the background: whatever is on screen refetches. Phone browsers
+// especially — a tab woken after an hour shows data an hour old otherwise.
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "visible") void queryClient.refetchQueries({ type: "active" });
+});
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <TransitionRouter>
+          <ToastProvider>
+            {/* Inside the router and the toast provider: the sign-in screen
+              is a route-level swap, not a separate app. */}
+            <AuthGate>
+              <App />
+            </AuthGate>
+          </ToastProvider>
+        </TransitionRouter>
+      </QueryClientProvider>
+    </trpc.Provider>
+  </StrictMode>,
+);

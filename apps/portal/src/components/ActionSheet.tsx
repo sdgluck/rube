@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { haptic, pushOverlay } from "@tinkerbell/native-client";
+import { pushOverlay } from "@tinkerbell/native-client";
 
 export type SheetAction = { label: string; onSelect: () => void; danger?: boolean };
 
@@ -41,7 +41,6 @@ export default function ActionSheet({
               role="menuitem"
               className={`action-item ${a.danger ? "danger" : ""}`}
               onClick={() => {
-                if (a.danger) haptic("warning");
                 onClose();
                 a.onSelect();
               }}

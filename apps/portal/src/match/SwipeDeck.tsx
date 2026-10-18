@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
-import { haptic } from "@tinkerbell/native-client";
 import { portalTrpc, portalTrpcClient, type MatchCard, type MatchState } from "../trpc.ts";
-import { filmMeta, posterSrc } from "./film.ts";
+import { filmMeta } from "./film.ts";
 
 /**
  * The cards. One shared order per room (the server's), dealt in pages of what
@@ -71,7 +70,7 @@ export default function SwipeDeck({
   // The next few posters, fetched ahead, so a swipe never reveals a blank card.
   useEffect(() => {
     for (const film of cards.slice(1, 4)) {
-      const src = posterSrc(film.poster);
+      const src = film.poster;
       if (src) new Image().src = src;
     }
   }, [cards]);
@@ -106,7 +105,6 @@ export default function SwipeDeck({
   const swipe = useCallback(
     (dir: Dir) => {
       if (fling || !cardsRef.current[0]) return;
-      haptic(dir === "like" ? "medium" : "light");
       setFling(dir);
     },
     [fling],
@@ -261,7 +259,7 @@ function Card({
   const tilt = x / 18;
   const like = Math.max(0, Math.min(1, x / THRESHOLD));
   const nope = Math.max(0, Math.min(1, -x / THRESHOLD));
-  const poster = posterSrc(film.poster);
+  const poster = film.poster;
   const meta = filmMeta(film);
 
   return (

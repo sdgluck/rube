@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Check } from "lucide-react";
-import { haptic } from "@tinkerbell/native-client";
 import Modal from "./Modal";
 import styles from "./PickerSheet.module.css";
 
@@ -66,7 +65,6 @@ export default function PickerSheet({
             aria-selected={selected.length === 0}
             className={styles.option}
             onClick={() => {
-              haptic("selection");
               onClear();
               if (!multiple) onClose();
             }}
@@ -85,7 +83,6 @@ export default function PickerSheet({
               aria-selected={on}
               className={styles.option}
               onClick={() => {
-                haptic("selection");
                 onToggle(o.value);
                 if (!multiple) onClose();
               }}

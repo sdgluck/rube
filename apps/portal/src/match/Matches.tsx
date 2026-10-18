@@ -2,7 +2,7 @@ import { useState } from "react";
 import { portalTrpc, type MatchFilm, type MatchState } from "../trpc.ts";
 import { EmptyState } from "../components/States.tsx";
 import Sheet from "./Sheet.tsx";
-import { filmMeta, plexLink, posterSrc } from "./film.ts";
+import { filmMeta, plexLink } from "./film.ts";
 
 /**
  * What the room agrees on: films everyone liked, then films more than one
@@ -111,7 +111,7 @@ function Section({
         {films.map((film) => {
           const voters = votesFor(film.ratingKey);
           const mine = state.myVote === film.ratingKey;
-          const poster = posterSrc(film.poster);
+          const poster = film.poster;
           return (
             <div key={film.ratingKey} className={`mm-tile ${film.unanimous ? "mm-tile-all" : ""}`}>
               <button
@@ -148,7 +148,7 @@ function Section({
 }
 
 function Detail({ film, serverId, onClose }: { film: MatchFilm; serverId: string | null; onClose: () => void }) {
-  const poster = posterSrc(film.poster);
+  const poster = film.poster;
   return (
     <Sheet title={film.title} onClose={onClose}>
       <div className="mm-detail">

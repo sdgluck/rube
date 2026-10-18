@@ -1,10 +1,3 @@
-import { apiUrl } from "@tinkerbell/native-client";
-
-/** A poster's signed path, made absolute in the native app, where the server is another origin. */
-export function posterSrc(path: string | null): string | null {
-  return path ? apiUrl(path) : null;
-}
-
 export function runtime(ms: number | null): string | null {
   if (!ms) return null;
   const mins = Math.round(ms / 60_000);

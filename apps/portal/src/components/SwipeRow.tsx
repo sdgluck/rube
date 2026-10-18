@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { haptic } from "@tinkerbell/native-client";
 
 /**
  * A row you swipe left to reveal one action, and swipe most of the way across
@@ -53,11 +52,7 @@ export default function SwipeRow({
       if (mode !== "swipe") return;
       e.preventDefault();
       current = Math.min(0, Math.max(-el.offsetWidth, base + dx));
-      const commit = -current > el.offsetWidth * 0.55;
-      if (commit !== armed) {
-        armed = commit;
-        if (commit) haptic("medium");
-      }
+      armed = -current > el.offsetWidth * 0.55;
       setOffset(current);
     };
     const onEnd = () => {

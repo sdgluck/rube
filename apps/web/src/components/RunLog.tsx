@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseLogLine } from "@tinkerbell/contracts";
 import styles from "./RunLog.module.css";
-import { saveFile } from "@tinkerbell/native-client";
+import { saveFile } from "#lib/download";
 
 /**
  * Lines worth pulling out when someone only wants to know what went wrong.
@@ -163,8 +163,7 @@ export default function RunLog({
 
   const handleDownload = () => {
     if (!log || !downloadName) return;
-    // A download in the browser, the share sheet in the app.
-    void saveFile(new Blob([asText(lines)], { type: "text/plain" }), downloadName);
+    saveFile(new Blob([asText(lines)], { type: "text/plain" }), downloadName);
   };
 
   const body =

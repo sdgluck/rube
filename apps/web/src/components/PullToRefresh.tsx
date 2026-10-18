@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { haptic } from "@tinkerbell/native-client";
 import Spinner from "./Spinner";
 import styles from "./PullToRefresh.module.css";
 
@@ -19,7 +18,6 @@ const HOLD = 52;
  *
  * iOS: the content follows the finger and reveals an activity spinner above
  * it. Android: a Material disc drops in over the content, which stays put.
- * A tick of haptic feedback marks the point of no return.
  *
  * The listeners are attached by hand because React registers touchmove as
  * passive, and only a non-passive listener can stop the platform's own
@@ -65,12 +63,7 @@ export default function PullToRefresh({ onRefresh, children }: PullToRefreshProp
       e.preventDefault();
       // Resistance grows with distance, as a native pull does.
       distance = Math.min(MAX, dy * 0.45);
-      if (!armed && distance >= THRESHOLD) {
-        armed = true;
-        haptic("light");
-      } else if (armed && distance < THRESHOLD) {
-        armed = false;
-      }
+      armed = distance >= THRESHOLD;
       setPull(distance);
     };
     const onEnd = async () => {

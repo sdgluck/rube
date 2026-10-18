@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { haptic } from "@tinkerbell/native-client";
 import styles from "./List.module.css";
 
 export type SwipeAction = {
@@ -14,10 +13,9 @@ const ACTION_W = 80;
  * A row you can swipe sideways to reveal actions, as Mail and Messages do.
  *
  * Swipe left for the trailing actions, right for the leading one. Swiping
- * most of the way across commits the outermost action outright, with a
- * haptic tick at the point of no return. Vertical scrolling wins any
- * ambiguous gesture: the row only takes over once the finger has moved
- * clearly sideways. Touch-only — with a mouse the row is just the row, and
+ * most of the way across commits the outermost action outright. Vertical
+ * scrolling wins any ambiguous gesture: the row only takes over once the
+ * finger has moved clearly sideways. Touch-only — with a mouse the row is just the row, and
  * the same actions must exist elsewhere (a row menu).
  */
 export default function SwipeRow({
@@ -69,11 +67,7 @@ export default function SwipeRow({
       const max = leadingRef.current ? el.offsetWidth : 0;
       const min = trailingRef.current.length ? -el.offsetWidth : 0;
       current = Math.max(min, Math.min(max, base + dx));
-      const commit = Math.abs(current) > el.offsetWidth * 0.55;
-      if (commit !== armed) {
-        armed = commit;
-        if (commit) haptic("medium");
-      }
+      armed = Math.abs(current) > el.offsetWidth * 0.55;
       setOffset(current);
     };
     const onEnd = () => {

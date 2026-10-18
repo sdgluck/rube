@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { haptic } from "@tinkerbell/native-client";
 import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
 import SwipeRow from "../components/SwipeRow.tsx";
@@ -67,7 +66,6 @@ export default function MyCollections({
    * for-me" to call afterwards.
    */
   const exclude = (title: string) => {
-    haptic("light");
     setPending((prev) => [...prev, title]);
     timers.current.set(
       title,

@@ -1,7 +1,6 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink, httpLink, splitLink } from "@trpc/client";
 import type { AppRouter } from "@tinkerbell/trpc";
-import { apiUrl, authHeaders } from "@tinkerbell/native-client";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -14,12 +13,7 @@ export const trpc = createTRPCReact<AppRouter>();
 export const UNAUTHORIZED_EVENT = "tinkerbell:unauthorized";
 
 const authAwareFetch: typeof fetch = async (input, init) => {
-  // Resolved per request rather than baked into the links: in the native app
-  // the server is chosen at runtime and the bearer token arrives after sign-in.
-  // In a browser both are no-ops and this is the request it always was.
-  const headers = new Headers(init?.headers);
-  for (const [name, value] of Object.entries(authHeaders())) headers.set(name, value);
-  const res = await fetch(typeof input === "string" ? apiUrl(input) : input, { ...init, headers });
+  const res = await fetch(input, init);
   if (res.status === 401) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
   if (!res.ok && !res.headers.get("content-type")?.includes("json")) throw new Error(notTinkerbellMessage(res));
   return res;

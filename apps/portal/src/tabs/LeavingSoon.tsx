@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { haptic } from "@tinkerbell/native-client";
 import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
 import SwipeRow from "../components/SwipeRow.tsx";
@@ -29,7 +28,6 @@ export default function LeavingSoon({ components }: { components: PortalComponen
   // disable every row's button while one request was in flight.
   const [optimistic, setOptimistic] = useState<Record<string, boolean>>({});
   const vote = (ratingKey: string, keep: boolean) => {
-    haptic(keep ? "success" : "light");
     setOptimistic((prev) => ({ ...prev, [ratingKey]: keep }));
     voteKeep.mutate(
       { ratingKey, keep },

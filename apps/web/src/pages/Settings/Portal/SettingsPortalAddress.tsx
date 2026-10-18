@@ -14,7 +14,6 @@ import ErrorState from "#components/ErrorState";
 import styles from "../Personalization.module.css";
 import local from "./SettingsPortalAddress.module.css";
 import { nativeConnectLink } from "@tinkerbell/contracts";
-import { getConnection } from "@tinkerbell/native-client";
 import QrCode from "#components/QrCode";
 
 const USED_WITHOUT_FALLBACK = ["Cleanup warnings", "Portal preroll"];
@@ -41,9 +40,8 @@ export default function SettingsPortalAddress() {
   }
 
   const saved = configQuery.data?.user_app_public_url ?? "";
-  // The host the admin server answers on; in the native app that's the
-  // connected server, not the app's own `app.tinkerbell`.
-  const host = new URL(getConnection()?.server ?? window.location.origin).hostname;
+  // The host the admin server answers on.
+  const host = window.location.hostname;
   const suggestion = `http://${host}:3100`;
   const blank = url.trim() === "";
   const dirty = url.trim() !== saved;

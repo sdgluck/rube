@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { haptic, pushOverlay } from "@tinkerbell/native-client";
+import { pushOverlay } from "@tinkerbell/native-client";
 import { useSheetDrag } from "#hooks/useSheetDrag";
 import styles from "./ActionSheet.module.css";
 
@@ -94,7 +94,6 @@ export default function ActionSheet({
               className={`${styles.action} ${action.danger ? styles.actionDanger : ""}`}
               disabled={action.disabled}
               onClick={() => {
-                if (action.danger) haptic("warning");
                 // The choice runs after the sheet has gone, so anything it
                 // opens (a confirm, another sheet) isn't stacked under it.
                 close(action.onSelect);

@@ -1,13 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { describeMatchFilters } from "@tinkerbell/contracts";
-import { haptic } from "@tinkerbell/native-client";
 import { portalTrpc, type MatchState } from "../trpc.ts";
 import ActionSheet from "../components/ActionSheet.tsx";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
 import Matches from "./Matches.tsx";
 import ShareSheet from "./ShareSheet.tsx";
 import SwipeDeck from "./SwipeDeck.tsx";
-import { posterSrc } from "./film.ts";
 
 /**
  * One room: the deck, the matches, and who's here. Polls the room every few
@@ -56,7 +54,6 @@ export default function Room({
       );
       if (fresh) {
         setMatched(fresh);
-        haptic("success");
       }
     }
     pendingMatch.current = null;
@@ -165,7 +162,7 @@ export default function Room({
         <div className="mm-match-overlay" role="alertdialog" aria-label="It's a match" onClick={() => setMatched(null)}>
           <p className="mm-match-head">It's a match</p>
           <p className="mm-match-sub">Everyone wants to watch this</p>
-          {posterSrc(matched.poster) && <img className="mm-match-poster" src={posterSrc(matched.poster)!} alt="" />}
+          {matched.poster && <img className="mm-match-poster" src={matched.poster} alt="" />}
           <p className="mm-match-title">{matched.title}</p>
           <div className="mm-actions">
             <button

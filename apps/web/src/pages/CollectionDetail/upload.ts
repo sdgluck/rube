@@ -7,8 +7,6 @@
  * looks like a hung dialog.
  */
 
-import { apiUrl, authHeaders } from "@tinkerbell/native-client";
-
 export function uploadCollectionPoster(
   ratingKey: string,
   file: File,
@@ -16,8 +14,7 @@ export function uploadCollectionPoster(
 ): Promise<void> {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    xhr.open("POST", apiUrl(`/api/collections/${encodeURIComponent(ratingKey)}/poster`));
-    for (const [name, value] of Object.entries(authHeaders())) xhr.setRequestHeader(name, value);
+    xhr.open("POST", `/api/collections/${encodeURIComponent(ratingKey)}/poster`);
     xhr.responseType = "json";
 
     xhr.upload.addEventListener("progress", (event) => {

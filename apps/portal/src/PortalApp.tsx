@@ -1,18 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Clock, Heart, LayoutGrid, Popcorn, UserRound, type LucideIcon } from "lucide-react";
-import {
-  biometryAvailable,
-  getConnection,
-  getLockEnabled,
-  haptic,
-  isNative,
-  nativePlexSignIn,
-  saveServer,
-  saveSession,
-  setLockEnabled,
-  SignInCancelled,
-  unlock,
-} from "@tinkerbell/native-client";
 import ActionSheet from "./components/ActionSheet.tsx";
 import { useIsPhone } from "./useIsPhone.ts";
 import { portalTrpc } from "./trpc.ts";
@@ -108,7 +95,6 @@ export default function PortalApp() {
     }
     scrollByTab.current.set(tab, window.scrollY);
     if (isPhone) {
-      haptic("selection");
       history.pushState({ ...history.state, portalTab: next }, "", `#${next}`);
     }
     setTabState(next);
@@ -201,28 +187,9 @@ export default function PortalApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function signInNative() {
-    setFinishing(true);
-    try {
-      const { token } = await nativePlexSignIn({
-        start: () => startMutation.mutateAsync({ client: "native" }),
-        poll: (handshake) => pollMutation.mutateAsync({ handshake }),
-      });
-      await saveSession(token);
-      await utils.me.invalidate();
-    } catch (e) {
-      if (!(e instanceof SignInCancelled)) setError(e instanceof Error ? e.message : "Sign-in failed.");
-    } finally {
-      setFinishing(false);
-    }
-  }
-
   function signIn() {
     setError(null);
     rememberLinkAcrossSignIn();
-    // The app opens Plex in a sheet and keeps the session itself, rather than
-    // leaving for plex.tv and coming back. See `nativePlexSignIn`.
-    if (isNative()) return void signInNative();
     startMutation.mutate(undefined, {
       onSuccess: ({ authUrl }) => {
         localStorage.setItem(PENDING_KEY, "1");
@@ -303,11 +270,7 @@ export default function PortalApp() {
 
   const signOut = () =>
     logoutMutation.mutate(undefined, {
-      // The app forgets its stored token too, or the next launch signs it back in.
-      onSuccess: async () => {
-        await saveSession(null);
-        await utils.me.reset();
-      },
+      onSuccess: () => utils.me.reset(),
     });
 
   const content: ReactNode =
@@ -417,30 +380,10 @@ export default function PortalApp() {
 }
 
 /**
- * The phone's Account tab: who you are, which server, the app lock, and
- * signing out — the things that belong to the person and the phone rather
- * than to their tastes.
+ * The phone's Account tab: who you are, and signing out — the things that
+ * belong to the person rather than to their tastes.
  */
 function Account({ username, onSignOut }: { username: string; onSignOut: () => void }) {
-  const native = isNative();
-  const [available, setAvailable] = useState(false);
-  const [lock, setLock] = useState(false);
-  useEffect(() => {
-    if (!native) return;
-    void biometryAvailable().then(setAvailable);
-    void getLockEnabled().then(setLock);
-  }, [native]);
-
-  async function toggleLock() {
-    const next = !lock;
-    // Proving it works before relying on it: a lock you can't open is a lockout.
-    if (next && !(await unlock("Turn on the app lock"))) return;
-    await setLockEnabled(next);
-    setLock(next);
-    haptic("selection");
-  }
-
-  const server = getConnection()?.server;
   return (
     <div className="stack">
       <div className="list-group">
@@ -448,28 +391,7 @@ function Account({ username, onSignOut }: { username: string; onSignOut: () => v
           <span>Plex account</span>
           <span className="muted">{username}</span>
         </div>
-        {server && (
-          <div className="list-row">
-            <span>Server</span>
-            <span className="muted">{new URL(server).host}</span>
-          </div>
-        )}
       </div>
-      {native && (
-        <div className="list-group">
-          {available && (
-            <label className="list-row">
-              <span>App lock</span>
-              <span className="switch">
-                <input type="checkbox" role="switch" checked={lock} onChange={() => void toggleLock()} />
-              </span>
-            </label>
-          )}
-          <button type="button" className="list-row list-button" onClick={() => void saveServer(null)}>
-            Switch server
-          </button>
-        </div>
-      )}
       <div className="list-group">
         <button type="button" className="list-row list-button danger" onClick={onSignOut}>
           Sign out

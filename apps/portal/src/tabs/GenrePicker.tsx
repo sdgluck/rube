@@ -14,7 +14,6 @@
  */
 import { useState } from "react";
 import { Ban, Heart, ThumbsUp, type LucideIcon } from "lucide-react";
-import { haptic } from "@tinkerbell/native-client";
 import { useIsPhone } from "../useIsPhone.ts";
 
 export type GenreLevel = "none" | "loved" | "liked" | "hated";
@@ -154,7 +153,6 @@ function GenreChips({ genres, levelOf, onChange }: Props) {
               className={`genre-chip ${level}`}
               aria-label={`${g}: ${choice ? choice.label : "no preference"}`}
               onClick={() => {
-                haptic("selection");
                 onChange(g, next);
               }}
             >

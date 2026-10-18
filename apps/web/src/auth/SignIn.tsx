@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { isNative, nativePlexSignIn, saveServer, saveSession, SignInCancelled } from "@tinkerbell/native-client";
 import { trpc } from "#/trpc";
 import styles from "./auth.module.css";
 
@@ -69,27 +68,8 @@ export default function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function signInNative() {
-    setFinishing(true);
-    try {
-      const { token } = await nativePlexSignIn({
-        start: () => startMutation.mutateAsync({ client: "native" }),
-        poll: (handshake) => pollMutation.mutateAsync({ handshake }),
-      });
-      await saveSession(token);
-      onSignedIn();
-    } catch (err) {
-      if (!(err instanceof SignInCancelled)) setError(err instanceof Error ? err.message : "Sign-in failed.");
-    } finally {
-      setFinishing(false);
-    }
-  }
-
   function signIn() {
     setError(null);
-    // The app can't leave for plex.tv and come back: it opens Plex in a sheet
-    // and keeps the session itself. See `nativePlexSignIn`.
-    if (isNative()) return void signInNative();
     startMutation.mutate(undefined, {
       onSuccess: ({ authUrl }) => {
         localStorage.setItem(PENDING_KEY, "1");
@@ -118,12 +98,6 @@ export default function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
         <p className={styles.hint}>
           Locked out? Set <code>TINKERBELL_DISABLE_AUTH=1</code> on the server and restart to get back in.
         </p>
-
-        {isNative() && (
-          <button type="button" className={styles.linkButton} onClick={() => void saveServer(null)}>
-            Use a different server
-          </button>
-        )}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { haptic, markTabNavigation } from "@tinkerbell/native-client";
+import { markTabNavigation } from "@tinkerbell/native-client";
 import { SidebarStreamCount } from "#layout/Sidebar";
 import { useNavMenu } from "#hooks/useNavMenu";
 import { navIcon } from "#layout/navIcons";
@@ -62,7 +62,6 @@ export default function BottomNav() {
                 pathname,
                 remembered: remembered.current.get(to),
               });
-              haptic("selection");
               if (action.kind === "scrollTop") {
                 window.scrollTo({ top: 0, behavior: "smooth" });
                 return;

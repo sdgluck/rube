@@ -1,26 +1,22 @@
 /**
- * Downloading a file the server generates (an export bundle, a backup).
+ * Saving a file the page generated (a run log, an overlay or rule export).
  *
- * In the browser it stays a plain navigation: the server's
- * `Content-Disposition` names the file, and the download streams with the
- * browser's own progress, which a multi-megabyte backup deserves. In the
- * native app a navigation to an attachment does nothing at all, so the file is
- * fetched with the bearer token and handed to the share sheet instead.
+ * A blob URL clicked through an `<a download>` — the one way to name a file
+ * that never came from the server. Files the server generates (export bundles,
+ * backups) don't come through here: they stay a plain navigation, so the
+ * server's `Content-Disposition` names the file and a multi-megabyte backup
+ * streams with the browser's own progress.
  */
-import { apiUrl, authHeaders, isNative, saveFile } from "@tinkerbell/native-client";
-
-export async function downloadFromServer(path: string, fallbackName: string): Promise<void> {
-  if (!isNative()) {
-    window.location.href = path;
-    return;
-  }
-  const res = await fetch(apiUrl(path), { headers: authHeaders(), signal: AbortSignal.timeout(120_000) });
-  if (!res.ok) throw new Error(`Download failed (${res.status})`);
-  await saveFile(await res.blob(), filenameFrom(res.headers.get("content-disposition")) ?? fallbackName);
-}
-
-/** `attachment; filename="tinkerbell-export.json"` → `tinkerbell-export.json`. */
-export function filenameFrom(disposition: string | null): string | null {
-  const match = /filename\*?=(?:UTF-8'')?"?([^";]+)"?/i.exec(disposition ?? "");
-  return match ? decodeURIComponent(match[1]) : null;
+export function saveFile(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  // In the document for the click, as older Firefox requires.
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  // Revoked on the next tick: Safari cancels a download whose URL is revoked
+  // synchronously after the click.
+  setTimeout(() => URL.revokeObjectURL(url), 0);
 }

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import { haptic } from "@tinkerbell/native-client";
 import { portalTrpc, type PortalComponents } from "../trpc.ts";
 import { ErrorState, RowsSkeleton } from "../components/States.tsx";
 import { useDebounced } from "../useDebounced.ts";
@@ -172,7 +171,6 @@ export default function PreferencesForm({ components: show }: { components: Port
       {
         onSuccess: () => {
           setSaved(true);
-          haptic("success");
           utils.preferences.get.invalidate();
         },
       },

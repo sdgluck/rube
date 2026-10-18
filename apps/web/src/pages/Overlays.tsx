@@ -22,7 +22,7 @@ import { ImportLayoutModal } from "./Overlays/ImportLayoutModal";
 import { POSITIONS } from "./Overlays/constants";
 import { getPlaceholderValue } from "./Overlays/helpers";
 import { plexImageUrl } from "#lib/media";
-import { saveFile } from "@tinkerbell/native-client";
+import { saveFile } from "#lib/download";
 
 export default function Overlays() {
   const toast = useToast();
@@ -183,8 +183,7 @@ export default function Overlays() {
       const blob = new Blob([json], { type: "application/json" });
       const sectionName = sections.find((s) => s.key === sectionId)?.title ?? sectionId;
       const safeName = sectionName.replace(/[^a-z0-9]+/gi, "-").toLowerCase();
-      // A download in the browser, the share sheet in the app.
-      await saveFile(blob, `overlays-${safeName}.json`);
+      saveFile(blob, `overlays-${safeName}.json`);
       toast.addToast(`Exported ${data.configs.length} overlay${data.configs.length === 1 ? "" : "s"}`, "success");
     } catch (err) {
       const msg = (err as { message?: string })?.message ?? "Export failed";

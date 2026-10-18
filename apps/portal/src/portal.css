@@ -787,47 +787,6 @@ textarea {
   }
 }
 
-/* ── Native app ────────────────────────────────────────────── */
-
-/* The server picker: the address field and the connect button, full width
-   like the sign-in button they precede. */
-.connect-form {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  margin-top: 16px;
-  text-align: left;
-}
-
-.connect-form input {
-  width: 100%;
-}
-
-.connect-form .btn-primary {
-  width: 100%;
-}
-
-/* Which server, switching, and the app lock — under the card, quiet. */
-.app-footer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 4px 16px;
-  margin-top: 16px;
-  font-size: 0.82rem;
-  color: var(--text-muted);
-}
-
-.app-footer button {
-  min-height: 44px;
-  padding: 0 4px;
-  border: none;
-  background: transparent;
-  font-weight: 600;
-  color: var(--text-secondary);
-}
-
 /* ─── The phone app ────────────────────────────────────────────────────────
  *
  * Below 768px the portal is an app rather than a card on a page: a pinned
@@ -998,13 +957,6 @@ html[data-platform="android"] .tab-bar-item:active {
   opacity: 1;
 }
 
-/* The native footer's job moves to the Account tab on a phone. */
-@media (max-width: 768px) {
-  .app-footer {
-    display: none;
-  }
-}
-
 /* ─── Native lists (Account) ─────────────────────────────────────────── */
 
 .list-group {
@@ -1061,7 +1013,7 @@ html[data-platform="android"] .list-row + .list-row::before {
 
 /* ─── Switches ─────────────────────────────────────────────────────────
    A setting's checkbox, drawn as the platform's switch on a phone — the
-   Tastes toggles and the app lock. */
+   Tastes toggles. */
 @media (max-width: 768px) {
   .check {
     flex-direction: row-reverse;
@@ -1072,8 +1024,7 @@ html[data-platform="android"] .list-row + .list-row::before {
     color: var(--text-primary);
   }
 
-  .check input,
-  .switch input {
+  .check input {
     flex: 0 0 auto;
     position: relative;
     width: 51px;
@@ -1085,8 +1036,7 @@ html[data-platform="android"] .list-row + .list-row::before {
     transition: background 0.2s;
   }
 
-  .check input::after,
-  .switch input::after {
+  .check input::after {
     content: "";
     position: absolute;
     top: 2px;
@@ -1099,13 +1049,11 @@ html[data-platform="android"] .list-row + .list-row::before {
     transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
   }
 
-  .check input:checked,
-  .switch input:checked {
+  .check input:checked {
     background: var(--accent);
   }
 
-  .check input:checked::after,
-  .switch input:checked::after {
+  .check input:checked::after {
     transform: translateX(20px);
   }
 }
