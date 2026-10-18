@@ -30,11 +30,3 @@
 .button {
   composes: btn btnSecondary btnSm from "../styles/controls.module.css";
 }
-
-@media (max-width: 768px) {
-  /* No table card to sit under — the pager becomes its own card. */
-  .pagination {
-    border-top: none;
-    border-radius: var(--r-card);
-  }
-}

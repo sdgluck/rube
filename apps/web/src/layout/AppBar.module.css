@@ -90,235 +90,41 @@
   flex-shrink: 0;
 }
 
-/* Phone-only parts, hidden on a desktop. */
-.back,
-.phoneTitle,
-.overflow,
-.largeTitle {
-  display: none;
+/* The drawer's menu button. Only rendered below --bp-md (App.tsx). */
+.menu {
+  composes: btn btnGhost btnIcon from "../styles/controls.module.css";
+  flex-shrink: 0;
+  margin-left: -0.6rem;
 }
 
-/* ─── Phones: a native navigation bar ─────────────────────────────────────
-   Pinned (the desktop bar deliberately scrolls away; a phone's never does),
-   translucent over a blur so content visibly passes underneath, padded down
-   past the status bar. The breadcrumb trail gives way to a back button and a
-   title; the theme toggle leaves for Settings → Appearance. iOS by default,
-   Material in the `[data-platform="android"]` rules after. */
+/* ─── Narrow screens ──────────────────────────────────────────────────────
+   The same bar, allowed to grow: a page's actions wrap onto a second row
+   rather than being clipped, and the trail ellipsises before it pushes them
+   off. The theme toggle leaves for Settings → Appearance — on a phone it was
+   the control most often wrapped alone onto a row of its own. */
 @media (max-width: 768px) {
   .bar {
-    position: sticky;
-    top: 0;
-    z-index: var(--z-sticky-bar);
-    height: calc(env(safe-area-inset-top, 0px) + var(--navbar-h));
-    padding: env(safe-area-inset-top, 0px) 0.8rem 0;
-    gap: 0.4rem;
-    background: var(--bar-bg);
-    backdrop-filter: saturate(1.8) blur(2rem);
-    -webkit-backdrop-filter: saturate(1.8) blur(2rem);
-    border-bottom-color: transparent;
-    transition: border-color 0.2s;
-    user-select: none;
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--appbar-h);
+    row-gap: 0.6rem;
   }
 
-  .bar[data-scrolled] {
-    border-bottom-color: var(--bar-line);
+  .trail {
+    overflow: hidden;
   }
 
-  .trail,
+  /* Not shrinkable: a shrunk row of nowrap buttons overflows its own box
+     instead of wrapping. Capped at the bar's width, so a row too long even
+     for a line of its own wraps its buttons inside it. */
+  .actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    max-width: 100%;
+    margin-left: auto;
+  }
+
   .theme {
     display: none;
-  }
-
-  .back {
-    display: inline-flex;
-    align-items: center;
-    flex: 0 1 auto;
-    min-width: 0;
-    /* Stops short of the centred title, which spans the middle half. */
-    max-width: calc(25% - 0.4rem);
-    height: 4.4rem;
-    padding: 0 0.6rem 0 0;
-    margin-left: -0.4rem;
-    border: none;
-    background: none;
-    color: var(--accent-text);
-    font: var(--t-body);
-    font-size: 1.7rem;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .back:active {
-    opacity: 0.4;
-  }
-
-  .backLabel {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* Centred on iOS, like UINavigationBar's title; absolutely placed so the
-     back button and the actions don't push it off-centre. */
-  .phoneTitle {
-    display: block;
-    position: absolute;
-    left: 50%;
-    bottom: calc((var(--navbar-h) - 2.2rem) / 2);
-    max-width: 50%;
-    transform: translateX(-50%);
-    font: var(--t-body);
-    font-size: 1.7rem;
-    font-weight: 600;
-    color: var(--ink);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    pointer-events: none;
-    transition: opacity 0.2s;
-  }
-
-  /* On a large-title screen the small title only appears once the large one
-     has scrolled under the bar. */
-  .bar[data-large-title]:not([data-scrolled]) .phoneTitle {
-    opacity: 0;
-  }
-
-  .crumbRecordPhone {
-    font-family: var(--font-sans);
-  }
-
-  .meta {
-    display: none;
-  }
-
-  .actions {
-    gap: 0.2rem;
-  }
-
-  /* Nav-bar buttons are words in the accent colour, not boxed controls — the
-     page's own buttons are restyled here rather than at each call site. The
-     size stays the primitive's; only the chrome goes. */
-  .actions :global(button),
-  .actions :global(a) {
-    border-color: transparent;
-    background: transparent;
-    color: var(--accent-text);
-    font-size: 1.6rem;
-    font-weight: 500;
-    box-shadow: none;
-  }
-
-  /* The last action is the page's primary one (see useActionsOverflow). */
-  .actions > :last-child :global(button),
-  .actions > :global(button):last-child {
-    font-weight: 600;
-  }
-
-  .actions[data-visible="0"] > * {
-    display: none;
-  }
-
-  .actions[data-visible="1"] > :not(:last-child) {
-    display: none;
-  }
-
-  .overflow {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 4.4rem;
-    height: 4.4rem;
-    border: none;
-    background: none;
-    color: var(--accent-text);
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .overflow:active {
-    opacity: 0.4;
-  }
-
-  .largeTitle {
-    display: block;
-    margin: 0;
-    font: var(--t-display);
-    font-size: 3.4rem;
-    font-weight: 700;
-    line-height: 1.15;
-    letter-spacing: -0.02em;
-    color: var(--ink);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* ─── Material: a left-aligned top app bar ───────────────────────────── */
-
-  :global(html[data-platform="android"]) .bar {
-    padding: env(safe-area-inset-top, 0px) 0.4rem 0;
-    background: var(--page);
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    border-bottom-color: transparent;
-    transition: background 0.2s;
-  }
-
-  /* Scrolled content gets a tonal lift rather than a hairline. */
-  :global(html[data-platform="android"]) .bar[data-scrolled] {
-    background: var(--surface);
-    border-bottom-color: transparent;
-  }
-
-  :global(html[data-platform="android"]) .back {
-    justify-content: center;
-    width: 4.8rem;
-    height: 4.8rem;
-    max-width: none;
-    margin: 0;
-    padding: 0;
-    border-radius: var(--r-round);
-    color: var(--ink);
-  }
-
-  :global(html[data-platform="android"]) .back:active {
-    opacity: 1;
-    background: var(--pressed);
-  }
-
-  :global(html[data-platform="android"]) .phoneTitle {
-    position: static;
-    flex: 1 1 auto;
-    max-width: none;
-    margin-left: 1.2rem;
-    transform: none;
-    font-size: 2.2rem;
-    font-weight: 400;
-    pointer-events: auto;
-  }
-
-  :global(html[data-platform="android"]) .back + .phoneTitle {
-    margin-left: 0.4rem;
-  }
-
-  :global(html[data-platform="android"]) .spacer {
-    display: none;
-  }
-
-  :global(html[data-platform="android"]) .actions :global(button),
-  :global(html[data-platform="android"]) .actions :global(a) {
-    font-size: 1.4rem;
-    font-weight: 600;
-  }
-
-  :global(html[data-platform="android"]) .overflow {
-    width: 4.8rem;
-    height: 4.8rem;
-    border-radius: var(--r-round);
-    color: var(--ink);
-  }
-
-  :global(html[data-platform="android"]) .overflow:active {
-    opacity: 1;
-    background: var(--pressed);
   }
 }

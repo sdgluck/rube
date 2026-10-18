@@ -197,35 +197,25 @@ tests are unchanged, and the portal never advertises the admin address. See
   three things until the next release: `apps/server/src/cors.ts` with
   `NATIVE_APPS`, the `auth.start({ client: "native" })` handshake, and the
   `admin-media` tokens accepted as `?access_token=`. Don't build on any of
-  them. `packages/native-client` now holds only the phone layer's browser
-  helpers (below).
+  them.
 
 ### The phone layout
 
-This is due to be replaced by plain responsive CSS, so keep it working but
-don't grow it.
+Below `--bp-md` (768px) the admin SPA is the same responsive web page, not an
+imitation of a native app (that is `native/`'s job):
 
-Below `--bp-md` (768px) both SPAs imitate a native app in phone browsers.
-Platform details read `<html data-platform>` (`ios` | `android` | `desktop`,
-set before first paint by each `index.html`); iOS is the default look and Material is layered on
-with `[data-platform="android"]` rules. Desktop layouts don't change.
+- **The sidebar is an off-canvas drawer**, opened by the `AppBar`'s menu
+  button and closed by the scrim, Escape or any navigation (`useDrawer` in
+  `App.tsx`). The `AppBar` keeps one layout and wraps its `PageActions` onto a
+  second row rather than hiding them.
+- **The document scrolls**, not `.content` — `--sticky-top` is where a sticky
+  bar inside a page should stop. Tables keep their columns and scroll sideways
+  in `.table-scroll`; `Modal`, menus and popovers are the desktop ones.
+- `:hover` must sit inside `@media (hover: hover)` (`tinkerbell/hover-media`),
+  and anything a hover reveals needs a `@media (hover: none)` fallback.
 
-- **Shared primitives carry it.** `Modal` is a draggable bottom sheet
-  (`presentation="alert"` for a native alert), `DropdownButton`/`RowActions`
-  raise an `ActionSheet`, `MultiSelect`/`Combobox` a `PickerSheet`, the `.table`
-  reflow is an inset grouped list, Settings' `.group`/`.field`/`.checkRow` are a
-  native form. Build new UI from these and it is native on a phone for free.
-- **The header** is `AppBar` rendered as a navigation bar: back to the parent
-  crumb, the title (an iOS large title on tab roots), the page's `PageActions`
-  with the rest behind "⋯" (the last action is treated as primary).
-- **Navigation** runs through `layout/TransitionRouter` (View Transitions for
-  push/pop) and `BottomNav` (per-tab memory). Overlays push a history entry
-  (`pushOverlay`) so Back closes them. The document scrolls on a phone, not
-  `.content` — `--sticky-top` is where a sticky bar inside a page should stop.
-- `styles/mobile.css` is the global phone layer; component phone styles live
-  with their components. `:hover` must sit inside `@media (hover: hover)`
-  (`tinkerbell/hover-media`), and anything a hover reveals needs a
-  `@media (hover: none)` fallback.
+The portal (`apps/portal`) still has its own per-platform phone styles
+(`<html data-platform>`, `src/lib/overlay-history.ts`, `src/lib/keyboard.ts`).
 
 ### Agent API (`packages/agent-api`)
 

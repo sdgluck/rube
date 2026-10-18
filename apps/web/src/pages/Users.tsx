@@ -311,7 +311,7 @@ export default function Users() {
                             {user.optedIn ? "opted in" : "opted out"}
                           </span>
                         </td>
-                        <td data-cell="meta" className={`${sharedStyles.cellNum} ${styles.collectionsCell}`}>
+                        <td data-cell="meta" className={sharedStyles.cellNum}>
                           {!user.optedIn && user.collectionCount === 0 ? (
                             <span className={styles.hint}>—</span>
                           ) : (

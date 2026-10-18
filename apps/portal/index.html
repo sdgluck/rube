@@ -17,8 +17,8 @@
     <meta name="apple-mobile-web-app-title" content="Tinkerbell" />
     <script>
       (function () {
-        // Platform conventions (see packages/native-client/src/platform.ts,
-        // which this mirrors). Before first paint, so the phone layout never
+        // Platform conventions for the portal's phone styles (portal.css
+        // reads <html data-platform>). Before first paint, so the phone layout never
         // draws in the wrong platform's style and then flips.
         try {
           var p = new URLSearchParams(location.search).get("platform");

@@ -1,8 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { pushOverlay } from "@tinkerbell/native-client";
-import { useIsPhone } from "#hooks/useMediaQuery";
-import { useSheetDrag } from "#hooks/useSheetDrag";
 import styles from "./Modal.module.css";
 
 type Size = "sm" | "md" | "lg" | "xl";
@@ -22,12 +19,6 @@ interface ModalProps {
   dismissOnBackdrop?: boolean;
   /** Pinned to the bottom of the panel, outside the scrolling body. */
   footer?: ReactNode;
-  /**
-   * `alert` is for a question or a notice, not a task: on a phone it is a
-   * small centred card (an iOS alert, a Material dialog) rather than a sheet.
-   * Desktop draws both the same.
-   */
-  presentation?: "sheet" | "alert";
   className?: string;
   children: ReactNode;
 }
@@ -44,14 +35,12 @@ const EXIT_MS = 200;
  * Six hand-rolled versions of this existed, of which exactly one set
  * role="dialog", none trapped focus, none restored focus to the trigger, none
  * locked body scroll, and their backdrops sat at four different z-indexes —
- * three of them *below* the mobile bottom nav.
+ * three of them below the page chrome.
  *
- * On a phone it is a bottom sheet rather than a floating dialog: it slides up
- * from the bottom edge, has a grabber, follows a downward drag and dismisses
- * past a quarter of its height, and Back (hardware, gesture or browser) closes
- * it instead of navigating the page underneath. `lg`/`xl` dialogs — the
- * wizards and editors — become full-height sheets. Every one of the ~50 call
- * sites gets this without knowing about it.
+ * The same centred dialog at every width — on a phone it is simply the width
+ * of the screen less a margin. It used to become a draggable bottom sheet
+ * whose history entry made Back close it; that was the admin app imitating a
+ * native one, which the real native apps (`native/`) now are.
  */
 export default function Modal({
   open,
@@ -63,7 +52,6 @@ export default function Modal({
   hideCloseButton = false,
   dismissOnBackdrop = true,
   footer,
-  presentation = "sheet",
   className,
   children,
 }: ModalProps) {
@@ -72,9 +60,6 @@ export default function Modal({
   const restoreFocusTo = useRef<HTMLElement | null>(null);
   const titleId = useId();
 
-  const isPhone = useIsPhone();
-  const alert = presentation === "alert";
-
   const close = useCallback(() => {
     setExiting(true);
     window.setTimeout(() => {
@@ -82,24 +67,6 @@ export default function Modal({
       onClose();
     }, EXIT_MS);
   }, [onClose]);
-
-  // Back closes the sheet. `close` is read through a ref so a re-render
-  // doesn't push a second history entry for the same open sheet.
-  const closeRef = useRef(close);
-  closeRef.current = close;
-  useEffect(() => {
-    if (!open) return;
-    return pushOverlay(() => closeRef.current());
-  }, [open]);
-
-  // A dragged-away sheet has already animated off; skip the exit animation,
-  // which would start again from the top.
-  useSheetDrag(panelRef, {
-    enabled: open && isPhone && !alert && !exiting,
-    canDismiss: dismissOnBackdrop,
-    onDismiss: onClose,
-    scrollSelector: `.${styles.body}`,
-  });
 
   // Remember the trigger so focus can go back where the user left it.
   useEffect(() => {
@@ -111,9 +78,7 @@ export default function Modal({
     if (!open) return;
     const panel = panelRef.current;
     if (!panel) return;
-    // On a phone the panel itself takes focus: focusing a field would raise
-    // the keyboard over a sheet the user hasn't even seen yet.
-    const first = window.matchMedia("(max-width: 768px)").matches ? null : panel.querySelector<HTMLElement>(FOCUSABLE);
+    const first = panel.querySelector<HTMLElement>(FOCUSABLE);
     (first ?? panel).focus({ preventScroll: true });
     return () => restoreFocusTo.current?.focus?.({ preventScroll: true });
   }, [open]);
@@ -169,7 +134,7 @@ export default function Modal({
 
   return createPortal(
     <div
-      className={`${styles.backdrop} ${alert ? styles.alertBackdrop : ""} ${exiting ? styles.backdropExiting : ""}`}
+      className={`${styles.backdrop} ${exiting ? styles.backdropExiting : ""}`}
       onMouseDown={(e) => {
         if (dismissOnBackdrop && e.target === e.currentTarget) close();
       }}
@@ -180,15 +145,14 @@ export default function Modal({
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`${styles.panel} ${styles[size]} ${alert ? styles.alertPanel : ""} ${exiting ? styles.panelExiting : ""} ${className ?? ""}`}
+        className={`${styles.panel} ${styles[size]} ${exiting ? styles.panelExiting : ""} ${className ?? ""}`}
       >
-        {!alert && <span className={styles.grabber} aria-hidden />}
         <div className={hideTitle ? styles.headerVisuallyHidden : styles.header}>
           <h2 id={titleId} className={styles.title}>
             {title}
           </h2>
           {meta && <span className={styles.meta}>{meta}</span>}
-          {!hideCloseButton && !(alert && isPhone) && (
+          {!hideCloseButton && (
             <button type="button" className={styles.close} onClick={close} aria-label="Close dialog">
               <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
                 <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

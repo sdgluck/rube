@@ -4,7 +4,7 @@
   align-items: center;
   justify-content: center;
   padding: 2.4rem;
-  /* Clear of the status bar and home indicator in the native app; zero in a browser. */
+  /* Clear of the status bar and home indicator in a home-screen install; zero in a browser tab. */
   padding-top: calc(env(safe-area-inset-top, 0px) + 2.4rem);
   padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2.4rem);
   background: var(--page);

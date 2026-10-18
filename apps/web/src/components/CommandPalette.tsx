@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import Modal from "./Modal";
-import { useIsPhone } from "#hooks/useMediaQuery";
 import styles from "./CommandPalette.module.css";
 import { useGlobalSearch, type SearchHit } from "#hooks/useGlobalSearch";
 import { SCOPES } from "#/lib/searchScopes";
@@ -241,22 +240,11 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [open, flat.length, activeIndex, select]);
 
-  // On a phone this is the app's search screen: a full-height sheet with a
-  // search field and Cancel, no keyboard-shortcut footer.
-  const isPhone = useIsPhone();
   let renderedIndex = -1;
   const activeId = `palette-option-${activeIndex}`;
 
   return (
-    <Modal
-      open={open}
-      onClose={close}
-      title="Search"
-      hideTitle
-      size={isPhone ? "xl" : "md"}
-      hideCloseButton
-      className={styles.panel}
-    >
+    <Modal open={open} onClose={close} title="Search" hideTitle size="md" hideCloseButton className={styles.panel}>
       <div className={styles.inputWrapper}>
         <input
           ref={inputRef}
@@ -265,7 +253,7 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
           enterKeyHint="go"
           autoCapitalize="none"
           autoCorrect="off"
-          placeholder={isPhone ? "Search" : "Search commands, collections, media… or scope with rule:, job:, user:"}
+          placeholder="Search commands, collections, media… or scope with rule:, job:, user:"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           role="combobox"
@@ -275,11 +263,6 @@ export default function CommandPalette({ open, initialQuery, onClose }: Props) {
           aria-autocomplete="list"
           aria-label="Search commands, collections and media"
         />
-        {isPhone && (
-          <button type="button" className={styles.cancel} onClick={close}>
-            Cancel
-          </button>
-        )}
       </div>
       <div className={styles.results} ref={resultsRef} id="palette-results" role="listbox" aria-label="Results">
         {flat.length === 0 ? (

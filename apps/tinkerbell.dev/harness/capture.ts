@@ -181,19 +181,8 @@ async function newContext(browser: Browser, viewport: Viewport, scale: number): 
     deviceScaleFactor: scale,
     isMobile: viewport === "mobile",
     hasTouch: viewport === "mobile",
-    // An iPhone's user agent, so the phone captures show the app's iOS design
-    // (`<html data-platform>`, packages/native-client/src/platform.ts) rather
-    // than the platform-less look a desktop Chromium would get.
-    ...(viewport === "mobile"
-      ? {
-          // `TB_CAPTURE_PLATFORM=android` previews the Material look instead
-          // (not for committing: the suite's phone shots are the iOS ones).
-          userAgent:
-            process.env.TB_CAPTURE_PLATFORM === "android"
-              ? "Mozilla/5.0 (Linux; Android 15; Pixel 9) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36"
-              : "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1",
-        }
-      : {}),
+    // A phone browser is a narrow viewport with touch: no user-agent
+    // override, because the app no longer draws a per-platform look.
     // The redesign is light-first; its dark theme is documented as a starting
     // point rather than a finished design, so capturing dark would publish
     // something nobody has drawn.

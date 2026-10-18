@@ -1,18 +1,15 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import TransitionRouter from "#layout/TransitionRouter";
+import { BrowserRouter } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { trpc, trpcClient } from "#/trpc";
 import { ToastProvider } from "#components/Toast";
 import AuthGate from "#/auth/AuthGate";
-import { watchKeyboard } from "@tinkerbell/native-client";
 import App from "#/App";
 import { startThemeWatch } from "#/theme";
 import { startUiScale } from "#/ui-scale";
 import "#/styles/fonts.css";
 import "#/App.css";
-// After App.css: the phone layer overrides the shell's responsive block.
-import "#/styles/mobile.css";
 
 // index.html has already painted the resolved theme onto <html>; this takes
 // over from the boot script so that `system` keeps following the OS after load.
@@ -61,9 +58,6 @@ const queryClient = new Client({
   },
 });
 
-// Phones in a browser too: the tab bar hides while the keyboard is up.
-watchKeyboard();
-
 // Back from the background: whatever is on screen refetches. Phone browsers
 // especially — a tab woken after an hour shows data an hour old otherwise.
 document.addEventListener("visibilitychange", () => {
@@ -74,7 +68,7 @@ createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
-        <TransitionRouter>
+        <BrowserRouter>
           <ToastProvider>
             {/* Inside the router and the toast provider: the sign-in screen
               is a route-level swap, not a separate app. */}
@@ -82,7 +76,7 @@ createRoot(document.getElementById("root")!).render(
               <App />
             </AuthGate>
           </ToastProvider>
-        </TransitionRouter>
+        </BrowserRouter>
       </QueryClientProvider>
     </trpc.Provider>
   </StrictMode>,

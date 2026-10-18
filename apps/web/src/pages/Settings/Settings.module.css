@@ -341,8 +341,8 @@
 }
 
 /* ─── Phones ───────────────────────────────────────────────────────────────
-   No rail: `/settings` is its own grouped index (SettingsIndex) and each
-   page is a pushed screen, with Back to the index in the header. */
+   No rail: `/settings` is its own index (SettingsIndex), and the breadcrumb's
+   "Settings" crumb leads back to it from each page. */
 .phoneIndex {
   display: flex;
   flex-direction: column;
@@ -359,35 +359,12 @@
   }
 }
 
-/* ─── Phones: settings as a native form ───────────────────────────────────
-   Every settings page is built from .group / .field / .checkRow, so these
-   rules are what turn ~25 pages into native forms without touching them:
-   inset grouped cards with a caption title, full-width fields at the
-   platform's touch size, a setting's checkbox drawn as a switch on the right,
-   and commit buttons across the width of the card. */
+/* ─── Narrow screens: the same form, stacked ──────────────────────────────
+   Fields take the card's width rather than a desktop measure, the card's
+   gutter tightens, and a row of buttons wraps instead of overflowing. */
 @media (max-width: 768px) {
   .group {
-    gap: 1.2rem;
     padding: 1.4rem 1.6rem 1.6rem;
-    border-radius: var(--r-list);
-    box-shadow: none;
-  }
-
-  .groupTitle {
-    font: var(--t-caption);
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--ink-3);
-  }
-
-  .label {
-    font-size: 1.5rem;
-    font-weight: 500;
-  }
-
-  .hint {
-    font-size: 1.3rem;
   }
 
   .field > .input,
@@ -395,56 +372,7 @@
     width: 100%;
   }
 
-  .checkRow {
-    flex-direction: row-reverse;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1.6rem;
-    max-width: none;
-    min-height: 4.4rem;
-    font-size: 1.5rem;
-  }
-
-  .checkRow input[type="checkbox"] {
-    flex: 0 0 auto;
-    position: relative;
-    width: 5.1rem;
-    height: 3.1rem;
-    margin: 0;
-    border-radius: var(--r-round);
-    background: var(--fill-inert);
-    appearance: none;
-    transition: background 0.2s;
-  }
-
-  .checkRow input[type="checkbox"]::after {
-    content: "";
-    position: absolute;
-    top: 0.2rem;
-    left: 0.2rem;
-    width: 2.7rem;
-    height: 2.7rem;
-    border-radius: 50%;
-    background: var(--surface);
-    box-shadow: var(--e-float);
-    transition: transform 0.2s cubic-bezier(0.32, 0.72, 0, 1);
-  }
-
-  .checkRow input[type="checkbox"]:checked {
-    background: var(--accent-fill);
-  }
-
-  .checkRow input[type="checkbox"]:checked::after {
-    transform: translateX(2rem);
-  }
-
-  .group .button,
-  .group .buttonSecondary {
-    align-self: stretch;
-    justify-content: center;
-  }
-
   .buttons {
-    flex-direction: column;
+    flex-wrap: wrap;
   }
 }

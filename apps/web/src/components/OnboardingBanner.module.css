@@ -82,11 +82,3 @@
     transition: none;
   }
 }
-
-/* On a phone, setup progress is a row on the More screen rather than a strip
-   taking space under the header on every screen. */
-@media (max-width: 768px) {
-  .banner {
-    display: none;
-  }
-}

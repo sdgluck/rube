@@ -1,9 +1,8 @@
-/* ─── Native lists ──────────────────────────────────────────────────────────
-   ListSection / ListRow / SwipeRow. iOS inset grouped by default: rounded
-   groups on the page colour, hairlines inset past the leading icon, a grey
-   uppercase header. Material in the [data-platform="android"] rules: flat
-   rows, no group card, a coloured subheader. On a desktop a section is a
-   plain card. */
+/* ─── Lists ─────────────────────────────────────────────────────────────────
+   ListSection / ListRow: a captioned card of rows with hairlines between
+   them, the same at every width. It used to be an iOS inset group (or a
+   Material list) below --bp-md; the native apps in `native/` are where that
+   look lives now. */
 
 .section {
   display: flex;
@@ -35,7 +34,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border-radius: var(--r-list);
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
   background: var(--surface);
 }
 
@@ -54,8 +54,6 @@
   font-size: 1.6rem;
   text-align: left;
   text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
 }
 
 /* The hairline between rows starts where the text does, past the icon. */
@@ -165,98 +163,4 @@
 
 .icon_danger {
   background: var(--danger);
-}
-
-/* ─── Swipe rows ─────────────────────────────────────────────────────────── */
-
-.swipe {
-  position: relative;
-  overflow: hidden;
-  touch-action: pan-y;
-}
-
-.swipeContent {
-  position: relative;
-  z-index: 1;
-  background: var(--surface);
-}
-
-.swipeSettling {
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
-}
-
-.swipeActions {
-  position: absolute;
-  inset: 0;
-  display: flex;
-}
-
-.swipeLeading {
-  justify-content: flex-start;
-}
-
-.swipeTrailing {
-  justify-content: flex-end;
-}
-
-.swipeAction {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 100%;
-  padding: 0 1.2rem;
-  border: none;
-  color: var(--on-accent);
-  font: var(--t-body);
-  font-size: 1.5rem;
-  font-weight: 600;
-}
-
-.swipe_accent {
-  background: var(--accent-fill);
-}
-
-.swipe_danger {
-  background: var(--danger);
-}
-
-.swipe_neutral {
-  background: var(--ink-4);
-}
-
-/* ─── Material ───────────────────────────────────────────────────────────── */
-
-:global(html[data-platform="android"]) .sectionTitle {
-  padding: 0 1.6rem;
-  font-size: 1.4rem;
-  font-weight: 600;
-  text-transform: none;
-  letter-spacing: 0;
-  color: var(--accent-text);
-}
-
-:global(html[data-platform="android"]) .row {
-  min-height: 5.6rem;
-  padding: 1.2rem 1.6rem;
-}
-
-:global(html[data-platform="android"]) .row + .row::before {
-  display: none;
-}
-
-:global(html[data-platform="android"]) .chevron {
-  display: none;
-}
-
-:global(html[data-platform="android"]) .icon {
-  background: none;
-  color: var(--ink-2);
-}
-
-/* Desktop: a plain card with dividers, not a phone's inset group. */
-@media (min-width: 769px) {
-  .group {
-    border: 1px solid var(--line);
-    border-radius: var(--r-card);
-  }
 }

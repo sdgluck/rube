@@ -1,18 +1,14 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { trpc } from "#/trpc";
 import {
-  MAX_BOTTOM_TABS,
   NAV_SECTIONS,
   UNHIDEABLE,
   applyNavPrefs,
   defaultItemOrder,
   defaultSectionOrder,
   mergeOrder,
-  moreSections as resolveMoreSections,
-  resolveBottomTabs,
   resolveNav,
   visibleSections,
-  type NavItem,
   type NavPrefs,
   type NavSection,
 } from "#/nav";
@@ -20,10 +16,10 @@ import {
 /**
  * The menu layout, shared by everything that draws or edits a menu.
  *
- * A context rather than three copies of the same query because the sidebar, the
- * tab bar and the More page have to agree *while being edited*: starring a tab
- * on /more has to move the bar underneath you, and the bar is a sibling of the
- * page, not a child of it. The edit flag lives here for the same reason.
+ * A context rather than a query in the sidebar because the sidebar and its
+ * editor have to agree *while being edited*, and the editor's draft has to
+ * outlive the sidebar re-rendering around it. The edit flag lives here for the
+ * same reason.
  */
 
 /**
@@ -51,7 +47,6 @@ function readMirror(): NavPrefs {
       hidden: arr(p.hidden),
       itemOrder: arr(p.itemOrder),
       sectionOrder: arr(p.sectionOrder),
-      bottomTabs: arr(p.bottomTabs),
     };
   } catch {
     // A private window, cleared site data, or a browser refusing storage. The
@@ -71,10 +66,6 @@ function writeMirror(prefs: NavPrefs): void {
 export type NavMenu = {
   /** The menu as it should render right now. */
   sections: NavSection[];
-  /** The mobile tab bar's destinations, "More" excluded. */
-  bottomTabs: NavItem[];
-  /** Everything the menu holds that isn't already a tab. */
-  moreSections: NavSection[];
   /** The full catalogue in current order, hidden items included — what the editor lists. */
   editableSections: NavSection[];
   editing: boolean;
@@ -82,10 +73,6 @@ export type NavMenu = {
   isHidden: (to: string) => boolean;
   canHide: (to: string) => boolean;
   toggleHidden: (to: string) => void;
-  /** The tab's 1-based slot, or 0 if the route isn't a tab. */
-  tabSlot: (to: string) => number;
-  toggleTab: (to: string) => void;
-  tabsFull: boolean;
   moveItem: (sectionId: string, from: number, to: number) => void;
   moveSection: (from: number, to: number) => void;
   reset: () => void;
@@ -115,7 +102,6 @@ export function NavMenuProvider({ children }: { children: ReactNode }) {
         hidden: configQuery.data.nav_items_hidden,
         itemOrder: configQuery.data.nav_item_order,
         sectionOrder: configQuery.data.nav_section_order,
-        bottomTabs: configQuery.data.nav_bottom_tabs,
       }
     : undefined;
 
@@ -145,7 +131,6 @@ export function NavMenuProvider({ children }: { children: ReactNode }) {
       nav_items_hidden: next.hidden ?? [],
       nav_item_order: next.itemOrder ?? [],
       nav_section_order: next.sectionOrder ?? [],
-      nav_bottom_tabs: next.bottomTabs ?? [],
     });
   }, [saveMutation]);
 
@@ -189,22 +174,11 @@ export function NavMenuProvider({ children }: { children: ReactNode }) {
     () => resolveNav(NAV_SECTIONS, draft, setupComplete),
     [JSON.stringify(draft), setupComplete], // eslint-disable-line react-hooks/exhaustive-deps
   );
-  const bottomTabs = useMemo(
-    () => resolveBottomTabs(NAV_SECTIONS, draft, setupComplete),
-    [JSON.stringify(draft), setupComplete], // eslint-disable-line react-hooks/exhaustive-deps
-  );
-  const moreSections = useMemo(
-    () => resolveMoreSections(NAV_SECTIONS, draft, setupComplete),
-    [JSON.stringify(draft), setupComplete], // eslint-disable-line react-hooks/exhaustive-deps
-  );
 
   const hidden = useMemo(() => new Set(draft.hidden ?? []), [JSON.stringify(draft.hidden)]); // eslint-disable-line react-hooks/exhaustive-deps
-  const tabs = bottomTabs.map((i) => i.to);
 
   const value: NavMenu = {
     sections,
-    bottomTabs,
-    moreSections,
     editableSections,
     editing,
     setEditing,
@@ -215,19 +189,8 @@ export function NavMenuProvider({ children }: { children: ReactNode }) {
       const next = new Set(hidden);
       if (next.has(to)) next.delete(to);
       else next.add(to);
-      // Hiding a route that was a tab has to unstar it in the same write, or the
-      // saved tab list keeps a slot for something the menu no longer shows.
-      const nextTabs = next.has(to) ? tabs.filter((t) => t !== to) : tabs;
-      commit({ ...draft, hidden: [...next], bottomTabs: nextTabs }, true);
+      commit({ ...draft, hidden: [...next] }, true);
     },
-    tabSlot: (to) => tabs.indexOf(to) + 1,
-    toggleTab: (to) => {
-      if (hidden.has(to)) return;
-      const next = tabs.includes(to) ? tabs.filter((t) => t !== to) : [...tabs, to];
-      if (next.length > MAX_BOTTOM_TABS) return;
-      commit({ ...draft, bottomTabs: next }, true);
-    },
-    tabsFull: tabs.length >= MAX_BOTTOM_TABS,
     moveItem: (sectionId, from, to) => {
       const section = editableSections.find((s) => s.id === sectionId);
       if (!section) return;
@@ -249,10 +212,9 @@ export function NavMenuProvider({ children }: { children: ReactNode }) {
       next.splice(to, 0, moved);
       commit({ ...draft, sectionOrder: next }, false);
     },
-    reset: () => commit({ hidden: [], itemOrder: [], sectionOrder: [], bottomTabs: [] }, true),
+    reset: () => commit({ hidden: [], itemOrder: [], sectionOrder: [] }, true),
     isDefault:
       (draft.hidden ?? []).length === 0 &&
-      (draft.bottomTabs ?? []).length === 0 &&
       sameOrder(draft.itemOrder, defaultItemOrder(NAV_SECTIONS)) &&
       sameOrder(draft.sectionOrder, defaultSectionOrder(NAV_SECTIONS)),
   };

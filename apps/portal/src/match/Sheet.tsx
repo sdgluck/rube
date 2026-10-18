@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { pushOverlay } from "@tinkerbell/native-client";
+import { pushOverlay } from "../lib/overlay-history.ts";
 
 /**
  * A centred card on a desktop and a bottom sheet on a phone, for movie match's

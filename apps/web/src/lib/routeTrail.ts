@@ -47,7 +47,6 @@ export function routeTrail(pathname: string): Crumb[] {
 
   const extras: Crumb[] = [
     { label: "Changelog", to: "/settings/changelog" },
-    { label: "More", to: "/more" },
     { label: "Registry", to: "/registry" },
   ];
   const items: Crumb[] = [

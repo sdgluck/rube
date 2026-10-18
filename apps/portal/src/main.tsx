@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { portalTrpc, portalTrpcClient } from "./trpc.ts";
 import PortalApp from "./PortalApp.tsx";
 import ErrorBoundary from "./components/ErrorBoundary.tsx";
-import { watchKeyboard } from "@tinkerbell/native-client";
+import { watchKeyboard } from "./lib/keyboard.ts";
 import "./fonts.css";
 import "./tokens.css";
 import "./portal.css";

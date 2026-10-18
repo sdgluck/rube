@@ -10,7 +10,6 @@
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
     "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/native-client": "workspace:*",
     "@tinkerbell/trpc": "workspace:*",
     "@trpc/client": "^11.10.0",
     "@trpc/react-query": "^11.10.0",

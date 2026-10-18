@@ -13,7 +13,9 @@
  * on phones and touch devices: on a desktop, Back has always meant "previous
  * page", and a dialog that ate the first press would be a regression.
  *
- * Framework-free so both SPAs can wrap it in their own hook.
+ * Framework-free so the portal's sheets can wrap it in their own effect. It
+ * came from the retired `packages/native-client` when the admin app dropped its
+ * phone emulation; the portal's phone polish is reworked separately.
  */
 
 const STATE_KEY = "tbOverlayDepth";

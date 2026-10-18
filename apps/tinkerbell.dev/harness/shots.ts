@@ -149,7 +149,7 @@ export const SHOTS: Shot[] = [
     name: "04-collection-smart-filters",
     description: "Collection detail — the Smart Filters drawer with the nesting grammar",
     path: "/collections/5001/details",
-    // Both viewports: on a phone this is a sheet, the shape that changed most.
+    // Both viewports: the dialog is the shape that changes most on a phone.
     steps: [{ click: "Edit filters" }, { wait: "text=of the following" }],
   },
   // Both of these address the pencil by its title rather than by the name
@@ -162,7 +162,7 @@ export const SHOTS: Shot[] = [
     name: "04-collection-edit",
     description: "Collection detail — the edit wizard, where the name, summary and labels are written",
     path: "/collections/5001",
-    // Both viewports: on a phone this is a sheet, the shape that changed most.
+    // Both viewports: the dialog is the shape that changes most on a phone.
     steps: [{ clickSelector: '[title="Edit name, summary and labels"]' }, { wait: "text=Name and summary" }],
   },
   {
@@ -264,7 +264,7 @@ export const SHOTS: Shot[] = [
     name: "10-rule-wizard-1-type",
     description: "Rule wizard step 1 — the 28 rule types as selectable cards",
     path: "/rules",
-    // Both viewports: on a phone this is a sheet, the shape that changed most.
+    // Both viewports: the dialog is the shape that changes most on a phone.
     steps: [{ click: "Add Rule" }, { wait: "text=Choose a rule type" }],
   },
   {
@@ -477,9 +477,10 @@ export const SHOTS: Shot[] = [
     steps: [{ press: "?" }, { wait: "text=Navigation" }],
   },
   {
-    name: "19-mobile-more",
-    description: "Mobile — the More page listing every destination the bottom nav doesn't hold",
-    path: "/more",
+    name: "19-mobile-drawer",
+    description: "Mobile — the sidebar as a drawer, opened from the header's menu button",
+    path: "/stats",
     viewports: MOBILE,
+    steps: [{ clickSelector: '[aria-controls="app-drawer"]' }, { wait: ".layout[data-drawer=open]" }],
   },
 ];

@@ -1,9 +1,7 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import ErrorBoundary from "#components/ErrorBoundary";
 import { useIsPhone } from "#hooks/useMediaQuery";
-import { useQueryClient } from "@tanstack/react-query";
-import PullToRefresh from "#components/PullToRefresh";
 import { OPEN_SEARCH_EVENT } from "#lib/openSearch";
 import ScrollRestoration from "#layout/ScrollRestoration";
 import { AppBarProvider } from "#layout/AppBar";
@@ -21,7 +19,6 @@ import useUiScaleConfigSync from "#hooks/useUiScaleConfigSync";
 import { NavMenuProvider } from "#hooks/useNavMenu";
 import Settings from "#pages/Settings/Settings";
 import Sidebar from "#layout/Sidebar";
-import BottomNav from "#layout/BottomNav";
 import { PageSkeleton } from "#components/Skeleton";
 
 const Stats = lazy(() => import("#pages/Stats"));
@@ -98,7 +95,6 @@ const Changes = lazy(() => import("#pages/Changes"));
 const StressTest = lazy(() => import("#pages/StressTest"));
 const Preview = lazy(() => import("#pages/Preview"));
 const Changelog = lazy(() => import("#pages/Changelog"));
-const More = lazy(() => import("#pages/More"));
 const SettingsPosters = lazy(() => import("#pages/Settings/SettingsPosters"));
 const SettingsAppearance = lazy(() => import("#pages/Settings/SettingsAppearance"));
 const SettingsPrerolls = lazy(() => import("#pages/Settings/SettingsPrerolls"));
@@ -126,19 +122,16 @@ export default function App() {
   }, []);
 
   const isPhone = useIsPhone();
-  const queryClient = useQueryClient();
-  const banners = (
-    <>
-      <AuthBanner />
-      <OnboardingBanner />
-    </>
-  );
+  const drawer = useDrawer(isPhone, location.pathname);
 
   useEffect(() => {
-    const onOpen = () => openPalette();
+    const onOpen = () => {
+      drawer.close();
+      openPalette();
+    };
     window.addEventListener(OPEN_SEARCH_EVENT, onOpen);
     return () => window.removeEventListener(OPEN_SEARCH_EVENT, onOpen);
-  }, [openPalette]);
+  }, [openPalette, drawer.close]);
 
   useDocumentTitle();
   useKeyboardShortcuts(setShortcutsHelpOpen, openPalette);
@@ -148,8 +141,7 @@ export default function App() {
   useUiScaleConfigSync();
 
   /**
-   * Setup renders outside the app shell — no sidebar, no bottom nav, no app
-   * bar. Handled here rather than as a route because those three are siblings
+   * Setup renders outside the app shell — no sidebar and no app bar. Handled here rather than as a route because those three are siblings
    * of `<Routes>`, not children of it, so there is no route-level way to opt
    * out of them.
    */
@@ -164,18 +156,29 @@ export default function App() {
   }
 
   return (
-    // The menu layout wraps the whole shell, not just the sidebar: the tab bar
-    // and the /more page edit the same thing the sidebar does, and all three
-    // have to move together while somebody is rearranging them.
+    // The menu layout wraps the whole shell, not just the sidebar, so the
+    // sidebar's editor and anything else reading the menu move together while
+    // somebody is rearranging it.
     <NavMenuProvider>
-      <div className="layout">
+      <div className="layout" data-drawer={drawer.open ? "open" : undefined}>
         {/* First in the DOM, so it is first in the tab order. */}
         <a className="skip-link" href="#page-content">
           Skip to content
         </a>
         <RouteAnnouncer />
-        <Sidebar onOpenPalette={openPalette} />
-        <BottomNav />
+        <Sidebar
+          onOpenPalette={() => {
+            drawer.close();
+            openPalette();
+          }}
+          // Off-canvas and closed: out of the tab order and the accessibility
+          // tree, not merely off-screen, or Tab walks through forty links the
+          // user can't see.
+          inert={isPhone && !drawer.open}
+        />
+        {/* Below --bp-md the sidebar is a drawer; this is what a tap outside
+          it lands on. Rendered only while open, so it can't catch a tap. */}
+        {isPhone && drawer.open && <div className="drawer-scrim" onClick={drawer.close} aria-hidden="true" />}
         {/* `tabIndex={-1}` so the skip link can actually move focus here: an
           anchor to a non-focusable target scrolls the page and leaves the tab
           order where it was, which is the failure mode that makes skip links
@@ -184,571 +187,534 @@ export default function App() {
           <ScrollRestoration />
           {/* Above the AppBarProvider, so it sits over the breadcrumb rather than
             between it and the page: this is server-wide chrome, not a message
-            about whatever page you happen to be on. On a phone the header is
-            pinned at the top, so the banners go just under it instead. */}
-          {!isPhone && banners}
-          <AppBarProvider notices={isPhone ? banners : undefined}>
+            about whatever page you happen to be on. */}
+          <AuthBanner />
+          <OnboardingBanner />
+          <AppBarProvider onOpenMenu={isPhone ? drawer.toggle : undefined} menuOpen={drawer.open}>
             <ErrorBoundary>
               <Suspense fallback={<PageSkeleton />}>
-                {/* Every phone screen refreshes on a pull at the top, as native
-                    lists do: whatever is on screen refetches. Touch-only — on a
-                    desktop this renders its children untouched. */}
-                <PullToRefresh onRefresh={() => queryClient.refetchQueries({ type: "active" })}>
-                  <Routes>
-                    <Route
-                      path="/stats"
-                      element={
-                        <LazyPage>
-                          <Stats />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/preview"
-                      element={
-                        <LazyPage>
-                          <Preview />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/collections"
-                      element={
-                        <LazyPage>
-                          <Collections />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/collections/:ratingKey"
-                      element={
-                        <LazyPage>
-                          <CollectionDetail />
-                        </LazyPage>
-                      }
-                    >
-                      <Route index element={<CollectionItems />} />
-                      <Route path="details" element={<CollectionDetails />} />
-                      <Route path="activity" element={<CollectionActivity />} />
-                    </Route>
-                    <Route
-                      path="/rules"
-                      element={
-                        <LazyPage>
-                          <Rules />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/rules/:ruleId/runs"
-                      element={
-                        <LazyPage>
-                          <RuleRuns />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/cleanup"
-                      element={
-                        <LazyPage>
-                          <CleanupLayout />
-                        </LazyPage>
-                      }
-                    >
-                      <Route index element={<Cleanup />} />
-                      <Route path="rules" element={<Rules outcome="cleanup" />} />
-                      <Route path="rules/:ruleId/runs" element={<RuleRuns outcome="cleanup" />} />
-                      <Route path="protected" element={<CleanupProtected />} />
-                    </Route>
-                    {/* No layout of its own: a metadata rule's history lives in
+                <Routes>
+                  <Route
+                    path="/stats"
+                    element={
+                      <LazyPage>
+                        <Stats />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/preview"
+                    element={
+                      <LazyPage>
+                        <Preview />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/collections"
+                    element={
+                      <LazyPage>
+                        <Collections />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/collections/:ratingKey"
+                    element={
+                      <LazyPage>
+                        <CollectionDetail />
+                      </LazyPage>
+                    }
+                  >
+                    <Route index element={<CollectionItems />} />
+                    <Route path="details" element={<CollectionDetails />} />
+                    <Route path="activity" element={<CollectionActivity />} />
+                  </Route>
+                  <Route
+                    path="/rules"
+                    element={
+                      <LazyPage>
+                        <Rules />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/rules/:ruleId/runs"
+                    element={
+                      <LazyPage>
+                        <RuleRuns />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/cleanup"
+                    element={
+                      <LazyPage>
+                        <CleanupLayout />
+                      </LazyPage>
+                    }
+                  >
+                    <Route index element={<Cleanup />} />
+                    <Route path="rules" element={<Rules outcome="cleanup" />} />
+                    <Route path="rules/:ruleId/runs" element={<RuleRuns outcome="cleanup" />} />
+                    <Route path="protected" element={<CleanupProtected />} />
+                  </Route>
+                  {/* No layout of its own: a metadata rule's history lives in
                     Settings → Metadata, where the master switch and the undo
                     are, so there is no second tab to put beside the rules. */}
-                    <Route path="/metadata" element={<Rules outcome="metadata" />} />
-                    <Route path="/metadata/rules/:ruleId/runs" element={<RuleRuns outcome="metadata" />} />
-                    <Route
-                      path="/registry"
-                      element={
-                        <LazyPage>
-                          <Registry />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/problems"
-                      element={
-                        <LazyPage>
-                          <Problems />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/problems/:kind"
-                      element={
-                        <LazyPage>
-                          <ProblemKind />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/media"
-                      element={
-                        <LazyPage>
-                          <Media />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/duplicates"
-                      element={
-                        <LazyPage>
-                          <Duplicates />
-                        </LazyPage>
-                      }
-                    />
-                    {/* Managers. `/movies` and `/tv` are the same component with a
+                  <Route path="/metadata" element={<Rules outcome="metadata" />} />
+                  <Route path="/metadata/rules/:ruleId/runs" element={<RuleRuns outcome="metadata" />} />
+                  <Route
+                    path="/registry"
+                    element={
+                      <LazyPage>
+                        <Registry />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/problems"
+                    element={
+                      <LazyPage>
+                        <Problems />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/problems/:kind"
+                    element={
+                      <LazyPage>
+                        <ProblemKind />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/media"
+                    element={
+                      <LazyPage>
+                        <Media />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/duplicates"
+                    element={
+                      <LazyPage>
+                        <Duplicates />
+                      </LazyPage>
+                    }
+                  />
+                  {/* Managers. `/movies` and `/tv` are the same component with a
                     different service — the divergence between Radarr and Sonarr
                     is real, but it lives below this, in what the columns mean. */}
-                    <Route
-                      path="/discover"
-                      element={
-                        <LazyPage>
-                          <Discover />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/movies"
-                      element={
-                        <LazyPage>
-                          <ArrLibrary service="radarr" />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/movies/unused-4k"
-                      element={
-                        <LazyPage>
-                          <UnusedFourK />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/tv"
-                      element={
-                        <LazyPage>
-                          <ArrLibrary service="sonarr" />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/downloads"
-                      element={
-                        <LazyPage>
-                          <ArrDownloads />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/arrs"
-                      element={
-                        <LazyPage>
-                          <ArrInstances />
-                        </LazyPage>
-                      }
-                    />
-                    {/* Reconciliation moved into Problems. Kept so an old bookmark,
+                  <Route
+                    path="/discover"
+                    element={
+                      <LazyPage>
+                        <Discover />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/movies"
+                    element={
+                      <LazyPage>
+                        <ArrLibrary service="radarr" />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/movies/unused-4k"
+                    element={
+                      <LazyPage>
+                        <UnusedFourK />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/tv"
+                    element={
+                      <LazyPage>
+                        <ArrLibrary service="sonarr" />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/downloads"
+                    element={
+                      <LazyPage>
+                        <ArrDownloads />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/arrs"
+                    element={
+                      <LazyPage>
+                        <ArrInstances />
+                      </LazyPage>
+                    }
+                  />
+                  {/* Reconciliation moved into Problems. Kept so an old bookmark,
                     and the literal segment's precedence over `:instanceId`,
                     still work. */}
-                    <Route path="/arrs/health" element={<Navigate to="/problems" replace />} />
-                    <Route
-                      path="/arrs/:instanceId"
-                      element={
-                        <LazyPage>
-                          <ArrInstanceDetail />
-                        </LazyPage>
-                      }
-                    />
-                    {/* The record pages `/movies` and `/tv` have always linked to.
+                  <Route path="/arrs/health" element={<Navigate to="/problems" replace />} />
+                  <Route
+                    path="/arrs/:instanceId"
+                    element={
+                      <LazyPage>
+                        <ArrInstanceDetail />
+                      </LazyPage>
+                    }
+                  />
+                  {/* The record pages `/movies` and `/tv` have always linked to.
                     They are listed after `/arrs/health` so the literal segment
                     still wins over `:instanceId`. */}
+                  <Route
+                    path="/arrs/:instanceId/movies/:arrId"
+                    element={
+                      <LazyPage>
+                        <ArrItemDetail service="radarr" />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/arrs/:instanceId/series/:arrId"
+                    element={
+                      <LazyPage>
+                        <ArrItemDetail service="sonarr" />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/media/:ratingKey"
+                    element={
+                      <LazyPage>
+                        <MediaDetail />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/overlays"
+                    element={
+                      <LazyPage>
+                        <Overlays />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/prerolls"
+                    element={
+                      <LazyPage>
+                        <Prerolls />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/users"
+                    element={
+                      <LazyPage>
+                        <Users />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/users/:userId"
+                    element={
+                      <LazyPage>
+                        <UserDetail />
+                      </LazyPage>
+                    }
+                  >
+                    <Route index element={<UserAccess />} />
+                    <Route path="activity" element={<UserActivity />} />
+                    <Route path="sessions" element={<UserSessions />} />
+                  </Route>
+                  <Route
+                    path="/events"
+                    element={
+                      <LazyPage>
+                        <Events />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/jobs"
+                    element={
+                      <LazyPage>
+                        <JobsLayout />
+                      </LazyPage>
+                    }
+                  >
+                    <Route index element={<Jobs />} />
+                    <Route path="schedule" element={<JobSchedule />} />
+                  </Route>
+                  <Route
+                    path="/jobs/:jobId"
+                    element={
+                      <LazyPage>
+                        <JobDetail />
+                      </LazyPage>
+                    }
+                  />
+                  <Route
+                    path="/jobs/runs/:runId"
+                    element={
+                      <LazyPage>
+                        <JobRun />
+                      </LazyPage>
+                    }
+                  />
+                  <Route path="/settings" element={<Settings />}>
+                    <Route index element={<SettingsIndex />} />
                     <Route
-                      path="/arrs/:instanceId/movies/:arrId"
+                      path="plex"
                       element={
                         <LazyPage>
-                          <ArrItemDetail service="radarr" />
+                          <SettingsPlex />
                         </LazyPage>
                       }
                     />
                     <Route
-                      path="/arrs/:instanceId/series/:arrId"
+                      path="ai"
                       element={
                         <LazyPage>
-                          <ArrItemDetail service="sonarr" />
+                          <SettingsAi />
                         </LazyPage>
                       }
                     />
                     <Route
-                      path="/media/:ratingKey"
+                      path="arrs"
                       element={
                         <LazyPage>
-                          <MediaDetail />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/overlays"
-                      element={
-                        <LazyPage>
-                          <Overlays />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/prerolls"
-                      element={
-                        <LazyPage>
-                          <Prerolls />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/users"
-                      element={
-                        <LazyPage>
-                          <Users />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/users/:userId"
-                      element={
-                        <LazyPage>
-                          <UserDetail />
+                          <SettingsArrs />
                         </LazyPage>
                       }
                     >
-                      <Route index element={<UserAccess />} />
-                      <Route path="activity" element={<UserActivity />} />
-                      <Route path="sessions" element={<UserSessions />} />
+                      <Route index element={<Navigate to="/settings/arrs/radarr" replace />} />
+                      {/* Ahead of `:service`, which would otherwise match it. */}
+                      <Route
+                        path="instances"
+                        element={
+                          <LazyPage>
+                            <SettingsArrsInstances />
+                          </LazyPage>
+                        }
+                      />
+                      <Route
+                        path="download-clients"
+                        element={
+                          <LazyPage>
+                            <SettingsDownloadClients />
+                          </LazyPage>
+                        }
+                      />
+                      <Route
+                        path=":service"
+                        element={
+                          <LazyPage>
+                            <SettingsArrsService />
+                          </LazyPage>
+                        }
+                      />
                     </Route>
                     <Route
-                      path="/events"
+                      path="databases"
                       element={
                         <LazyPage>
-                          <Events />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/jobs"
-                      element={
-                        <LazyPage>
-                          <JobsLayout />
+                          <SettingsDatabases />
                         </LazyPage>
                       }
                     >
-                      <Route index element={<Jobs />} />
-                      <Route path="schedule" element={<JobSchedule />} />
+                      <Route index element={<Navigate to="/settings/databases/omdb" replace />} />
+                      <Route
+                        path=":service"
+                        element={
+                          <LazyPage>
+                            <SettingsDatabasesService />
+                          </LazyPage>
+                        }
+                      />
                     </Route>
                     <Route
-                      path="/jobs/:jobId"
+                      path="notifications"
                       element={
                         <LazyPage>
-                          <JobDetail />
+                          <SettingsNotifications />
+                        </LazyPage>
+                      }
+                    >
+                      <Route index element={<Navigate to="/settings/notifications/routing" replace />} />
+                      {/* Ahead of `:service`, which would otherwise match them. */}
+                      <Route
+                        path="routing"
+                        element={
+                          <LazyPage>
+                            <SettingsNotificationsRouting />
+                          </LazyPage>
+                        }
+                      />
+                      <Route
+                        path="delivery"
+                        element={
+                          <LazyPage>
+                            <SettingsNotificationsDelivery />
+                          </LazyPage>
+                        }
+                      />
+                      <Route
+                        path=":service"
+                        element={
+                          <LazyPage>
+                            <SettingsNotificationsService />
+                          </LazyPage>
+                        }
+                      />
+                    </Route>
+                    <Route
+                      path="health"
+                      element={
+                        <LazyPage>
+                          <SettingsHealth />
                         </LazyPage>
                       }
                     />
                     <Route
-                      path="/jobs/runs/:runId"
+                      path="bandwidth"
                       element={
                         <LazyPage>
-                          <JobRun />
+                          <SettingsBandwidth />
                         </LazyPage>
                       }
                     />
-                    <Route path="/settings" element={<Settings />}>
-                      <Route index element={<SettingsIndex />} />
+                    {/* Moved to Jobs → Schedule, beside the timeline it governs. */}
+                    <Route path="schedules" element={<Navigate to="/jobs/schedule" replace />} />
+                    <Route
+                      path="cleanup"
+                      element={
+                        <LazyPage>
+                          <SettingsCleanup />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="home-assistant"
+                      element={
+                        <LazyPage>
+                          <SettingsHomeAssistant />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="metadata"
+                      element={
+                        <LazyPage>
+                          <SettingsMetadata />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="digest"
+                      element={
+                        <LazyPage>
+                          <SettingsDigest />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="watchlist"
+                      element={
+                        <LazyPage>
+                          <SettingsWatchlist />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="maintenance"
+                      element={
+                        <LazyPage>
+                          <SettingsMaintenance />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="backup"
+                      element={
+                        <LazyPage>
+                          <SettingsBackup />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="history"
+                      element={
+                        <LazyPage>
+                          <SettingsHistory />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="security"
+                      element={
+                        <LazyPage>
+                          <SettingsSecurity />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="api"
+                      element={
+                        <LazyPage>
+                          <SettingsApi />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="mobile"
+                      element={
+                        <LazyPage>
+                          <SettingsMobile />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="portal"
+                      element={
+                        <LazyPage>
+                          <SettingsPortal />
+                        </LazyPage>
+                      }
+                    >
+                      <Route index element={<Navigate to="/settings/portal/personalization" replace />} />
                       <Route
-                        path="plex"
+                        path="address"
                         element={
                           <LazyPage>
-                            <SettingsPlex />
+                            <SettingsPortalAddress />
                           </LazyPage>
                         }
                       />
                       <Route
-                        path="ai"
+                        path="personalization"
                         element={
                           <LazyPage>
-                            <SettingsAi />
+                            <SettingsPortalPersonalization />
                           </LazyPage>
                         }
                       />
                       <Route
-                        path="arrs"
+                        path="components"
                         element={
                           <LazyPage>
-                            <SettingsArrs />
-                          </LazyPage>
-                        }
-                      >
-                        <Route index element={<Navigate to="/settings/arrs/radarr" replace />} />
-                        {/* Ahead of `:service`, which would otherwise match it. */}
-                        <Route
-                          path="instances"
-                          element={
-                            <LazyPage>
-                              <SettingsArrsInstances />
-                            </LazyPage>
-                          }
-                        />
-                        <Route
-                          path="download-clients"
-                          element={
-                            <LazyPage>
-                              <SettingsDownloadClients />
-                            </LazyPage>
-                          }
-                        />
-                        <Route
-                          path=":service"
-                          element={
-                            <LazyPage>
-                              <SettingsArrsService />
-                            </LazyPage>
-                          }
-                        />
-                      </Route>
-                      <Route
-                        path="databases"
-                        element={
-                          <LazyPage>
-                            <SettingsDatabases />
-                          </LazyPage>
-                        }
-                      >
-                        <Route index element={<Navigate to="/settings/databases/omdb" replace />} />
-                        <Route
-                          path=":service"
-                          element={
-                            <LazyPage>
-                              <SettingsDatabasesService />
-                            </LazyPage>
-                          }
-                        />
-                      </Route>
-                      <Route
-                        path="notifications"
-                        element={
-                          <LazyPage>
-                            <SettingsNotifications />
-                          </LazyPage>
-                        }
-                      >
-                        <Route index element={<Navigate to="/settings/notifications/routing" replace />} />
-                        {/* Ahead of `:service`, which would otherwise match them. */}
-                        <Route
-                          path="routing"
-                          element={
-                            <LazyPage>
-                              <SettingsNotificationsRouting />
-                            </LazyPage>
-                          }
-                        />
-                        <Route
-                          path="delivery"
-                          element={
-                            <LazyPage>
-                              <SettingsNotificationsDelivery />
-                            </LazyPage>
-                          }
-                        />
-                        <Route
-                          path=":service"
-                          element={
-                            <LazyPage>
-                              <SettingsNotificationsService />
-                            </LazyPage>
-                          }
-                        />
-                      </Route>
-                      <Route
-                        path="health"
-                        element={
-                          <LazyPage>
-                            <SettingsHealth />
+                            <SettingsPortalComponents />
                           </LazyPage>
                         }
                       />
                       <Route
-                        path="bandwidth"
+                        path="match"
                         element={
                           <LazyPage>
-                            <SettingsBandwidth />
-                          </LazyPage>
-                        }
-                      />
-                      {/* Moved to Jobs → Schedule, beside the timeline it governs. */}
-                      <Route path="schedules" element={<Navigate to="/jobs/schedule" replace />} />
-                      <Route
-                        path="cleanup"
-                        element={
-                          <LazyPage>
-                            <SettingsCleanup />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="home-assistant"
-                        element={
-                          <LazyPage>
-                            <SettingsHomeAssistant />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="metadata"
-                        element={
-                          <LazyPage>
-                            <SettingsMetadata />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="digest"
-                        element={
-                          <LazyPage>
-                            <SettingsDigest />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="watchlist"
-                        element={
-                          <LazyPage>
-                            <SettingsWatchlist />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="maintenance"
-                        element={
-                          <LazyPage>
-                            <SettingsMaintenance />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="backup"
-                        element={
-                          <LazyPage>
-                            <SettingsBackup />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="history"
-                        element={
-                          <LazyPage>
-                            <SettingsHistory />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="security"
-                        element={
-                          <LazyPage>
-                            <SettingsSecurity />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="api"
-                        element={
-                          <LazyPage>
-                            <SettingsApi />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="mobile"
-                        element={
-                          <LazyPage>
-                            <SettingsMobile />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="portal"
-                        element={
-                          <LazyPage>
-                            <SettingsPortal />
-                          </LazyPage>
-                        }
-                      >
-                        <Route index element={<Navigate to="/settings/portal/personalization" replace />} />
-                        <Route
-                          path="address"
-                          element={
-                            <LazyPage>
-                              <SettingsPortalAddress />
-                            </LazyPage>
-                          }
-                        />
-                        <Route
-                          path="personalization"
-                          element={
-                            <LazyPage>
-                              <SettingsPortalPersonalization />
-                            </LazyPage>
-                          }
-                        />
-                        <Route
-                          path="components"
-                          element={
-                            <LazyPage>
-                              <SettingsPortalComponents />
-                            </LazyPage>
-                          }
-                        />
-                        <Route
-                          path="match"
-                          element={
-                            <LazyPage>
-                              <SettingsPortalMatch />
-                            </LazyPage>
-                          }
-                        />
-                        <Route
-                          path="appearance"
-                          element={
-                            <LazyPage>
-                              <SettingsPortalAppearance />
-                            </LazyPage>
-                          }
-                        />
-                        <Route
-                          path="preroll"
-                          element={
-                            <LazyPage>
-                              <SettingsPortalPreroll />
-                            </LazyPage>
-                          }
-                        />
-                      </Route>
-                      <Route
-                        path="stress-test"
-                        element={
-                          <LazyPage>
-                            <StressTest />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="posters"
-                        element={
-                          <LazyPage>
-                            <SettingsPosters />
+                            <SettingsPortalMatch />
                           </LazyPage>
                         }
                       />
@@ -756,67 +722,91 @@ export default function App() {
                         path="appearance"
                         element={
                           <LazyPage>
-                            <SettingsAppearance />
+                            <SettingsPortalAppearance />
                           </LazyPage>
                         }
                       />
                       <Route
-                        path="prerolls"
+                        path="preroll"
                         element={
                           <LazyPage>
-                            <SettingsPrerolls />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="migrate"
-                        element={
-                          <LazyPage>
-                            <SettingsMigrate />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="credits"
-                        element={
-                          <LazyPage>
-                            <SettingsCredits />
-                          </LazyPage>
-                        }
-                      />
-                      <Route
-                        path="changelog"
-                        element={
-                          <LazyPage>
-                            <Changelog />
+                            <SettingsPortalPreroll />
                           </LazyPage>
                         }
                       />
                     </Route>
-                    {/* The changelog used to be a top-level page. Redirected rather
+                    <Route
+                      path="stress-test"
+                      element={
+                        <LazyPage>
+                          <StressTest />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="posters"
+                      element={
+                        <LazyPage>
+                          <SettingsPosters />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="appearance"
+                      element={
+                        <LazyPage>
+                          <SettingsAppearance />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="prerolls"
+                      element={
+                        <LazyPage>
+                          <SettingsPrerolls />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="migrate"
+                      element={
+                        <LazyPage>
+                          <SettingsMigrate />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="credits"
+                      element={
+                        <LazyPage>
+                          <SettingsCredits />
+                        </LazyPage>
+                      }
+                    />
+                    <Route
+                      path="changelog"
+                      element={
+                        <LazyPage>
+                          <Changelog />
+                        </LazyPage>
+                      }
+                    />
+                  </Route>
+                  {/* The changelog used to be a top-level page. Redirected rather
                     than dropped: the sidebar's version pill has pointed here
                     since the first release, so the path is in people's history
                     and bookmarks. */}
-                    <Route path="/changelog" element={<Navigate to="/settings/changelog" replace />} />
-                    <Route
-                      path="/more"
-                      element={
-                        <LazyPage>
-                          <More />
-                        </LazyPage>
-                      }
-                    />
-                    <Route
-                      path="/changes"
-                      element={
-                        <LazyPage>
-                          <Changes />
-                        </LazyPage>
-                      }
-                    />
-                    <Route path="*" element={<Navigate to="/stats" replace />} />
-                  </Routes>
-                </PullToRefresh>
+                  <Route path="/changelog" element={<Navigate to="/settings/changelog" replace />} />
+                  <Route
+                    path="/changes"
+                    element={
+                      <LazyPage>
+                        <Changes />
+                      </LazyPage>
+                    }
+                  />
+                  <Route path="*" element={<Navigate to="/stats" replace />} />
+                </Routes>
                 {/* Inside the boundary on purpose — it announces "loaded", and
                   from out here it would say so while the skeleton was up. */}
                 <RouteReady />
@@ -833,4 +823,43 @@ export default function App() {
       </div>
     </NavMenuProvider>
   );
+}
+
+/**
+ * The sidebar as an off-canvas drawer below --bp-md.
+ *
+ * Opened from the app bar's menu button; closed by the scrim, Escape, or any
+ * navigation — a drawer left open over the page you just picked from it is the
+ * one way this goes wrong. Leaving the phone layout closes it too, so widening
+ * the window can't strand an "open" flag that reappears on the next narrowing.
+ * Focus goes into the drawer on open and back to whatever opened it on close.
+ */
+function useDrawer(isPhone: boolean, pathname: string) {
+  const [open, setOpen] = useState(false);
+  const opener = useRef<HTMLElement | null>(null);
+  const close = useCallback(() => setOpen(false), []);
+  const toggle = useCallback(() => setOpen((v) => !v), []);
+
+  useEffect(() => setOpen(false), [pathname, isPhone]);
+
+  useEffect(() => {
+    if (!open) return;
+    opener.current = document.activeElement as HTMLElement | null;
+    document.querySelector<HTMLElement>(".sidebar a, .sidebar button")?.focus({ preventScroll: true });
+    // The document scrolls on a phone; without this a swipe on the drawer
+    // scrolls the page behind it.
+    const { overflow } = document.body.style;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = overflow;
+      document.removeEventListener("keydown", onKey);
+      opener.current?.focus?.({ preventScroll: true });
+    };
+  }, [open]);
+
+  return { open, close, toggle };
 }

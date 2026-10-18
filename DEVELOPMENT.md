@@ -150,16 +150,17 @@ pnpm screenshots:local  # faster, for iterating — don't commit the result
 See [screenshots/README.md](screenshots/README.md) for why the Docker run is
 the canonical one.
 
-The phone screenshots use an iPhone user agent, so they show the iOS design.
-Two switches help when iterating locally (never commit their output):
+The phone screenshots are the same pages at a 430px touch viewport — the
+admin app's responsive layout, with the sidebar as a drawer. One switch helps
+when iterating locally (never commit its output):
 
 ```sh
 TB_CAPTURE_ONLY=settings,rules pnpm --filter @tinkerbell/tinkerbell.dev capture   # just these shots
-TB_CAPTURE_PLATFORM=android pnpm --filter @tinkerbell/tinkerbell.dev capture      # the Material look
 ```
 
-Append `?platform=ios` or `?platform=android` to any URL to preview a phone
-platform's look in a desktop browser's device mode.
+The portal still has per-platform phone styles: append `?platform=ios` or
+`?platform=android` to a portal URL to preview one in a desktop browser's
+device mode.
 
 ## Native apps
 

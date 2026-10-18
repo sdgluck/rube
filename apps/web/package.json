@@ -21,7 +21,6 @@
     "@tanstack/react-query": "^5.90.21",
     "@tinkerbell/contracts": "workspace:*",
     "@tinkerbell/llm": "workspace:*",
-    "@tinkerbell/native-client": "workspace:*",
     "@tinkerbell/plex-smart-filter": "workspace:*",
     "@tinkerbell/trpc": "workspace:*",
     "@trpc/client": "^11.10.0",

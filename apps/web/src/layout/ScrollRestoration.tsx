@@ -9,7 +9,7 @@ import { PHONE_QUERY } from "#hooks/useMediaQuery";
  * scrolls the content column, not the window, so nothing was ever saved and a
  * detail page opened at whatever offset the list had been scrolled to (the
  * column is the same element across routes). The phone layout scrolls the
- * document (styles/mobile.css), so which scroller it is depends on the layout.
+ * document (App.css's responsive block), so which scroller it is depends on the layout.
  */
 function scroller(): { get: () => number; set: (top: number) => void; target: EventTarget } {
   const column = document.getElementById("page-content");

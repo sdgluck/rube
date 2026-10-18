@@ -1,8 +1,7 @@
-/* The menu editor, drawn on two very different surfaces: the sidebar, which is
- * dark in both themes, and the /more page, which is not. Rather than two
- * stylesheets (or a modifier class threaded through every rule) everything here
+/* The menu editor, drawn in the sidebar (dark in both themes). Everything here
  * is expressed against `currentColor` — the host sets the ink, this sets the
- * relationships. `color-mix` is how a fill or a line stays correct on both. */
+ * relationships — which is what let it also sit on a light page when the phone
+ * layout had one; `color-mix` keeps a fill or a line correct either way. */
 
 .editor {
   display: flex;
@@ -24,14 +23,7 @@
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   opacity: 0.65;
-}
-
-.headerCount {
-  font-family: var(--font-mono);
-  font-size: 1.05rem;
-  opacity: 0.5;
-  margin-left: auto;
-  font-variant-numeric: tabular-nums;
+  margin-right: auto;
 }
 
 /* The shared small button, coloured from currentColor so it reads on the
@@ -118,15 +110,6 @@
   white-space: nowrap;
 }
 
-/* Which slot this route holds in the tab bar. Mono and tabular so four of them
- * down the list line up rather than dancing by a pixel each. */
-.slot {
-  font-family: var(--font-mono);
-  font-size: 0.95rem;
-  opacity: 0.6;
-  font-variant-numeric: tabular-nums;
-}
-
 .grip {
   display: flex;
   align-items: center;
@@ -169,11 +152,6 @@
   cursor: default;
 }
 
-.toggleOn {
-  opacity: 1;
-  background: color-mix(in srgb, currentColor 18%, transparent);
-}
-
 .pinned {
   display: flex;
   align-items: center;
@@ -181,8 +159,8 @@
   opacity: 0.2;
 }
 
-/* Touch targets. The sidebar is a pointer surface and can afford 13px icons in
- * a tight row; /more is a thumb surface and cannot. */
+/* Touch targets. With a mouse the sidebar can afford 13px icons in a tight
+ * row; a thumb in the phone's drawer cannot. */
 @media (max-width: 768px) {
   .row {
     padding: 0.8rem 0.4rem 0.8rem 0.6rem;

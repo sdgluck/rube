@@ -6,8 +6,6 @@ import {
   defaultItemOrder,
   defaultSectionOrder,
   mergeOrder,
-  moreSections,
-  resolveBottomTabs,
   resolveNav,
   type NavSection,
 } from "./nav.ts";
@@ -119,7 +117,6 @@ describe("applyNavPrefs", () => {
       hidden: ["/nope"],
       itemOrder: ["/nope"],
       sectionOrder: ["nope"],
-      bottomTabs: ["/nope"],
     });
     assert.deepEqual(paths(out), paths(fixture()));
   });
@@ -141,72 +138,6 @@ describe("resolveNav", () => {
     assert.deepEqual(
       out.map((s) => s.items.map((i) => i.to)),
       [["/a", "/b"], ["/settings"]],
-    );
-  });
-});
-
-describe("resolveBottomTabs", () => {
-  test("an unset preference gives the defaults, in order", () => {
-    const tabs = resolveBottomTabs(NAV_SECTIONS, {}, true);
-    assert.deepEqual(
-      tabs.map((i) => i.to),
-      ["/stats", "/collections", "/jobs"],
-    );
-  });
-
-  test("a saved order is respected and clamped to the slot count", () => {
-    const tabs = resolveBottomTabs(
-      NAV_SECTIONS,
-      { bottomTabs: ["/rules", "/media", "/jobs", "/users", "/events"] },
-      true,
-    );
-    assert.deepEqual(
-      tabs.map((i) => i.to),
-      ["/rules", "/media", "/jobs", "/users"],
-    );
-  });
-
-  test("a hidden route can't be a tab", () => {
-    const tabs = resolveBottomTabs(NAV_SECTIONS, { hidden: ["/media"], bottomTabs: ["/media", "/rules"] }, true);
-    assert.deepEqual(
-      tabs.map((i) => i.to),
-      ["/rules"],
-    );
-  });
-
-  test("hiding every default still leaves a usable bar", () => {
-    const tabs = resolveBottomTabs(NAV_SECTIONS, { hidden: ["/stats", "/collections", "/jobs"] }, true);
-    assert.equal(tabs.length, 3);
-    assert.ok(!tabs.some((i) => ["/stats", "/collections", "/jobs"].includes(i.to)));
-  });
-
-  test("a setup tab leaves the bar the moment setup completes", () => {
-    const prefs = { bottomTabs: ["/onboarding", "/stats"] };
-    assert.ok(resolveBottomTabs(NAV_SECTIONS, prefs, undefined).some((i) => i.to === "/onboarding"));
-    assert.ok(!resolveBottomTabs(NAV_SECTIONS, prefs, true).some((i) => i.to === "/onboarding"));
-  });
-
-  test("tabs carry their metric, so the streams badge follows Stats", () => {
-    const tabs = resolveBottomTabs(NAV_SECTIONS, { bottomTabs: ["/rules", "/stats"] }, true);
-    assert.equal(tabs[1]?.metric?.kind, "streams");
-  });
-});
-
-describe("moreSections", () => {
-  test("excludes the chosen tabs, not the old hardcoded three", () => {
-    const prefs = { bottomTabs: ["/rules", "/media"] };
-    const listed = paths(moreSections(NAV_SECTIONS, prefs, true));
-    assert.ok(!listed.includes("/rules"));
-    assert.ok(!listed.includes("/media"));
-    assert.ok(listed.includes("/stats"));
-    assert.ok(listed.includes("/jobs"));
-  });
-
-  test("a section whose only item became a tab is dropped", () => {
-    const out = moreSections(fixture(), { bottomTabs: ["/a", "/b"] }, true);
-    assert.deepEqual(
-      out.map((s) => s.id),
-      ["two"],
     );
   });
 });

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { pushOverlay } from "@tinkerbell/native-client";
+import { pushOverlay } from "../lib/overlay-history.ts";
 
 export type SheetAction = { label: string; onSelect: () => void; danger?: boolean };
 

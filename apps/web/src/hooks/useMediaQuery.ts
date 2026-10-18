@@ -19,10 +19,10 @@ export function useMediaQuery(query: string): boolean {
   return matches;
 }
 
-/** The phone layout's breakpoint — `--bp-md` in App.css, the bottom-nav switch. */
+/** The phone layout's breakpoint — `--bp-md` in App.css, where the sidebar becomes a drawer. */
 export const PHONE_QUERY = "(max-width: 768px)";
 
-/** True in the phone layout: bottom tabs, sheets, native lists. */
+/** True in the phone layout: the sidebar is a drawer and the document scrolls. */
 export function useIsPhone(): boolean {
   return useMediaQuery(PHONE_QUERY);
 }

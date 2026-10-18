@@ -38,7 +38,7 @@ import { useIsPhone } from "#hooks/useMediaQuery";
 import { SETTINGS_SECTIONS } from "./sections";
 import styles from "./Settings.module.css";
 
-/** Each page's icon tile on the phone index, as iOS Settings draws one per row. */
+/** Each page's icon tile on the phone index. */
 const ICONS: Record<string, LucideIcon> = {
   "/settings/plex": Server,
   "/settings/ai": Bot,
@@ -72,9 +72,8 @@ const ICONS: Record<string, LucideIcon> = {
 /**
  * `/settings` itself. On a desktop it has always been a redirect to the first
  * page, because the rail beside every page is the index. A phone has no room
- * for the rail, so there it is a screen of its own: the grouped list every
- * native settings app opens on, with a filter at the top, each row pushing
- * its page.
+ * for the rail, so there it is a page of its own: the rail's links as a
+ * filterable list, each opening its page.
  */
 export default function SettingsIndex() {
   const isPhone = useIsPhone();

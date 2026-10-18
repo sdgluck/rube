@@ -86,10 +86,10 @@
 
 @media (max-width: 768px) {
   .body {
-    padding: 1.6rem 1.6rem calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
+    padding: 1.6rem 1.6rem calc(env(safe-area-inset-bottom, 0px) + 2.4rem);
   }
 
   .bodyFlush {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2.4rem);
   }
 }

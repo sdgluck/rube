@@ -1,18 +1,20 @@
 import { useState } from "react";
-import ActionSheet from "#components/ActionSheet";
-import { useIsPhone } from "#hooks/useMediaQuery";
+import Modal from "#components/Modal";
+import { useMediaQuery } from "#hooks/useMediaQuery";
 import styles from "../Overlays.module.css";
 import { OVERLAY_CATALOG, POSITIONS } from "./constants";
 import { badgePreviewStyle } from "./helpers";
 import type { OverlayPosition, OverlayType } from "@tinkerbell/contracts";
 
 /**
- * The badge catalog. On a desktop a badge is dragged onto the poster; a phone
- * has no HTML5 drag-and-drop (Android) or hides it behind a long press (iOS),
- * so there a tap asks where to put it, in an action sheet.
+ * The badge catalog. With a mouse a badge is dragged onto the poster; a touch
+ * screen has no HTML5 drag-and-drop (Android) or hides it behind a long press
+ * (iOS), so there a tap asks where to put it, as a 3×3 grid of the positions
+ * laid out the way they sit on the poster. Keyed on the pointer rather than the
+ * width: a tablet has the same problem a phone does.
  */
 export function Catalog({ onAdd }: { onAdd?: (position: OverlayPosition, type: OverlayType) => void }) {
-  const isPhone = useIsPhone();
+  const isTouch = useMediaQuery("(pointer: coarse)");
   const [placing, setPlacing] = useState<OverlayType | null>(null);
   return (
     <aside className={styles.catalog}>
@@ -27,8 +29,8 @@ export function Catalog({ onAdd }: { onAdd?: (position: OverlayPosition, type: O
                   key={chip.type}
                   className={styles.catalogChip}
                   draggable
-                  role={isPhone ? "button" : undefined}
-                  onClick={isPhone && onAdd ? () => setPlacing(chip.type) : undefined}
+                  role={isTouch ? "button" : undefined}
+                  onClick={isTouch && onAdd ? () => setPlacing(chip.type) : undefined}
                   onDragStart={(e) => {
                     e.dataTransfer.setData("text/plain", JSON.stringify({ kind: "new", type: chip.type }));
                     e.dataTransfer.effectAllowed = "copy";
@@ -47,13 +49,24 @@ export function Catalog({ onAdd }: { onAdd?: (position: OverlayPosition, type: O
           </div>
         ))}
       </div>
-      {isPhone && onAdd && (
-        <ActionSheet
-          open={placing !== null}
-          onClose={() => setPlacing(null)}
-          title="Place the badge"
-          actions={POSITIONS.map((p) => ({ label: p.label, onSelect: () => placing && onAdd(p.id, placing) }))}
-        />
+      {isTouch && onAdd && (
+        <Modal open={placing !== null} onClose={() => setPlacing(null)} title="Place the badge" size="sm">
+          <div className={styles.placeGrid}>
+            {POSITIONS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                className={styles.placeBtn}
+                onClick={() => {
+                  if (placing) onAdd(p.id, placing);
+                  setPlacing(null);
+                }}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </Modal>
       )}
     </aside>
   );

@@ -208,9 +208,11 @@ function SidebarActiveJobs() {
 
 type SidebarProps = {
   onOpenPalette: () => void;
+  /** Set while the sidebar is a closed off-canvas drawer (below --bp-md). */
+  inert?: boolean;
 };
 
-export default function Sidebar({ onOpenPalette }: SidebarProps) {
+export default function Sidebar({ onOpenPalette, inert }: SidebarProps) {
   const metricsQuery = trpc.nav.metrics.useQuery(undefined, {
     refetchInterval: 60_000,
     refetchOnWindowFocus: false,
@@ -223,7 +225,7 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
   const activeTo = routeTrail(pathname)[0]?.to;
 
   return (
-    <aside className="sidebar">
+    <aside className="sidebar" id="app-drawer" inert={inert}>
       <h1 className="sidebar-title">
         <img src="/favicon.svg" alt="" className="sidebar-mark" width={22} height={22} />
         Tinkerbell
@@ -243,7 +245,8 @@ export default function Sidebar({ onOpenPalette }: SidebarProps) {
           ⌕
         </span>
         <span className="sidebar-search-label">Search…</span>
-        <span className="sidebar-search-kbd" aria-hidden="true">
+        {/* A touch screen has no ⌘K: the global rule hides keyboard hints there. */}
+        <span className="sidebar-search-kbd" aria-hidden="true" data-keyboard-hint="">
           {modChord("K")}
         </span>
       </button>

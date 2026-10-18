@@ -80,10 +80,3 @@
   width: 100%;
   box-sizing: border-box;
 }
-
-/* On mobile the column headers are gone, so a bare number needs its noun. */
-@media (max-width: 768px) {
-  .collectionsCell::after {
-    content: " collections";
-  }
-}

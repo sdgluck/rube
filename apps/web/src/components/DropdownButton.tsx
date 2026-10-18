@@ -1,7 +1,5 @@
 import { ChevronDown } from "lucide-react";
 import { useState, useRef, useEffect, useCallback } from "react";
-import { useIsPhone } from "#hooks/useMediaQuery";
-import ActionSheet from "./ActionSheet";
 import styles from "./DropdownButton.module.css";
 
 interface DropdownButtonProps {
@@ -17,8 +15,6 @@ export default function DropdownButton({ label, options, className, disabled, ar
   const [open, setOpen] = useState(false);
   const [visible, setVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
-  // On a phone the choices rise as an action sheet rather than a popover.
-  const isPhone = useIsPhone();
 
   const close = useCallback(() => {
     setOpen(false);
@@ -56,23 +52,7 @@ export default function DropdownButton({ label, options, className, disabled, ar
         {label}
         <ChevronDown className={label ? styles.caret : undefined} size="1.3rem" strokeWidth={2.5} aria-hidden="true" />
       </button>
-      {isPhone && (
-        <ActionSheet
-          open={open}
-          onClose={() => {
-            setOpen(false);
-            setVisible(false);
-          }}
-          title={label || ariaLabel}
-          actions={options.map((o) => ({
-            label: o.label,
-            onSelect: o.onClick,
-            disabled: o.disabled,
-            danger: o.danger,
-          }))}
-        />
-      )}
-      {visible && !isPhone && (
+      {visible && (
         <div className={`${styles.menu} ${!open ? styles.menuExiting : ""}`}>
           {options.map((opt) => (
             <button

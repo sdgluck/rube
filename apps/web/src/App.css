@@ -91,31 +91,16 @@
   --qr-ink: #000;
   --qr-paper: #fff;
 
-  /* ─── Native chrome (phones) ────────────────────────────────────────
-     The phone layout's bars, sheets and lists (styles/mobile.css). The bars
-     are the page colour, translucent, over a blur — the way iOS and Material
-     both let content scroll visibly under the chrome rather than behind a
-     wall. The geometry tokens are iOS values here and Material ones in the
-     `[data-platform="android"]` block below; the colours are shared. */
+  /* ─── Touch and lists ───────────────────────────────────────────────
+     A translucent page-coloured bar over a blur (Onboarding's header). */
   --bar-bg: rgba(237, 241, 240, 0.82);
-  --bar-line: rgba(19, 28, 27, 0.12);
-  --grabber: rgba(19, 28, 27, 0.2);
   /* A row or button held down. Touch has no hover, so this is the only
-     acknowledgement a tap gets before the next screen arrives. */
+     acknowledgement a tap gets. */
   --pressed: rgba(19, 28, 27, 0.07);
   --list-sep: rgba(19, 28, 27, 0.1);
-  /* A true pill or circle. --r-pill is this design's 2px "pill"; a phone's
-     switches, grabbers and Material indicators are round on the platform and
-     look broken square. */
-  --r-round: 99.9rem;
-  --r-sheet: 1.2rem;
-  --r-list: 1.1rem;
-  --r-alert: 1.4rem;
-  --navbar-h: 4.4rem;
-  --tabbar-h: 4.9rem;
   /* Where a `position: sticky` bar inside a page should stop: the top of the
-     viewport on desktop, the bottom of the pinned header on a phone (set in
-     the block below). */
+     scroller — below the status bar on a phone, where the document scrolls
+     (set in the block below). */
   --sticky-top: 0rem;
   /* Error text on a surface that is dark in both themes — the sidebar's
      failure count. --status-error-fg is unreadable there in light mode. */
@@ -360,7 +345,7 @@
    *
    *   --bp-xs  phone
    *   --bp-sm  large phone
-   *   --bp-md  the sidebar/bottom-nav swap — the one structural break
+   *   --bp-md  the sidebar becomes a drawer — the one structural break
    *   --bp-lg  narrow desktop, two-column panels give up
    *   --bp-xl  wide two-pane editors (Overlays, Health)
    */
@@ -372,17 +357,18 @@
 
   /* ─── Stacking order ────────────────────────────────────────────────
    * Every app-level layer draws from this scale so overlays can never end
-   * up behind the mobile bottom nav. Purely-local layering inside a single
+   * up behind the sidebar drawer. Purely-local layering inside a single
    * component (poster canvas layers, progress fills) keeps plain integers.
    */
   --z-dropdown: 80;
   --z-sticky-bar: 90;
   --z-sidebar: 100;
   --z-tooltip: 150;
-  --z-bottom-nav: 200;
+  /* The sidebar as an off-canvas drawer, and its scrim (below --bp-md). */
+  --z-drawer: 200;
   --z-modal: 400;
   /* The page-coloured strip behind the status bar (see `.layout`). Above
-     modals, so a sheet's top edge is never drawn under the clock. */
+     modals, so a dialog's top edge is never drawn under the clock. */
   --z-status-strip: 450;
   --z-toast: 500;
 }
@@ -487,26 +473,14 @@
   --status-special-fg: #b6abec;
 
   --bar-bg: rgba(13, 20, 19, 0.82);
-  --bar-line: rgba(255, 255, 255, 0.1);
-  --grabber: rgba(255, 255, 255, 0.28);
   --pressed: rgba(255, 255, 255, 0.07);
   --list-sep: rgba(255, 255, 255, 0.08);
 }
 
 @media (max-width: 768px) {
   :root {
-    --sticky-top: calc(env(safe-area-inset-top, 0px) + var(--navbar-h));
+    --sticky-top: env(safe-area-inset-top, 0px);
   }
-}
-
-/* Material geometry: larger sheet and dialog corners, a taller top bar and
-   navigation bar. Colours are shared with iOS — only the shapes differ. */
-:root[data-platform="android"] {
-  --r-sheet: 2.8rem;
-  --r-list: 1.6rem;
-  --r-alert: 2.8rem;
-  --navbar-h: 6.4rem;
-  --tabbar-h: 8rem;
 }
 
 *,
@@ -589,9 +563,9 @@ p {
   display: flex;
   height: 100vh;
   height: 100dvh;
-  /* The native app draws the page under the status bar — as does an iOS
-     home-screen install, with `viewport-fit=cover` and the translucent status
-     bar index.html asks for — so the layout starts below it. The inset is
+  /* An iOS home-screen install draws the page under the status bar, with
+     `viewport-fit=cover` and the translucent status bar index.html asks for,
+     so the layout starts below it. The inset is
      zero in an ordinary browser tab, where this changes nothing. */
   padding-top: env(safe-area-inset-top, 0px);
 }
@@ -725,10 +699,6 @@ body::before {
   letter-spacing: var(--t-label-tracking);
   text-transform: uppercase;
   color: rgba(242, 246, 245, 0.32);
-}
-
-.bottom-sheet-section + .bottom-sheet-section {
-  margin-top: 1.4rem;
 }
 
 /* Pinned, not grown from its contents. The metric slot on the right changes
@@ -1088,23 +1058,60 @@ body::before {
   vertical-align: middle;
 }
 
-/* ─── Bottom nav (mobile only) ──────────────────────────────────────────── */
-
-.bottom-nav {
-  display: none;
-}
-
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
+/* Below --bp-md the sidebar is an off-canvas drawer (useDrawer in App.tsx)
+   and the document scrolls rather than the content column. On a desktop the
+   column scrolls so the sidebar can stay put; with the sidebar out of the
+   way, a document scroll is what a phone browser expects — its collapsing
+   toolbar, tap-the-status-bar-to-top and the rubber band all key off it. */
 @media (max-width: 768px) {
-  /* Hide the sidebar entirely on mobile — bottom nav replaces it */
+  .layout {
+    height: auto;
+    min-height: 100dvh;
+  }
+
+  .content {
+    overflow: visible;
+    min-height: 100dvh;
+  }
+
   .sidebar {
-    display: none !important;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(28rem, 85vw);
+    height: auto;
+    padding-top: calc(env(safe-area-inset-top, 0px) + 2rem);
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 1.4rem);
+    z-index: var(--z-drawer);
+    transform: translateX(-100%);
+    visibility: hidden;
+    /* `visibility` flips at the end of the slide out, so the closed drawer
+       is gone from hit-testing without cutting the animation short. */
+    transition:
+      transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+      visibility 0s linear 0.22s;
+  }
+
+  .layout[data-drawer="open"] .sidebar {
+    transform: none;
+    visibility: visible;
+    box-shadow: var(--e-float);
+    transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .drawer-scrim {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-drawer);
+    background: var(--scrim);
+    animation: backdropIn 180ms ease-out;
   }
 
   .content > * {
-    padding: 1.6rem 1.6rem calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
-    -webkit-overflow-scrolling: touch;
+    padding: 1.6rem 1.6rem calc(env(safe-area-inset-bottom, 0px) + 2.4rem);
   }
 
   .content > .page-shell,
@@ -1116,104 +1123,8 @@ body::before {
     padding: var(--appbar-pad-y) 1.6rem;
   }
 
-  /* Rows become their own cards on mobile, so the wrapper stops being one. */
-  .table-scroll {
-    overflow-x: visible;
-    background: none;
-    border: none;
-    border-radius: 0;
-  }
-
-  .table-scroll:has(+ [data-table-footer]) {
-    border-radius: 0;
-  }
-
-  /* …except where the wrapper opts back in. The card reflow above only exists
-     for `.table` (see shared.module.css); a `.compactTable` in a dashboard
-     panel stays a real table, and column alignment is the whole point of it —
-     bandwidth beside quality beside progress. Those swipe sideways inside
-     their own panel rather than pushing the document around. Declared at the
-     wrapper so the exception is visible at the call site. */
-  .table-scroll[data-scroll="x"] {
-    overflow-x: auto;
-  }
-
-  /* ─── Bottom tab bar ─────────────────────────────────────────────────── */
-
-  .bottom-nav {
-    display: flex;
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 0.6rem 0.6rem calc(env(safe-area-inset-bottom, 0px) + 1.4rem);
-    background: var(--bar-bg);
-    backdrop-filter: blur(1.2rem);
-    -webkit-backdrop-filter: blur(1.2rem);
-    z-index: var(--z-bottom-nav);
-    align-items: stretch;
-    /* Tokens, not the white literals it had: the bar stayed white in dark mode. */
-    border-top: 1px solid var(--bar-line);
-  }
-
-  .bottom-nav-item {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    gap: 0.3rem;
-    color: var(--ink-4);
-    text-decoration: none;
-    font-family: var(--font-sans);
-    font-size: 1rem;
-    font-weight: 600;
-    background: none;
-    border: none;
-    border-radius: var(--r-sm);
-    cursor: pointer;
-    position: relative;
-    transition:
-      color 0.15s,
-      background 0.15s;
-    -webkit-tap-highlight-color: transparent;
-    padding: 0.6rem 0;
-  }
-
-  .bottom-nav-item.active {
-    color: var(--accent-text);
-    background: var(--accent-soft);
-  }
-
-  .bottom-nav-item:active {
-    color: var(--accent-text);
-  }
-
-  .bottom-nav-icon {
-    width: 2.1rem;
-    height: 2.1rem;
-    flex-shrink: 0;
-  }
-
-  /* Ellipsised because the bar is no longer three labels chosen to fit: any
-     route can be a tab now, so a fifth slot on a 320px phone has to hold
-     "Duplicates" without pushing its neighbours out of shape. */
-  .bottom-nav-label {
-    line-height: 1;
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  /* Stream count badge positioned on the tab that carries the streams metric */
-  .bottom-nav-item .stream-badge {
-    position: absolute;
-    top: 2px;
-    left: calc(50% + 0.5rem);
-    font-size: 0.9rem;
-    padding: 0 0.4rem;
-    border: 2px solid var(--surface);
+  .content > .app-notice {
+    padding: 0.7rem 1.6rem;
   }
 }
 
@@ -1280,8 +1191,7 @@ body::before {
 /* ─── Tap/press feedback ─────────────────────────────────────────────────── */
 
 button:active:not(:disabled),
-.nav-link:active,
-.bottom-nav-item:active {
+.nav-link:active {
   transform: scale(0.97);
   opacity: 0.85;
   transition:
@@ -1291,16 +1201,12 @@ button:active:not(:disabled),
 
 @media (max-width: 480px) {
   .content > * {
-    padding: 1.2rem 1.2rem calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
+    padding: 1.2rem 1.2rem calc(env(safe-area-inset-bottom, 0px) + 2.4rem);
   }
 
   .content > .page-shell,
   .content > *:has(.page-shell) {
     padding: 0;
-  }
-
-  .content > .app-bar {
-    padding: var(--appbar-pad-y) 1.2rem;
   }
 }
 
@@ -1437,7 +1343,6 @@ input[type="checkbox"]:disabled {
 }
 
 .nav-link:focus-visible,
-.bottom-nav-item:focus-visible,
 .sidebar-search:focus-visible,
 .version-pill:focus-visible,
 .sidebar-version:focus-visible,
@@ -1452,7 +1357,6 @@ input[type="checkbox"]:disabled {
  */
 
 @media (pointer: coarse) {
-  .bottom-nav-item,
   .nav-link {
     min-height: 4.4rem;
   }
@@ -1461,6 +1365,20 @@ input[type="checkbox"]:disabled {
   [role="button"],
   summary {
     min-height: 3.2rem;
+  }
+
+  /* 16px or larger, or iOS zooms the whole page in when a field takes focus
+     and leaves it zoomed. The interface-size setting can shrink rem, so the
+     floor is in px. */
+  :root {
+    /* stylelint-disable-next-line tinkerbell/no-px -- iOS's zoom-on-focus threshold is 16 CSS px exactly, whatever the root size */
+    --input-font-size: max(1.6rem, 16px);
+  }
+
+  /* Hints for keys a touch screen doesn't have. */
+  kbd,
+  [data-keyboard-hint] {
+    display: none !important;
   }
 }
 
@@ -1488,13 +1406,8 @@ input[type="checkbox"]:disabled {
   }
 
   button:active:not(:disabled),
-  .nav-link:active,
-  .bottom-nav-item:active {
+  .nav-link:active {
     transform: none;
     opacity: 1;
-  }
-
-  .bottom-sheet {
-    transition: none;
   }
 }

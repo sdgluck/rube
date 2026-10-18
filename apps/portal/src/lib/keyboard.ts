@@ -8,7 +8,9 @@
  * this attribute.
  *
  * The visual viewport shrinking well below the layout viewport while a field
- * has focus is the only signal a mobile browser gives.
+ * has focus is the only signal a mobile browser gives. Portal-only now: it
+ * came from the retired `packages/native-client` with the admin app's tab bar
+ * gone.
  */
 
 function set(open: boolean): void {

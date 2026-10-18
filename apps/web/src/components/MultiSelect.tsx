@@ -1,7 +1,5 @@
 import { ChevronDown } from "lucide-react";
 import { useCallback, useEffect, useId, useRef, useState } from "react";
-import { useIsPhone } from "#hooks/useMediaQuery";
-import PickerSheet from "./PickerSheet";
 import styles from "./MultiSelect.module.css";
 
 export interface MultiSelectOption {
@@ -38,11 +36,9 @@ export default function MultiSelect({ allLabel, options, selected, onChange, ari
   const menuId = useId();
 
   const close = useCallback(() => setOpen(false), []);
-  // A sheet on a phone; the dropdown below on a desktop.
-  const isPhone = useIsPhone();
 
   useEffect(() => {
-    if (!open || isPhone) return;
+    if (!open) return;
     const onPointerDown = (e: MouseEvent) => {
       if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) close();
     };
@@ -60,7 +56,7 @@ export default function MultiSelect({ allLabel, options, selected, onChange, ari
       document.removeEventListener("mousedown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown, true);
     };
-  }, [open, close, isPhone]);
+  }, [open, close]);
 
   const toggleValue = (value: string) => {
     onChange(selected.includes(value) ? selected.filter((v) => v !== value) : [...selected, value]);
@@ -87,20 +83,7 @@ export default function MultiSelect({ allLabel, options, selected, onChange, ari
         {activeCount > 1 && <span className={styles.count}>{activeCount}</span>}
         <ChevronDown className={styles.caret} size="1.3rem" strokeWidth={2.5} aria-hidden="true" />
       </button>
-      {isPhone && (
-        <PickerSheet
-          open={open}
-          onClose={close}
-          title={ariaLabel ?? allLabel}
-          options={options}
-          selected={selected}
-          onToggle={toggleValue}
-          multiple
-          clearLabel={allLabel}
-          onClear={() => onChange([])}
-        />
-      )}
-      {open && !isPhone && (
+      {open && (
         <div className={styles.menu} id={menuId} role="group" aria-label={ariaLabel ?? allLabel}>
           {options.map((opt) => {
             const checked = selected.includes(opt.value);

@@ -18,7 +18,6 @@ const ROUTE_TITLES: [prefix: string, title: string][] = [
   ...NAV_SECTIONS.flatMap((s) => s.items.map((i) => [i.to, i.label] as [string, string])),
   ["/settings/changelog", "Changelog"],
   ["/cleanup/rules", "Cleanup rules"],
-  ["/more", "More"],
   ["/jobs/schedule", "Job schedule"],
 ];
 

@@ -974,12 +974,12 @@
 }
 
 @media (max-width: 768px) {
-  /* Mobile uses bottom nav instead of the sidebar — action bar can span
-     full width but should sit above the bottom nav. */
+  /* No sidebar beside it: the action bar spans the width, clear of the
+     home indicator. */
   .actionBar {
     left: 1.2rem;
     right: 1.2rem;
-    bottom: calc(env(safe-area-inset-bottom, 0px) + 7.6rem);
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1.2rem);
     /* Status text plus three nowrap buttons don't fit 351px on one line. */
     flex-wrap: wrap;
   }
@@ -1280,4 +1280,16 @@
   .chipList {
     grid-template-columns: repeat(auto-fill, minmax(11.2rem, 1fr));
   }
+}
+
+/* The touch screen's stand-in for dragging a badge on (Catalog.tsx): the nine
+   positions in the shape they take on the poster. */
+.placeGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+
+.placeBtn {
+  composes: btn btnSecondary from "../styles/controls.module.css";
 }

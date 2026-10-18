@@ -2,10 +2,8 @@ import type { ReactNode } from "react";
 import styles from "./List.module.css";
 
 /**
- * A group of rows with an optional header and footer — iOS's inset grouped
- * table section, or a Material list with a subheader. The phone layout's
- * settings, More screen and detail pages are made of these, the way native
- * apps' are; on a desktop they render as a plain bordered card.
+ * A group of rows with an optional header and footer, drawn as a plain
+ * bordered card — Problems' kinds and the narrow-screen Settings index.
  */
 export default function ListSection({
   title,

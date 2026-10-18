@@ -400,55 +400,6 @@
   box-shadow: inset 0 0 0 1px var(--line);
 }
 
-/* Phones: iOS's segmented control — a raised white segment in a grey trough —
-   and Material's segmented buttons, outlined with the selection tinted. Taller
-   on both: these are thumbs now, not a cursor. */
-@media (max-width: 768px) {
-  .segmented {
-    height: 3.6rem;
-    border: none;
-    border-radius: var(--r-md);
-    background: var(--fill-track);
-  }
-
-  .segmentedItem {
-    flex: 1 1 0;
-    justify-content: center;
-    padding: 0 1.2rem;
-    border-radius: var(--r-sm);
-    font-size: 1.4rem;
-  }
-
-  .segmentedItemActive {
-    background: var(--surface);
-    color: var(--ink);
-    box-shadow: var(--e-float);
-  }
-
-  :global(html[data-platform="android"]) .segmented {
-    gap: 0;
-    height: 4rem;
-    padding: 0;
-    border: 1px solid var(--line-strong);
-    border-radius: var(--r-round);
-    background: none;
-  }
-
-  :global(html[data-platform="android"]) .segmentedItem {
-    border-radius: 0;
-  }
-
-  :global(html[data-platform="android"]) .segmentedItem + .segmentedItem {
-    border-left: 1px solid var(--line-strong);
-  }
-
-  :global(html[data-platform="android"]) .segmentedItemActive {
-    background: var(--accent-soft);
-    color: var(--accent-ink);
-    box-shadow: none;
-  }
-}
-
 /* ─── Toggle ──────────────────────────────────────────────────────────── */
 
 /* The knob squares off with the track rather than staying a circle. It is not

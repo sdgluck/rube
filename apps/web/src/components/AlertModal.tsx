@@ -1,6 +1,4 @@
 import Modal from "./Modal";
-import { useIsPhone } from "#hooks/useMediaQuery";
-import alertStyles from "./AlertActions.module.css";
 import styles from "./AlertModal.module.css";
 
 interface AlertModalProps {
@@ -16,17 +14,11 @@ interface AlertModalProps {
  * did something other than what they asked for.
  */
 export default function AlertModal({ title, message, dismissLabel = "OK", onDismiss }: AlertModalProps) {
-  const isPhone = useIsPhone();
   return (
-    <Modal open onClose={onDismiss} title={title} size="sm" presentation="alert">
+    <Modal open onClose={onDismiss} title={title} size="sm">
       <p className={styles.message}>{message}</p>
-      <div className={isPhone ? alertStyles.row : styles.actions}>
-        <button
-          type="button"
-          className={isPhone ? alertStyles.actionBold : styles.dismiss}
-          onClick={onDismiss}
-          autoFocus
-        >
+      <div className={styles.actions}>
+        <button type="button" className={styles.dismiss} onClick={onDismiss} autoFocus>
           {dismissLabel}
         </button>
       </div>

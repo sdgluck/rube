@@ -1,24 +1,19 @@
 import { useRef, useState } from "react";
-import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Smartphone } from "lucide-react";
-import { MAX_BOTTOM_TABS } from "#/nav";
+import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical } from "lucide-react";
 import type { NavMenu } from "#hooks/useNavMenu";
 import styles from "./NavEditor.module.css";
 
 /**
- * The menu, in edit mode. One component for both places it appears — the
- * sidebar on a desktop and the /more page on a phone — because they are editing
- * the same four config keys and a second implementation would be a second set
- * of rules about what can be hidden.
+ * The menu, in edit mode, inside the sidebar (or the drawer it becomes on a
+ * phone).
  *
- * `drag` is the only difference between the two, and it is off on touch for a
- * concrete reason: mobile Safari does not implement HTML5 drag-and-drop, so a
- * grip there is a control that does nothing. The ↑/↓ buttons are not a fallback
- * for that case — they are the primary way to reorder in both, because a drag
- * handle is unreachable by keyboard however good the pointer story is.
+ * `drag` adds grips for HTML5 drag-and-drop. The ↑/↓ buttons are not a
+ * fallback for touch screens, where mobile Safari has no drag-and-drop — they
+ * are the primary way to reorder everywhere, because a drag handle is
+ * unreachable by keyboard however good the pointer story is.
  */
 export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?: boolean }) {
   const { editableSections: sections } = menu;
-  const tabCount = menu.bottomTabs.length;
 
   // Which row (or section) is mid-drag. A ref, not state: it is read during the
   // drop handler and must not cause a render on every dragover.
@@ -30,9 +25,6 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
     <div className={styles.editor}>
       <div className={styles.header}>
         <span className={styles.headerTitle}>Editing menu</span>
-        <span className={styles.headerCount}>
-          {tabCount}/{MAX_BOTTOM_TABS} tabs
-        </span>
         <button
           type="button"
           className={styles.headerButton}
@@ -117,8 +109,6 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
 
           {section.items.map((item, index) => {
             const hidden = menu.isHidden(item.to);
-            const slot = menu.tabSlot(item.to);
-            const canTab = !hidden && (slot > 0 || !menu.tabsFull);
             return (
               <div
                 key={item.to}
@@ -168,26 +158,6 @@ export default function NavEditor({ menu, drag = false }: { menu: NavMenu; drag?
                   </span>
                 )}
                 <span className={styles.label}>{item.label}</span>
-                {slot > 0 && <span className={styles.slot}>{slot}</span>}
-                <button
-                  type="button"
-                  className={`${styles.toggle} ${slot > 0 ? styles.toggleOn : ""}`}
-                  onClick={() => menu.toggleTab(item.to)}
-                  disabled={!canTab}
-                  title={
-                    hidden
-                      ? "A hidden page can't be a tab"
-                      : slot > 0
-                        ? `Remove ${item.label} from the mobile tab bar`
-                        : menu.tabsFull
-                          ? `The tab bar is full (${MAX_BOTTOM_TABS})`
-                          : `Put ${item.label} in the mobile tab bar`
-                  }
-                  aria-pressed={slot > 0}
-                  aria-label={`${item.label} in the mobile tab bar`}
-                >
-                  <Smartphone size="1.3rem" strokeWidth={2} />
-                </button>
                 {menu.canHide(item.to) ? (
                   <button
                     type="button"

@@ -41,9 +41,9 @@ export type NavSection = { id: string; label: string; items: NavItem[] };
  *
  * Four things read this list unfiltered on purpose: `routeTrail` (the app bar's
  * breadcrumb), `useDocumentTitle`, `RouteAnnouncer` and the command palette. The
- * admin's own menu layout — order, hidden items, tab bar — is applied by
- * `resolveNav` and lives only in the three things that render a menu
- * (`Sidebar`, `More`, `BottomNav`). Hiding a page from the menu must never make
+ * admin's own menu layout — order and hidden items — is applied by
+ * `resolveNav` and lives only in the thing that renders a menu (`Sidebar`,
+ * which is also the drawer below --bp-md). Hiding a page from the menu must never make
  * it unreachable, untitled or unbreadcrumbed, which is exactly what would
  * happen if the filter moved into this constant.
  */
@@ -128,18 +128,15 @@ export const NAV_SECTIONS: NavSection[] = [
  */
 export const UNHIDEABLE = "/settings";
 
-/** Bottom tabs a fresh install gets, in order. `/more` is appended by the bar. */
-export const DEFAULT_BOTTOM_TABS = ["/stats", "/collections", "/jobs"];
-
-/** Slots in the tab bar, not counting the "More" tab, which is always last. */
-export const MAX_BOTTOM_TABS = 4;
-
-/** The four `nav_*` config keys, as the resolvers below want them. */
+/**
+ * The `nav_*` config keys the menu reads, as the resolvers below want them.
+ * `nav_bottom_tabs` is left out: it chose the phone tab bar's routes, and that
+ * bar went with the admin app's native-app emulation.
+ */
 export type NavPrefs = {
   hidden?: string[];
   itemOrder?: string[];
   sectionOrder?: string[];
-  bottomTabs?: string[];
 };
 
 /**
@@ -218,8 +215,8 @@ export function applyNavPrefs(sections: NavSection[], prefs: NavPrefs): NavSecti
 /**
  * The menu as it should render for this install.
  *
- * Takes the flag rather than reading it, so the same filter serves the sidebar
- * and the mobile More page from one query. `setupComplete` is undefined while
+ * Takes the flag rather than reading it, so the filter stays a pure function
+ * of its inputs and the sidebar and the editor share one query. `setupComplete` is undefined while
  * that query is in flight, and an item stays put until we know otherwise —
  * hiding it first and putting it back a moment later would be a menu that
  * flickers on every page load.
@@ -240,54 +237,4 @@ export function visibleSections(sections: NavSection[], setupComplete: boolean |
  */
 export function resolveNav(sections: NavSection[], prefs: NavPrefs, setupComplete: boolean | undefined): NavSection[] {
   return visibleSections(applyNavPrefs(sections, prefs), setupComplete);
-}
-
-/**
- * The mobile tab bar's destinations, in order.
- *
- * Resolved against the *rendered* menu rather than the catalogue, which is what
- * makes the bar self-healing: a route the admin hid cannot also be a tab, and
- * `/onboarding` leaves the bar the moment setup completes without anybody
- * having to notice it was there. Returns items, not paths, so the bar gets the
- * label and the metric — that is how the streams badge follows Stats instead of
- * being pinned to the first slot.
- *
- * Never returns an empty bar: an install that hid all three defaults still gets
- * the first few things its own menu starts with.
- */
-export function resolveBottomTabs(
-  sections: NavSection[],
-  prefs: NavPrefs,
-  setupComplete: boolean | undefined,
-): NavItem[] {
-  const rendered = resolveNav(sections, prefs, setupComplete).flatMap((s) => s.items);
-  const byPath = new Map(rendered.map((i) => [i.to, i]));
-
-  const out: NavItem[] = [];
-  const take = (to: string) => {
-    const item = byPath.get(to);
-    if (item && !out.some((i) => i.to === to)) out.push(item);
-  };
-
-  for (const to of prefs.bottomTabs ?? []) take(to);
-  if (out.length === 0) {
-    for (const to of DEFAULT_BOTTOM_TABS) take(to);
-    for (const item of rendered) {
-      if (out.length >= DEFAULT_BOTTOM_TABS.length) break;
-      take(item.to);
-    }
-  }
-  return out.slice(0, MAX_BOTTOM_TABS);
-}
-
-/** Everything the rendered menu holds that isn't already one of the chosen tabs. */
-export function moreSections(
-  sections: NavSection[],
-  prefs: NavPrefs,
-  setupComplete: boolean | undefined,
-): NavSection[] {
-  const tabs = new Set(resolveBottomTabs(sections, prefs, setupComplete).map((i) => i.to));
-  return resolveNav(sections, prefs, setupComplete)
-    .map((s) => ({ ...s, items: s.items.filter((i) => !tabs.has(i.to)) }))
-    .filter((s) => s.items.length > 0);
 }

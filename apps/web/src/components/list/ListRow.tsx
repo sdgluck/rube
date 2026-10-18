@@ -23,7 +23,7 @@ type ListRowProps = {
  * One row of a `ListSection`: leading media, title and subtitle, then a
  * value and chevron, or a control. A row with `to` is a link that pushes a
  * screen; with `onClick` it is a button; with neither it just shows a value.
- * Rows are at least 44px tall and give a pressed state, never a hover one.
+ * Rows are at least 44px tall, a comfortable touch target at any width.
  */
 export default function ListRow({
   leading,
@@ -70,7 +70,7 @@ export default function ListRow({
   );
 }
 
-/** A small rounded icon tile for a row's leading slot, as iOS Settings draws. */
+/** A small rounded icon tile for a row's leading slot. */
 export function RowIcon({
   children,
   tone = "accent",
