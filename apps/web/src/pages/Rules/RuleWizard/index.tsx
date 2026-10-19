@@ -31,7 +31,7 @@ import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";
 import Modal from "#components/Modal";
 import styles from "./RuleWizard.module.css";
-import MonthDaySelect from "./MonthDaySelect.tsx";
+import MonthDaySelect from "#components/MonthDaySelect";
 import TemplateInput from "./TemplateInput.tsx";
 import ArrTargetFields, { ARR_SERVICE_LABEL } from "./ArrTargetFields.tsx";
 import { IMDB_CHART_LABELS, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";

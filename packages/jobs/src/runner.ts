@@ -239,6 +239,7 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   { id: "byw-remove", name: "Remove Because You Watched", command: "byw-remove", schedule: "", enabled: 1 },
   { id: "wtyl-remove", name: "Remove We Think You'd Like", command: "wtyl-remove", schedule: "", enabled: 1 },
   { id: "pibu-remove", name: "Remove Pick It Back Up", command: "pibu-remove", schedule: "", enabled: 1 },
+  { id: "season-remove", name: "Remove Season Collections", command: "season-remove", schedule: "", enabled: 1 },
   {
     id: "personalize-enable",
     name: "Enable Personalized Home Screens",

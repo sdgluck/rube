@@ -1,3 +1,4 @@
+import { SEASON_PRESETS } from "@tinkerbell/contracts";
 import { type Services } from "@tinkerbell/composition";
 import { createTmdbMetadataCommand } from "../tmdb-metadata.ts";
 import type { TmdbCachedDetails } from "@tinkerbell/db";
@@ -9,14 +10,12 @@ import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts
 
 export type KeywordGroupedField = "based_on" | "seasonal" | "awards";
 
-interface KeywordBucket {
+export interface KeywordBucket {
   /** Stable key — used to dedup groupings within a single rule run. */
   key: string;
   label: string;
   /** TMDb keyword IDs that put an item in this bucket. */
   keywordIds: number[];
-  /** Optional month-of-release filter (1–12). Item must hit a keyword AND a month. */
-  months?: number[];
 }
 
 /**
@@ -35,18 +34,20 @@ const BASED_ON: KeywordBucket[] = [
 ];
 
 /**
- * Seasonal buckets — a keyword set OR a release-month window. Items hit
- * the bucket if they match either signal so a Christmas-set film with no
- * "christmas" keyword still counts via its December release.
+ * Seasonal buckets — the same holidays Season Collections builds, from the
+ * one table in contracts. Every preset, whether or not that feature has it
+ * switched on: a rule picks its buckets with `includeValues`.
+ *
+ * Keyword only. These used to also take any film released in the holiday's
+ * month, which made every December release "Christmas" — and since most of
+ * the old ids pointed at unrelated keywords, the month was doing nearly all
+ * the matching.
  */
-const SEASONAL: KeywordBucket[] = [
-  { key: "seasonal:christmas", label: "Christmas", keywordIds: [9882, 207317, 184939], months: [12] },
-  { key: "seasonal:halloween", label: "Halloween", keywordIds: [11497, 12377, 6256], months: [10] },
-  { key: "seasonal:valentines", label: "Valentine's Day", keywordIds: [13130, 9799], months: [2] },
-  { key: "seasonal:thanksgiving", label: "Thanksgiving", keywordIds: [10703], months: [11] },
-  { key: "seasonal:new_year", label: "New Year's Eve", keywordIds: [10685], months: [1, 12] },
-  { key: "seasonal:summer", label: "Summer", keywordIds: [3490, 207928], months: [6, 7, 8] },
-];
+const SEASONAL: KeywordBucket[] = SEASON_PRESETS.map((season) => ({
+  key: `seasonal:${season.key}`,
+  label: season.name,
+  keywordIds: season.keywords.map((k) => k.id),
+}));
 
 /**
  * Awards. TMDb's keyword coverage for awards is sparse — there are
@@ -68,16 +69,13 @@ const BUCKETS: Record<KeywordGroupedField, KeywordBucket[]> = {
   awards: AWARDS,
 };
 
-function matchesBucket(bucket: KeywordBucket, details: TmdbCachedDetails): boolean {
-  const keywordHit = (details.keywords ?? []).some((id) => bucket.keywordIds.includes(id));
-  if (keywordHit) return true;
-  if (bucket.months && details.releaseMonth && bucket.months.includes(details.releaseMonth)) {
-    // Month-only matches are a softer signal — for seasonal collections only.
-    // We still require either a month match for seasonal items, OR a keyword
-    // match elsewhere. This branch handles the no-keyword + right-month case.
-    return true;
-  }
-  return false;
+export function matchesBucket(bucket: KeywordBucket, details: TmdbCachedDetails): boolean {
+  return (details.keywords ?? []).some((id) => bucket.keywordIds.includes(id));
+}
+
+/** For tests: the buckets a field builds. */
+export function bucketsFor(field: KeywordGroupedField): readonly KeywordBucket[] {
+  return BUCKETS[field];
 }
 
 export function createKeywordGroupedCommand(deps: Services) {

@@ -39,6 +39,14 @@ export const PIBU_DEFAULTS = {
   pinToHomepage: true,
 } as const;
 
+export const SEASON_DEFAULTS = {
+  mode: "server",
+  pinToHomepage: true,
+  minItems: 5,
+  maxItems: 30,
+  useAi: true,
+} as const;
+
 export const DIGEST_DEFAULTS = {
   frequency: "weekly",
   minAddedItems: 1,
@@ -245,6 +253,61 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       label: "Most items",
       control: { kind: "number", min: 1, max: 50 },
       default: PIBU_DEFAULTS.maxItems,
+      advanced: true,
+    },
+  ],
+  // `seasons` and `customSeasons` have no field here: a list of windows and
+  // keywords is the Seasons panel on the job page, not a form row.
+  "season-collections": [
+    {
+      key: "mode",
+      label: "Who it's for",
+      control: {
+        kind: "enum",
+        options: [
+          { value: "server", label: "Everyone", help: "One row per holiday that everybody sees." },
+          {
+            value: "per-user",
+            label: "Each person",
+            help: "A row per person, ordered by their taste. Needs Personalized Home Screens.",
+          },
+        ],
+      },
+      default: SEASON_DEFAULTS.mode,
+    },
+    {
+      key: "users",
+      label: "Users",
+      help: "Leave empty for everyone on the Users page.",
+      control: { kind: "users", source: "plex-users" },
+      showWhen: { key: "mode", equals: "per-user" },
+    },
+    {
+      key: "pinToHomepage",
+      label: "Pin to home screen",
+      control: { kind: "boolean" },
+      default: SEASON_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "useAi",
+      label: "Top up with AI",
+      help: "When keywords find too few titles, ask the AI provider for more from the library. Off, or with no provider, rows use keywords alone.",
+      control: { kind: "boolean" },
+      default: SEASON_DEFAULTS.useAi,
+    },
+    {
+      key: "minItems",
+      label: "Fewest items",
+      help: "A holiday with fewer matches than this gets no row.",
+      control: { kind: "number", min: 1, max: 50 },
+      default: SEASON_DEFAULTS.minItems,
+      advanced: true,
+    },
+    {
+      key: "maxItems",
+      label: "Most items",
+      control: { kind: "number", min: 5, max: 100 },
+      default: SEASON_DEFAULTS.maxItems,
       advanced: true,
     },
   ],

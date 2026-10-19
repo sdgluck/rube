@@ -12,6 +12,7 @@
  * *applying* overlays.
  */
 import { z } from "zod";
+import { customSeasonSchema, seasonOverrideSchema, seasonsConfigIssues } from "./seasons.ts";
 
 /**
  * Bounds for the rule engine's `ruleConcurrency` setting: the schema enforces
@@ -84,6 +85,28 @@ export const pibuJobConfigSchema = commonJobConfigSchema.extend({
   pinToHomepage: z.boolean().optional(),
 });
 export type PibuJobConfig = z.infer<typeof pibuJobConfigSchema>;
+
+/**
+ * Season Collections: a row per holiday per library, there only while the
+ * holiday is. `server` builds one row everybody sees and needs nothing set up;
+ * `per-user` builds one per person, ranked by their taste, and needs
+ * Personalized Home Screens like the other personal rows.
+ *
+ * The season list itself is `seasons` (overrides of the shipped presets, by
+ * key) plus `customSeasons` — see `seasons.ts` for why not one copied list.
+ */
+export const seasonCollectionsJobConfigSchema = commonJobConfigSchema.extend({
+  mode: z.enum(["server", "per-user"]).optional(),
+  users: z.array(z.string()).optional(),
+  pinToHomepage: z.boolean().optional(),
+  minItems: z.number().int().min(1).max(50).optional(),
+  maxItems: z.number().int().min(5).max(100).optional(),
+  /** Ask the AI provider for more when keywords find fewer than `minItems`. */
+  useAi: z.boolean().optional(),
+  seasons: z.record(z.string(), seasonOverrideSchema).optional(),
+  customSeasons: z.array(customSeasonSchema).max(30).optional(),
+});
+export type SeasonCollectionsJobConfig = z.infer<typeof seasonCollectionsJobConfigSchema>;
 
 export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
   /**
@@ -168,6 +191,8 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   "wtyl-remove": wtylJobConfigSchema,
   "pick-it-back-up": pibuJobConfigSchema,
   "pibu-remove": pibuJobConfigSchema,
+  "season-collections": seasonCollectionsJobConfigSchema,
+  "season-remove": seasonCollectionsJobConfigSchema,
   "collections-sweep": collectionsSweepJobConfigSchema,
   "collection-art": collectionArtJobConfigSchema,
   overlays: overlaysJobConfigSchema,
@@ -185,12 +210,15 @@ export function configSchemaFor(command: string): z.ZodObject {
  */
 export function configIssues(command: string, config: Record<string, unknown>): string[] {
   const issues: string[] = [];
-  if (command === "because-you-watched" || command === "we-think-youd-like") {
+  if (command === "because-you-watched" || command === "we-think-youd-like" || command === "season-collections") {
     const min = config.minItems;
     const max = config.maxItems;
     if (typeof min === "number" && typeof max === "number" && min > max) {
       issues.push(`Minimum items (${min}) can't be more than maximum items (${max})`);
     }
+  }
+  if (command === "season-collections") {
+    issues.push(...seasonsConfigIssues(config as Parameters<typeof seasonsConfigIssues>[0]));
   }
   if (command === "pick-it-back-up") {
     const from = config.stallDays;

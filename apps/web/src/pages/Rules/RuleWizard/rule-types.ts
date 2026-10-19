@@ -218,7 +218,7 @@ export const RULE_TYPES: RuleType[] = [
     value: "seasonal",
     label: "Seasonal",
     description:
-      "Holiday and season collections (Christmas, Halloween, Valentine's, …) using TMDb keywords + release month.",
+      "Holiday and season collections (Christmas, Halloween, Valentine's, …) from the TMDb keywords films are filed under. For one row per holiday that comes and goes by itself, see the Season Collections feature.",
     requires: "tmdb",
   },
   {

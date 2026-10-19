@@ -13,15 +13,17 @@ import controls from "#/styles/controls.module.css";
 import { plexImageUrl } from "#lib/media";
 
 /**
- * The per-user rows a personal-row job made, grouped by person. One panel for
- * all three jobs: they differ only in which label they own and in whether a
- * row carries a description worth showing.
+ * The rows a personal-row job made, grouped by person. One panel for all four
+ * jobs: they differ only in which label they own and in whether a row carries
+ * a description worth showing.
  */
 const KINDS = {
   "because-you-watched": { name: "Because You Watched", showSummary: false },
   "we-think-youd-like": { name: "We Think You'd Like", showSummary: true },
   // Its description lists each show's next episode.
   "pick-it-back-up": { name: "Pick It Back Up", showSummary: true },
+  // Its description says which dates the row is up for.
+  "season-collections": { name: "Season Collections", showSummary: true },
 } as const;
 
 export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof typeof KINDS }) {
@@ -45,17 +47,26 @@ export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof type
     refetchInterval: 10000,
     enabled: jobId === "pick-it-back-up",
   });
-  const collectionsQuery =
-    jobId === "because-you-watched" ? bywQuery : jobId === "we-think-youd-like" ? wtylQuery : pibuQuery;
+  const seasonQuery = trpc.jobs.seasonCollections.useQuery(undefined, {
+    refetchInterval: 10000,
+    enabled: jobId === "season-collections",
+  });
+  const collectionsQuery = {
+    "because-you-watched": bywQuery,
+    "we-think-youd-like": wtylQuery,
+    "pick-it-back-up": pibuQuery,
+    "season-collections": seasonQuery,
+  }[jobId];
   const [confirming, setConfirming] = useState<{ title: string; ratingKey: string } | null>(null);
 
   const deleteMutation = trpc.collections.delete.useMutation({
     onSuccess: () =>
-      jobId === "because-you-watched"
-        ? utils.jobs.bywCollections.invalidate()
-        : jobId === "we-think-youd-like"
-          ? utils.jobs.wtylCollections.invalidate()
-          : utils.jobs.pibuCollections.invalidate(),
+      ({
+        "because-you-watched": utils.jobs.bywCollections,
+        "we-think-youd-like": utils.jobs.wtylCollections,
+        "pick-it-back-up": utils.jobs.pibuCollections,
+        "season-collections": utils.jobs.seasonCollections,
+      })[jobId].invalidate(),
   });
 
   const total = collectionsQuery.data?.reduce((n, g) => n + g.collections.length, 0);

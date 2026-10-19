@@ -19,6 +19,7 @@ import { tmdbFetch, yearFromDate, monthFromDate, type TmdbConfig } from "./_shar
 
 export { TmdbError, type TmdbConfig } from "./_shared.ts";
 export * from "./search.ts";
+export * from "./keywords.ts";
 
 // ─── Shared atomic schemas ───────────────────────────────────────────────
 

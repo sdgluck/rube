@@ -92,6 +92,14 @@ export const COMMANDS = {
     lane: "default",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
+  // A Plex walk per library and, the first time, TMDb details for every title
+  // in it (30-day cache shared with the grouped rules). That first hydration of
+  // a large library is the slow case the budget is sized for.
+  "season-collections": {
+    load: () => import("./season-collections/index.ts"),
+    lane: "default",
+    timeoutMs: HOUR_MS,
+  },
   // Local queries plus one network call per recipient. The default budget is
   // generous for that, and is really bounding a mail server that has stopped
   // answering rather than the work.
@@ -116,6 +124,7 @@ export const COMMANDS = {
   "byw-remove": { load: () => import("./byw-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   "wtyl-remove": { load: () => import("./wtyl-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   "pibu-remove": { load: () => import("./pibu-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
+  "season-remove": { load: () => import("./season-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   // Both walk every item in the managed libraries. Batched labelling should
   // make that minutes, but a first pass on a large library or a slow server
   // took 30+ with one item per request, and the old 30-minute budget aborted

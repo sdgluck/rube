@@ -1,4 +1,4 @@
-import { SYSTEM_COLLECTION_LABELS } from "@tinkerbell/contracts";
+import { isSystemCollectionLabel } from "@tinkerbell/contracts";
 import { useState, Fragment } from "react";
 import { useParams, useNavigate, useLocation, Link, Outlet } from "react-router-dom";
 import { Image, Pencil, Pin, PinOff, RefreshCw, RotateCcw, SlidersHorizontal, Trash2 } from "lucide-react";
@@ -18,8 +18,6 @@ import CollectionEditModal from "./CollectionEditModal.tsx";
 import PosterStudio from "./PosterStudio.tsx";
 import local from "./CollectionDetail.module.css";
 import { plexImageUrl } from "#lib/media";
-
-const SYSTEM_LABELS = SYSTEM_COLLECTION_LABELS;
 
 /**
  * `Rule:<uuid>` is how a rule finds its own collections again. It is plumbing —
@@ -285,7 +283,7 @@ export default function CollectionDetailLayout() {
                   to={`/collections?label=${encodeURIComponent(label)}`}
                   title={`Show collections labelled "${label}"`}
                   className={`${styles.label} ${local.labelChip} ${local.labelChipLink} ${
-                    SYSTEM_LABELS.includes(label.toLowerCase())
+                    isSystemCollectionLabel(label)
                       ? styles.labelTinkerbell
                       : label.toLowerCase().startsWith("user:")
                         ? styles.labelUser

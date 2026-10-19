@@ -25,6 +25,7 @@ const FEATURE_LABELS: Record<string, string> = {
   "because-you-watched": "Because you watched",
   "because-you-watched-preview": "Because you watched (Try it)",
   "we-think-youd-like": "We think you'd like",
+  "season-collections": "Season collections",
   "collection-summary": "Collection summaries",
   "health-check": "Health checks",
   "test-connection": "Test connection",

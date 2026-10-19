@@ -33,6 +33,7 @@ export const LLM_FEATURES = [
   // read as the nightly job getting more expensive.
   "because-you-watched-preview",
   "we-think-youd-like",
+  "season-collections",
   "collection-summary",
   "health-check",
   "test-connection",

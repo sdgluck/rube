@@ -1,4 +1,4 @@
-import { SYSTEM_COLLECTION_LABELS } from "@tinkerbell/contracts";
+import { isSystemCollectionLabel } from "@tinkerbell/contracts";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ExternalLink, Trash2 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -51,8 +51,6 @@ type ViewMode = (typeof VIEW_MODES)[number];
 const PAGE_SIZE = 50;
 
 type CollectionRow = RouterOutputs["collections"]["list"]["items"][number];
-
-const SYSTEM_LABELS = SYSTEM_COLLECTION_LABELS;
 
 /**
  * Column ids in their default order, for the two "is this column on?" checks
@@ -328,7 +326,7 @@ export default function Collections() {
             .map((label) => (
               <span
                 key={label}
-                className={`${styles.label} ${SYSTEM_LABELS.includes(label.toLowerCase()) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+                className={`${styles.label} ${isSystemCollectionLabel(label) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
               >
                 {label}
               </span>

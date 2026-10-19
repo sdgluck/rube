@@ -1,12 +1,10 @@
-import { SYSTEM_COLLECTION_LABELS } from "@tinkerbell/contracts";
+import { isSystemCollectionLabel } from "@tinkerbell/contracts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { trpc } from "#/trpc";
 import Modal from "#components/Modal";
 import { useToast } from "#components/Toast";
 import shared from "#/styles/shared.module.css";
 import styles from "./CollectionEditModal.module.css";
-
-const SYSTEM_LABELS = SYSTEM_COLLECTION_LABELS;
 
 /**
  * `Rule:<uuid>` is how a rule finds its own collections again. It is plumbing —
@@ -145,7 +143,7 @@ export default function CollectionEditModal({ ratingKey, title, summary, labels,
   }, [goNext]);
 
   const labelClass = (label: string) =>
-    SYSTEM_LABELS.includes(label.toLowerCase())
+    isSystemCollectionLabel(label)
       ? shared.labelTinkerbell
       : label.toLowerCase().startsWith("user:")
         ? shared.labelUser

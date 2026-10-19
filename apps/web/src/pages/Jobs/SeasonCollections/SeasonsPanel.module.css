@@ -1,0 +1,50 @@
+/* One block per season; the list scrolls with the page rather than in a capped card,
+   because the custom seasons make it as long as the admin wants. */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.season {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding-bottom: 1.2rem;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.head,
+.window,
+.keywords,
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.name {
+  max-width: 24rem;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.picker {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.results {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}

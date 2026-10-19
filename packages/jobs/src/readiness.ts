@@ -97,6 +97,22 @@ export function createReadiness(
       case "pick-it-back-up":
         items.push(personalization(), watchHistory());
         break;
+      case "season-collections":
+        items.push({
+          id: "tmdb",
+          label: "TMDb API key set",
+          met: Boolean(getConfig("global_tmdb_api_key")),
+          detail: "Finds each holiday's titles by the keywords TMDb files them under.",
+          href: "/settings/databases/tmdb",
+          severity: "required",
+        });
+        if (cfg.useAi !== false) {
+          items.push({ ...ai("Adds titles to a holiday the keywords found too few for."), severity: "recommended" });
+        }
+        // Only a row per person needs the rows kept apart; the shared row is
+        // meant to be seen by everyone.
+        if (cfg.mode === "per-user") items.push(personalization(), watchHistory());
+        break;
       case "digest": {
         if (cfg.includeServerDigest !== false) {
           const services = notifications.servicesForEvent("digest.sent");

@@ -12,4 +12,14 @@ export const SYSTEM_COLLECTION_LABELS: readonly string[] = [
   "becauseyouwatched",
   "wethinkyoudlike",
   "pickitbackup",
+  "seasoncollections",
 ];
+
+/**
+ * A label Tinkerbell wrote: one of the above, or a `Season:<key>` marker that
+ * says which holiday a Season Collections row is for.
+ */
+export function isSystemCollectionLabel(label: string): boolean {
+  const lower = label.toLowerCase();
+  return SYSTEM_COLLECTION_LABELS.includes(lower) || lower.startsWith("season:");
+}

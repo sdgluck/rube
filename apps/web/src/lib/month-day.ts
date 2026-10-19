@@ -1,5 +1,6 @@
 /**
- * The rule window's `MM-DD` strings, as the month and day a person picks.
+ * A yearly window's `MM-DD` strings — a rule's, or a season's — as the month
+ * and day a person picks.
  *
  * The window used to be two text boxes and a hint explaining the format. Two
  * selects can't produce "13-01" or "Oct 1", so the format needs no explaining;

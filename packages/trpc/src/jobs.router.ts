@@ -6,8 +6,9 @@ import { TRPCError } from "@trpc/server";
 
 import { t, procedure } from "./_base.ts";
 import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { searchKeywords } from "@tinkerbell/tmdb";
 
-export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "stats">) {
+export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "config" | "jobs" | "stats">) {
   const {
     cancelRun,
     checkpointStatus,
@@ -32,7 +33,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
     uninstallFeature,
     updateJob,
   } = deps.jobs;
-  const { collections, stats } = deps;
+  const { collections, config, stats } = deps;
   const { getBywCollectionsGroupedByUser, getGeneratedCollectionsGroupedByUser } = collections;
   const { getLastFailedRun } = stats;
 
@@ -285,6 +286,18 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "jobs" | "
     bywCollections: procedure.query(() => getBywCollectionsGroupedByUser()),
     wtylCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("WeThinkYoudLike")),
     pibuCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("PickItBackUp")),
+    seasonCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("SeasonCollections")),
+
+    /**
+     * TMDb keywords by name, for the Seasons panel's keyword picker. The ids
+     * are what matching uses; the name is stored beside each so the panel
+     * never has to look one up again.
+     */
+    seasonKeywordSearch: procedure.input(z.object({ query: z.string().max(100) })).query(async ({ input }) => {
+      const apiKey = config.getConfig("global_tmdb_api_key");
+      if (!apiKey) throw new TRPCError({ code: "PRECONDITION_FAILED", message: "TMDb is not configured" });
+      return searchKeywords({ apiKey }, input.query);
+    }),
 
     featureCatalog: procedure.query(() => listFeatureCatalog()),
 

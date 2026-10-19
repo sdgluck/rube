@@ -53,6 +53,7 @@ export const FEATURE_IDS = [
   "because-you-watched",
   "we-think-youd-like",
   "pick-it-back-up",
+  "season-collections",
   "shuffle",
   "overlays",
   "digest",
@@ -251,6 +252,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     description:
       "Builds a “Pick It Back Up” collection in each TV library for each Plex user, of the shows they started and stopped watching partway through.",
   },
+  "season-collections": {
+    kind: "feature",
+    requires: "A TMDb API key. Personalized Home Screens too, for a row per person.",
+    description:
+      "Puts a collection for each holiday — Christmas, Halloween, Valentine's Day and any you add — in each library while it's on, and takes it down afterwards.",
+  },
   shuffle: {
     kind: "feature",
     description: "Randomises the order of items in shuffled hub collections so the homescreen stays fresh.",
@@ -296,6 +303,11 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "hidden",
     description:
       "Tears down Pick It Back Up: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
+  },
+  "season-remove": {
+    kind: "hidden",
+    description:
+      "Tears down Season Collections: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
   },
   "personalize-enable": {
     kind: "hidden",

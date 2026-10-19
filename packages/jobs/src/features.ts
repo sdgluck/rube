@@ -61,6 +61,19 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     requiresPersonalizedSharing: true,
   },
   {
+    id: "season-collections",
+    name: "Season Collections",
+    command: "season-collections",
+    // Daily, so a holiday's row appears the morning its window opens and is
+    // gone the morning after it closes. Out of season a run reads its config,
+    // lists its rows and stops. 07:45 is after every schedule preset's night
+    // chain, so no preset has to make room for it or warns about sharing a slot.
+    defaultSchedule: "45 7 * * *",
+    defaultConfig: {},
+    // Not `requiresPersonalizedSharing`: the default is one row for everyone.
+    // A row per person needs it, and readiness says so for that mode.
+  },
+  {
     id: "shuffle",
     name: "Shuffle Hubs",
     command: "shuffle",
@@ -95,6 +108,7 @@ const TEARDOWN_JOBS: Record<string, CommandName> = {
   "because-you-watched": "byw-remove",
   "we-think-youd-like": "wtyl-remove",
   "pick-it-back-up": "pibu-remove",
+  "season-collections": "season-remove",
 };
 
 function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {

@@ -1,8 +1,8 @@
 import controls from "#/styles/controls.module.css";
-import styles from "./RuleWizard.module.css";
-import { daysInMonth, formatMonthDay, MONTH_NAMES, parseMonthDay } from "./month-day.ts";
+import styles from "./MonthDaySelect.module.css";
+import { daysInMonth, formatMonthDay, MONTH_NAMES, parseMonthDay } from "#lib/month-day";
 
-/** One end of a rule's yearly window, as a day and a month rather than `MM-DD`. */
+/** One end of a yearly window — a rule's, or a season's — as a day and a month rather than `MM-DD`. */
 export default function MonthDaySelect({
   value,
   onChange,

@@ -95,6 +95,9 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "because-you-watched": { heavy: true, requires: "personalizedSharing", estimateMs: 10 * MINUTE_MS },
   "we-think-youd-like": { heavy: true, requires: "personalizedSharing", estimateMs: 10 * MINUTE_MS },
   "pick-it-back-up": { requires: "personalizedSharing", estimateMs: 5 * MINUTE_MS },
+  // No `requires`: its default mode is one shared row and needs no
+  // personalization. Per-person mode's need is the readiness check's to state.
+  "season-collections": { estimateMs: 5 * MINUTE_MS },
   shuffle: { estimateMs: 2 * MINUTE_MS },
   overlays: { heavy: true, estimateMs: 30 * MINUTE_MS },
   digest: { requires: "notifier", estimateMs: 2 * MINUTE_MS },
@@ -107,6 +110,7 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "byw-remove": { estimateMs: 5 * MINUTE_MS },
   "wtyl-remove": { estimateMs: 5 * MINUTE_MS },
   "pibu-remove": { estimateMs: 5 * MINUTE_MS },
+  "season-remove": { estimateMs: 5 * MINUTE_MS },
   "personalize-enable": { estimateMs: 30 * MINUTE_MS },
   "personalize-disable": { estimateMs: 30 * MINUTE_MS },
   "overlays-remove": { estimateMs: 30 * MINUTE_MS },
@@ -194,6 +198,11 @@ export const JOB_ORDER: readonly JobOrderEdge[] = [
     before: "sync-media",
     after: "pick-it-back-up",
     reason: "it finds each show's library and title in the library index",
+  },
+  {
+    before: "sync-media",
+    after: "season-collections",
+    reason: "it ranks matches by the ratings and genres in the library index",
   },
 ];
 

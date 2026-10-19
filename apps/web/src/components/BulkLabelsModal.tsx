@@ -1,4 +1,4 @@
-import { SYSTEM_COLLECTION_LABELS } from "@tinkerbell/contracts";
+import { isSystemCollectionLabel } from "@tinkerbell/contracts";
 import { useState } from "react";
 import Modal from "./Modal";
 import styles from "./BulkLabelsModal.module.css";
@@ -21,8 +21,6 @@ interface Props {
    */
   freeTextRemove?: boolean;
 }
-
-const MANAGED_LABELS = SYSTEM_COLLECTION_LABELS;
 
 export default function BulkLabelsModal({
   count,
@@ -48,7 +46,7 @@ export default function BulkLabelsModal({
 
   const labelClass = (lbl: string) => {
     const lower = lbl.toLowerCase();
-    if (MANAGED_LABELS.includes(lower)) return shared.labelTinkerbell;
+    if (isSystemCollectionLabel(lower)) return shared.labelTinkerbell;
     if (lower.startsWith("user:")) return shared.labelUser;
     return "";
   };

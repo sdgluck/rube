@@ -21,6 +21,8 @@ and notifications on a schedule.
   from their recent watch history. [More](#we-think-youd-like)
 - **Pick it back up**: one collection per user per TV library of the shows
   they started and stopped watching. [More](#pick-it-back-up)
+- **Season collections**: a Christmas, Halloween or other holiday collection
+  in each library while the holiday is on. [More](#season-collections)
 - **Personalized home screens**: each Plex user sets their own tastes.
   [More](#personalized-home-screens)
 - **Movie match**: a group swipes through a movie library together until
@@ -287,6 +289,40 @@ Limits:
   install, run **Import Plex Watch History** first.
 - It reads Tinkerbell's own playback history, so playback retention limits how
   far back **Given up after** can reach.
+
+## Season collections
+
+Each library gets a collection for a holiday while it is on, such as
+"Christmas" from 1 to 26 December, and loses it the morning after. Install it
+from **Jobs**. It runs every morning.
+
+- A title is in a holiday's collection when TMDb files it under one of that
+  holiday's keywords, such as _christmas_ or _santa claus_. The release month
+  doesn't count.
+- The built-in seasons are Christmas, Halloween, Valentine's Day, New Year's
+  Eve, Thanksgiving and Summer. Thanksgiving and Summer are off by default.
+- On the job's **Seasons** card you can turn a season on or off, rename it,
+  change its dates and pick its keywords from TMDb. **Reset** puts a built-in
+  season back to how it shipped. **Add a season** makes one of your own, for
+  example Easter or Diwali.
+- When a season's keywords find fewer titles than **Fewest items** and an AI
+  provider is set, the AI suggests more from the library. Titles already in
+  the collection stay in it, so the AI is usually asked once per season.
+- **Who it's for** is _Everyone_ (the default): one collection that everybody
+  sees. _Each person_ gives every user "Christmas picks for you", ordered by
+  their own watch history.
+- A run updates each collection in place, so it keeps its pin and position
+  while the season lasts.
+
+Limits:
+
+- It needs a TMDb API key. The first run reads TMDb details for every title in
+  the library, which takes a while on a big one; the cache is shared with the
+  grouped rules.
+- _Each person_ needs Personalized Home Screens. **Not for me** on the row in
+  the portal removes it for that user.
+- A date window repeats every year on the same days, so a holiday whose date
+  moves, such as Easter, needs its dates updating each year.
 
 ## Movie match
 

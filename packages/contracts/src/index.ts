@@ -154,8 +154,11 @@ export type {
 } from "./presentation.ts";
 
 export {
+  describeMonthDayWindow,
   describeRuleWindow,
+  isMonthDayWindowActive,
   isRuleActiveOn,
+  monthDaySchema,
   RULE_TRIGGER_LABELS,
   RULE_TRIGGER_NOTES,
   RULE_TRIGGER_CADENCE,
@@ -165,6 +168,24 @@ export {
   runsInNightlyBatch,
 } from "./rule-schedule.ts";
 export type { RuleSchedule, RuleTrigger } from "./rule-schedule.ts";
+export {
+  activeSeasons,
+  CUSTOM_SEASON_KEY,
+  customSeasonSchema,
+  resolveSeasons,
+  SEASON_PRESETS,
+  seasonKeywordSchema,
+  seasonOverrideSchema,
+  seasonsConfigIssues,
+} from "./seasons.ts";
+export type {
+  CustomSeason,
+  ResolvedSeason,
+  SeasonKeyword,
+  SeasonOverride,
+  SeasonPreset,
+  SeasonsConfig,
+} from "./seasons.ts";
 
 export {
   DEFAULT_REGISTRY_URL,
@@ -257,6 +278,7 @@ export {
   bywJobConfigSchema,
   wtylJobConfigSchema,
   pibuJobConfigSchema,
+  seasonCollectionsJobConfigSchema,
   collectionArtJobConfigSchema,
   collectionsSweepJobConfigSchema,
   commonJobConfigSchema,
@@ -275,6 +297,7 @@ export type {
   BywJobConfig,
   WtylJobConfig,
   PibuJobConfig,
+  SeasonCollectionsJobConfig,
   CollectionArtJobConfig,
   CollectionsSweepJobConfig,
   CommonJobConfig,
@@ -296,6 +319,7 @@ export {
   BYW_DEFAULTS,
   WTYL_DEFAULTS,
   PIBU_DEFAULTS,
+  SEASON_DEFAULTS,
   commandsWithFields,
   DIGEST_DEFAULTS,
   fieldsFor,
@@ -406,5 +430,5 @@ export { DEFAULT_UI_SCALE, isUiScale, UI_SCALES } from "./ui-scale.ts";
 export type { UiScale } from "./ui-scale.ts";
 export * from "./download-clients.ts";
 export { NATIVE_APP, isLoopbackAddress, nativeConnectLink } from "./native-apps.ts";
-export { SYSTEM_COLLECTION_LABELS } from "./system-labels.ts";
+export { isSystemCollectionLabel, SYSTEM_COLLECTION_LABELS } from "./system-labels.ts";
 export { parseLogLine, stampLog } from "./run-log.ts";

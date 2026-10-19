@@ -58,6 +58,16 @@ export function ruleRowTitle(title: string, ruleId: string): string {
   return marked(title, `rule:${ruleId}`);
 }
 
+/**
+ * `title` made unique to one season, for a Season Collections row. Its
+ * "Christmas" would otherwise pool its films with a `seasonal` rule's
+ * "Christmas" in the same library, and taking the row down out of season
+ * would empty the rule's collection with it.
+ */
+export function seasonRowTitle(title: string, seasonKey: string): string {
+  return marked(title, `season:${seasonKey}`);
+}
+
 /** A title as people read it: the per-person marks removed. */
 export function displayTitle(title: string): string {
   return title.replace(MARKS, "");

@@ -172,9 +172,14 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
   {
     slug: "seasonal-picks",
     name: "Halloween Picks",
-    description: "TMDb keywords plus release month, for the shelf that only makes sense in October.",
+    description: "Films TMDb files under Halloween, on the shelf through October and gone in November.",
     type: "seasonal",
     config: {
+      // The seasonal type builds every holiday it knows; this rule is the
+      // Halloween one, and only in October — it used to sit on Home all year
+      // with a Christmas and a Valentine's row beside it.
+      includeValues: ["Halloween"],
+      schedule: { activeFrom: "10-01", activeTo: "10-31" },
       pinToHomepage: true,
       pinRotationCount: 10,
       pinMinItems: 3,

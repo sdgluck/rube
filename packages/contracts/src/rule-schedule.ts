@@ -85,6 +85,9 @@ export const RULE_RUN_TRIGGER_LABELS: Record<string, string> = {
 /** `MM-DD`. Year-less on purpose: a season recurs, a date doesn't. */
 const MONTH_DAY = /^(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/;
 
+/** One end of a yearly window. Season collections use the same spelling as a rule's window. */
+export const monthDaySchema = z.string().regex(MONTH_DAY, "Use MM-DD");
+
 export const ruleScheduleSchema = z
   .object({
     /**
@@ -97,8 +100,8 @@ export const ruleScheduleSchema = z
     cron: z.string().trim().min(1).optional(),
     /** Skip this rule in the nightly `generate` batch. Only meaningful with `cron`. */
     excludeFromBatch: z.boolean().optional(),
-    activeFrom: z.string().regex(MONTH_DAY, "Use MM-DD").optional(),
-    activeTo: z.string().regex(MONTH_DAY, "Use MM-DD").optional(),
+    activeFrom: monthDaySchema.optional(),
+    activeTo: monthDaySchema.optional(),
     triggers: z.array(z.enum(RULE_TRIGGERS)).optional(),
     /**
      * Rule ids this rule runs after, whenever one of them runs outside the
@@ -159,26 +162,29 @@ function todayOrdinal(date: Date, timezone?: string): number {
 }
 
 /**
- * Is the rule inside its calendar window on this date?
+ * Is `date` inside the yearly window `from` → `to`?
  *
  * A window whose end is before its start wraps the year end, which is the case
  * that matters: `12-01` → `01-05` is Christmas, and reading it as an empty
- * range would silently disable the rule for the one month it exists for.
+ * range would silently disable it for the one month it exists for.
  *
- * A rule with no window is always active.
- *
- * Evaluated in `timezone` for the same reason the cron is: a one-day window
+ * Evaluated in `timezone` for the same reason a cron is: a one-day window
  * like `10-31` → `10-31` read off a UTC container is Halloween somewhere else,
- * and the rule turns itself on and off eight hours from when it should.
+ * and the window turns itself on and off eight hours from when it should.
  */
-export function isRuleActiveOn(schedule: RuleSchedule | undefined, date: Date, timezone?: string): boolean {
-  if (!schedule?.activeFrom || !schedule.activeTo) return true;
-  const from = monthDayOrdinal(schedule.activeFrom);
-  const to = monthDayOrdinal(schedule.activeTo);
+export function isMonthDayWindowActive(from: string, to: string, date: Date, timezone?: string): boolean {
+  const start = monthDayOrdinal(from);
+  const end = monthDayOrdinal(to);
   const today = todayOrdinal(date, timezone);
   // Inclusive at both ends: a window of `10-31` → `10-31` is Halloween itself,
   // and an exclusive end would make it empty.
-  return from <= to ? today >= from && today <= to : today >= from || today <= to;
+  return start <= end ? today >= start && today <= end : today >= start || today <= end;
+}
+
+/** Is the rule inside its calendar window on this date? A rule with no window is always active. */
+export function isRuleActiveOn(schedule: RuleSchedule | undefined, date: Date, timezone?: string): boolean {
+  if (!schedule?.activeFrom || !schedule.activeTo) return true;
+  return isMonthDayWindowActive(schedule.activeFrom, schedule.activeTo, date, timezone);
 }
 
 const MONTHS = [
@@ -196,14 +202,19 @@ const MONTHS = [
   "December",
 ];
 
-/** "1 October – 5 November", for the rule list and the wizard's summary. */
-export function describeRuleWindow(schedule: RuleSchedule | undefined): string | null {
-  if (!schedule?.activeFrom || !schedule.activeTo) return null;
+/** "1 October – 5 November". */
+export function describeMonthDayWindow(from: string, to: string): string {
   const say = (value: string) => {
     const [month, day] = value.split("-").map(Number) as [number, number];
     return `${day} ${MONTHS[month - 1]}`;
   };
-  return `${say(schedule.activeFrom)} – ${say(schedule.activeTo)}`;
+  return `${say(from)} – ${say(to)}`;
+}
+
+/** The rule's window for the rule list and the wizard's summary. */
+export function describeRuleWindow(schedule: RuleSchedule | undefined): string | null {
+  if (!schedule?.activeFrom || !schedule.activeTo) return null;
+  return describeMonthDayWindow(schedule.activeFrom, schedule.activeTo);
 }
 
 /**

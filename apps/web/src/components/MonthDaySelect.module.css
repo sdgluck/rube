@@ -1,0 +1,4 @@
+.monthDay {
+  display: inline-flex;
+  gap: 0.4rem;
+}
