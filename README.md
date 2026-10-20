@@ -29,6 +29,8 @@ and notifications on a schedule.
   loved and haven't watched in years. [More](#watch-it-again)
 - **New for you**: one collection per user per library of what was added
   lately, in the order they're likeliest to enjoy it. [More](#new-for-you)
+- **More from…**: per user, a collection of the unseen films of each director
+  or lead actor whose work they keep finishing. [More](#more-from)
 - **Season collections**: a Christmas, Halloween or other holiday collection
   in each library while the holiday is on. [More](#season-collections)
 - **Leaving soon**: a collection in each library of what cleanup is about to
@@ -384,6 +386,28 @@ morning and uses no AI.
   for me** in the portal removes it.
 
 It needs Personalized Home Screens and recorded watch history.
+
+## More from…
+
+Each user gets up to **Rows per person** (2) collections in each film
+library, such as "More from Denis Villeneuve", for the directors and lead
+actors whose films they keep finishing. Each holds that person's films in
+the library they haven't seen. Install it from **Jobs**. It runs every
+morning and uses no AI.
+
+- A name counts once the user has finished **Films seen to count** (2) of
+  their films. Recent viewing counts for more than viewing years ago.
+- Actors count only when billed in the top three, so a familiar face in a
+  small part doesn't. **Include lead actors** off leaves directors only.
+- A name with fewer than **Fewest items** unseen films in the library is
+  skipped for the next one down.
+- As favourites change, old collections are removed and new ones made. A
+  collection for a name still on top is updated in place. **Not for me** on
+  any of them in the portal removes them all.
+
+It needs Personalized Home Screens, a TMDb API key and recorded watch
+history. Each run asks TMDb for the filmography of every name in play, once
+per name however many users share it.
 
 ## Season collections
 

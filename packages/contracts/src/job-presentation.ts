@@ -55,6 +55,7 @@ export const FEATURE_IDS = [
   "pick-it-back-up",
   "finish-the-franchise",
   "requests-arrived",
+  "more-from",
   "new-for-you",
   "watch-it-again",
   "season-collections",
@@ -275,6 +276,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     description:
       "Builds a \u201cNew For You\u201d collection in each library for each Plex user, of what was added lately, in the order they're likeliest to enjoy it.",
   },
+  "more-from": {
+    kind: "feature",
+    requires: "Personalized Home Screens, a TMDb API key, and recorded watch history.",
+    description:
+      "Builds \u201cMore from \u2026\u201d collections in each film library for each Plex user \u2014 the unseen films of the directors and lead actors whose work they keep finishing.",
+  },
   "requests-arrived": {
     kind: "feature",
     requires: "Personalized Home Screens, Overseerr, and recorded watch history.",
@@ -353,6 +360,11 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "hidden",
     description:
       "Tears down New For You: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
+  },
+  "more-from-remove": {
+    kind: "hidden",
+    description:
+      "Tears down More From…: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
   },
   "requests-remove": {
     kind: "hidden",

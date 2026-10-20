@@ -9,6 +9,7 @@ import SeasonCollectionsJob from "./SeasonCollections";
 import LeavingSoonJob from "./LeavingSoon";
 import FinishTheFranchiseJob from "./FinishTheFranchise";
 import RequestsArrivedJob from "./RequestsArrived";
+import MoreFromJob from "./MoreFrom";
 import NewForYouJob from "./NewForYou";
 import WatchItAgainJob from "./WatchItAgain";
 
@@ -24,6 +25,7 @@ const registry: Record<string, ComponentType<JobPageProps>> = {
   "leaving-soon": LeavingSoonJob,
   "finish-the-franchise": FinishTheFranchiseJob,
   "requests-arrived": RequestsArrivedJob,
+  "more-from": MoreFromJob,
   "new-for-you": NewForYouJob,
   "watch-it-again": WatchItAgainJob,
 };

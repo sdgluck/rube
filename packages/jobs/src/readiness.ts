@@ -130,6 +130,16 @@ export function createReadiness(
         });
         break;
       }
+      case "more-from":
+        items.push(personalization(), watchHistory(), {
+          id: "tmdb",
+          label: "TMDb API key set",
+          met: Boolean(getConfig("global_tmdb_api_key")),
+          detail: "Finds who directed and starred in each film, and their other films.",
+          href: "/settings/databases/tmdb",
+          severity: "required",
+        });
+        break;
       case "requests-arrived":
         items.push(
           {

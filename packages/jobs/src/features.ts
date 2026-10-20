@@ -89,6 +89,15 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     requiresPersonalizedSharing: true,
   },
   {
+    id: "more-from",
+    name: "More From\u2026",
+    command: "more-from",
+    // Daily. Clear of every schedule preset's night chain.
+    defaultSchedule: "35 7 * * *",
+    defaultConfig: {},
+    requiresPersonalizedSharing: true,
+  },
+  {
     id: "requests-arrived",
     name: "Your Requests Are Here",
     command: "requests-arrived",
@@ -159,6 +168,7 @@ const TEARDOWN_JOBS: Record<string, CommandName> = {
   "leaving-soon": "leaving-remove",
   "finish-the-franchise": "franchise-remove",
   "requests-arrived": "requests-remove",
+  "more-from": "more-from-remove",
   "new-for-you": "new-for-you-remove",
   "watch-it-again": "watch-again-remove",
 };

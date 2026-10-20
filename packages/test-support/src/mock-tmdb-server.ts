@@ -1,9 +1,10 @@
 /**
- * A stateful TMDb over real HTTP, for jobs that read film details and
- * collections (franchises).
+ * A stateful TMDb over real HTTP, for jobs that read film details,
+ * collections (franchises) and filmographies.
  *
- * Small on purpose: `/movie/:id` and `/collection/:id`, the two endpoints a
- * franchise walk needs, shaped like TMDb's v3 responses. Point the client at
+ * Small on purpose: `/movie/:id` (with credits), `/collection/:id` and
+ * `/person/:id/movie_credits` — what the franchise and filmography rows
+ * need — shaped like TMDb's v3 responses. Point the client at
  * `origin` through `TmdbConfig.baseUrl`. Every request lands in `journal`, so a
  * test can tell a cache hit from a refetch.
  */
@@ -16,6 +17,20 @@ export interface MockTmdbMovie {
   /** The franchise, by collection id. */
   collectionId?: number;
   keywords?: number[];
+  /** Credited directors. */
+  directors?: Array<{ id: number; name: string }>;
+  /** Cast, in billing order. */
+  cast?: Array<{ id: number; name: string }>;
+}
+
+/** A person's filmography, as `/person/:id/movie_credits` serves it. */
+export interface MockTmdbPerson {
+  id: number;
+  name: string;
+  /** Films they directed, by id; titles and dates come from `movies`. */
+  directed?: number[];
+  /** Films they acted in. */
+  actedIn?: number[];
 }
 
 export interface MockTmdbCollection {
@@ -29,16 +44,18 @@ export interface MockTmdb {
   origin: string;
   movies: Map<number, MockTmdbMovie>;
   collections: Map<number, MockTmdbCollection>;
+  people: Map<number, MockTmdbPerson>;
   /** Every request path, in order. */
   journal: string[];
   close(): Promise<void>;
 }
 
 export async function startMockTmdb(
-  seed: { movies?: MockTmdbMovie[]; collections?: MockTmdbCollection[] } = {},
+  seed: { movies?: MockTmdbMovie[]; collections?: MockTmdbCollection[]; people?: MockTmdbPerson[] } = {},
 ): Promise<MockTmdb> {
   const movies = new Map((seed.movies ?? []).map((m) => [m.id, m]));
   const collections = new Map((seed.collections ?? []).map((c) => [c.id, c]));
+  const people = new Map((seed.people ?? []).map((p) => [p.id, p]));
   const journal: string[] = [];
 
   const server: Server = createServer((req, res) => {
@@ -65,6 +82,26 @@ export async function startMockTmdb(
         production_countries: [],
         keywords: { keywords: (m.keywords ?? []).map((id) => ({ id, name: `keyword ${id}` })) },
         belongs_to_collection: collection ? { id: collection.id, name: collection.name } : null,
+        credits: {
+          cast: (m.cast ?? []).map((c, order) => ({ ...c, order })),
+          crew: (m.directors ?? []).map((d) => ({ ...d, job: "Director" })),
+        },
+      });
+    }
+
+    const person = url.pathname.match(/^\/person\/(\d+)\/movie_credits$/);
+    if (person) {
+      const p = people.get(Number(person[1]));
+      if (!p) return notFound();
+      const film = (id: number) => ({
+        id,
+        title: movies.get(id)?.title ?? `Movie ${id}`,
+        release_date: movies.get(id)?.releaseDate ?? "",
+      });
+      return send(200, {
+        id: p.id,
+        cast: (p.actedIn ?? []).map((id) => ({ ...film(id), character: "Someone" })),
+        crew: (p.directed ?? []).map((id) => ({ ...film(id), job: "Director", department: "Directing" })),
       });
     }
 
@@ -93,6 +130,7 @@ export async function startMockTmdb(
     origin: `http://127.0.0.1:${port}`,
     movies,
     collections,
+    people,
     journal,
     close: () => new Promise((done) => server.close(() => done())),
   };

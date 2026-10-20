@@ -255,6 +255,7 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     schedule: "",
     enabled: 1,
   },
+  { id: "more-from-remove", name: "Remove More From\u2026", command: "more-from-remove", schedule: "", enabled: 1 },
   { id: "new-for-you-remove", name: "Remove New For You", command: "new-for-you-remove", schedule: "", enabled: 1 },
   { id: "watch-again-remove", name: "Remove Watch It Again", command: "watch-again-remove", schedule: "", enabled: 1 },
   {

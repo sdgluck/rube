@@ -180,6 +180,24 @@ export const newForYouJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type NewForYouJobConfig = z.infer<typeof newForYouJobConfigSchema>;
 
+/**
+ * More From…: per person, a row for each of the directors and lead actors
+ * whose films they keep finishing, of that person's films they haven't seen.
+ */
+export const moreFromJobConfigSchema = commonJobConfigSchema.extend({
+  users: z.array(z.string()).optional(),
+  /** How many names get a row, per person. */
+  people: z.number().int().min(1).max(5).optional(),
+  /** Films of theirs finished before a name counts. */
+  minSeen: z.number().int().min(2).max(10).optional(),
+  minItems: z.number().int().min(1).max(20).optional(),
+  maxItems: z.number().int().min(5).max(50).optional(),
+  pinToHomepage: z.boolean().optional(),
+  /** Count lead actors as well as directors. */
+  includeActors: z.boolean().optional(),
+});
+export type MoreFromJobConfig = z.infer<typeof moreFromJobConfigSchema>;
+
 export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
   /**
    * Report what would be deleted and stop. Off by default — the job's own log
@@ -267,6 +285,8 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   "franchise-remove": franchiseJobConfigSchema,
   "requests-arrived": requestsJobConfigSchema,
   "requests-remove": requestsJobConfigSchema,
+  "more-from": moreFromJobConfigSchema,
+  "more-from-remove": moreFromJobConfigSchema,
   "new-for-you": newForYouJobConfigSchema,
   "new-for-you-remove": newForYouJobConfigSchema,
   "watch-it-again": watchAgainJobConfigSchema,
@@ -299,7 +319,12 @@ export function configIssues(command: string, config: Record<string, unknown>): 
       issues.push(`Minimum items (${min}) can't be more than maximum items (${max})`);
     }
   }
-  if (command === "watch-it-again" || command === "new-for-you" || command === "leaving-soon") {
+  if (
+    command === "watch-it-again" ||
+    command === "new-for-you" ||
+    command === "more-from" ||
+    command === "leaving-soon"
+  ) {
     const min = config.minItems;
     const max = config.maxItems;
     if (typeof min === "number" && typeof max === "number" && min > max) {

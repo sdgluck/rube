@@ -82,6 +82,15 @@ export const NEW_FOR_YOU_DEFAULTS = {
   pinToHomepage: true,
 } as const;
 
+export const MORE_FROM_DEFAULTS = {
+  people: 2,
+  minSeen: 2,
+  minItems: 3,
+  maxItems: 15,
+  pinToHomepage: true,
+  includeActors: true,
+} as const;
+
 export const DIGEST_DEFAULTS = {
   frequency: "weekly",
   minAddedItems: 1,
@@ -517,6 +526,57 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       label: "Most items",
       control: { kind: "number", min: 5, max: 50 },
       default: NEW_FOR_YOU_DEFAULTS.maxItems,
+      advanced: true,
+    },
+  ],
+  "more-from": [
+    {
+      key: "users",
+      label: "Users",
+      help: "Leave empty for everyone on the Users page.",
+      control: { kind: "users", source: "plex-users" },
+    },
+    {
+      key: "people",
+      label: "Rows per person",
+      help: "How many directors or actors each person gets a row for.",
+      control: { kind: "number", min: 1, max: 5, unit: "rows" },
+      default: MORE_FROM_DEFAULTS.people,
+    },
+    {
+      key: "includeActors",
+      label: "Include lead actors",
+      help: "Count the top three billed actors as well as directors.",
+      control: { kind: "boolean" },
+      default: MORE_FROM_DEFAULTS.includeActors,
+    },
+    {
+      key: "pinToHomepage",
+      label: "Pin to home screen",
+      control: { kind: "boolean" },
+      default: MORE_FROM_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "minSeen",
+      label: "Films seen to count",
+      help: "How many of someone's films a person has to finish before that name gets a row.",
+      control: { kind: "number", min: 2, max: 10, unit: "films" },
+      default: MORE_FROM_DEFAULTS.minSeen,
+      advanced: true,
+    },
+    {
+      key: "minItems",
+      label: "Fewest items",
+      help: "A name with fewer unseen films in the library than this is skipped for the next one.",
+      control: { kind: "number", min: 1, max: 20 },
+      default: MORE_FROM_DEFAULTS.minItems,
+      advanced: true,
+    },
+    {
+      key: "maxItems",
+      label: "Most items",
+      control: { kind: "number", min: 5, max: 50 },
+      default: MORE_FROM_DEFAULTS.maxItems,
       advanced: true,
     },
   ],

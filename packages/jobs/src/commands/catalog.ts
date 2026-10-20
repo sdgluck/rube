@@ -119,6 +119,12 @@ export const COMMANDS = {
     lane: "default",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
+  // Local queries, cached TMDb details, and one filmography fetch per person in play.
+  "more-from": {
+    load: () => import("./more-from/index.ts"),
+    lane: "default",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
   // A few paged Overseerr reads and local queries.
   "requests-arrived": {
     load: () => import("./requests-arrived/index.ts"),
@@ -164,6 +170,11 @@ export const COMMANDS = {
   },
   "requests-remove": {
     load: () => import("./requests-remove.ts"),
+    lane: "interactive",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
+  "more-from-remove": {
+    load: () => import("./more-from-remove.ts"),
     lane: "interactive",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
