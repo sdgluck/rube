@@ -26,38 +26,33 @@
  */
 import { PIBU_DEFAULTS } from "@tinkerbell/contracts";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { displayTitle, errorMessage, personalRowTitle } from "@tinkerbell/core";
+import { displayTitle, errorMessage } from "@tinkerbell/core";
 import type { JobContext, PibuJobConfig } from "@tinkerbell/core";
-import { createPlexClient, type PlexClient, type PlexLeaf, type PlexSection } from "@tinkerbell/plex";
-import { asc, eq, inArray, and } from "drizzle-orm";
-import { mediaItems, plexUsers } from "@tinkerbell/db";
+import { createPlexClient, type PlexLeaf, type PlexSection } from "@tinkerbell/plex";
+import { eq, inArray, and } from "drizzle-orm";
+import { mediaItems } from "@tinkerbell/db";
 import { plexConnection, resolveTargetSections } from "../ai-collection-shared.ts";
-import { personalRowLabels, personalRowPin } from "../../personalize/personal-row.ts";
+import {
+  createPersonalRowWriter,
+  noUsersError,
+  ownRow,
+  targetUsers,
+  type PersonalRow,
+} from "../../personalize/personal-row-writer.ts";
 import { historyUserIds } from "../we-think-youd-like/profile.ts";
 import { episodeCode, pickUpPoint, pickUpSummary, stalledShows, type PickUpPoint } from "./stalled.ts";
 
 export const PIBU_LABEL = "PickItBackUp";
 export const PIBU_ROW_NAME = "Pick It Back Up";
 
-interface TargetUser {
-  userId: number;
-  username: string;
-  name: string;
-  isOwner: boolean;
-}
-
 interface SectionState {
   section: PlexSection;
-  rows: Array<{ ratingKey: string; title: string; labels: string[] }>;
+  rows: PersonalRow[];
 }
 
 /** This person's row in a section's listing, if they have one. */
 export function ownPibuRow<T extends { labels: string[] }>(rows: T[], username: string): T | undefined {
-  return rows.find(
-    (row) =>
-      row.labels.some((l) => l.toLowerCase() === PIBU_LABEL.toLowerCase()) &&
-      row.labels.some((l) => l === `User:${username}`),
-  );
+  return ownRow(rows, PIBU_LABEL, username);
 }
 
 export function createPickItBackUpCommand(
@@ -67,24 +62,6 @@ export function createPickItBackUpCommand(
   const { plexHealthCallback } = clients;
   const { getConfig } = config;
   const { getOptedInPreferencesByUsername } = preferences;
-  const { upsertCollectionByKey, forgetCollections } = collections;
-
-  function targetUsers(allowlist: string[]): TargetUser[] {
-    const all = db
-      .select({
-        userId: plexUsers.userId,
-        username: plexUsers.username,
-        name: plexUsers.name,
-        isOwner: plexUsers.isOwner,
-      })
-      .from(plexUsers)
-      .orderBy(asc(plexUsers.username))
-      .all()
-      .map((u) => ({ userId: u.userId, username: u.username, name: u.name || u.username, isOwner: u.isOwner === 1 }));
-    if (allowlist.length === 0) return all;
-    const wanted = new Set(allowlist.map((u) => u.toLowerCase()));
-    return all.filter((u) => wanted.has(u.username.toLowerCase()) || wanted.has(u.name.toLowerCase()));
-  }
 
   /** The index's shows among `keys`: which library each is in, and its title. */
   function showsByKey(keys: string[]): Map<string, { title: string; sectionId: string }> {
@@ -99,61 +76,6 @@ export function createPickItBackUpCommand(
       }
     }
     return out;
-  }
-
-  async function deleteRow(client: PlexClient, ctx: JobContext, ratingKey: string, why: string): Promise<void> {
-    ctx.log(`Deleting "${PIBU_ROW_NAME}" (${ratingKey}) — ${why}.`);
-    await client.deleteItem(ratingKey);
-    forgetCollections([ratingKey]);
-  }
-
-  /** Make the person's row hold exactly `ratingKeys`, editing it in place if it exists. */
-  async function writeRow(
-    client: PlexClient,
-    ctx: JobContext,
-    machineId: string,
-    state: SectionState,
-    user: TargetUser,
-    ratingKeys: string[],
-    summary: string,
-    pin: boolean,
-  ): Promise<void> {
-    const { section } = state;
-    const existing = ownPibuRow(state.rows, user.username);
-    let collectionKey: string;
-    if (existing) {
-      collectionKey = existing.ratingKey;
-      const current = (await client.getCollectionChildren(collectionKey, { smart: false })).map((i) => i.ratingKey);
-      const wanted = new Set(ratingKeys);
-      const have = new Set(current);
-      const add = ratingKeys.filter((k) => !have.has(k));
-      const remove = current.filter((k) => !wanted.has(k));
-      await client.addCollectionItems(collectionKey, machineId, add);
-      for (const key of remove) await client.removeCollectionItem(collectionKey, key);
-      await client.updateCollection(collectionKey, { summary });
-      ctx.log(`Updated "${PIBU_ROW_NAME}" for ${user.name}: ${add.length} added, ${remove.length} removed.`);
-    } else {
-      const created = await client.createCollectionWithLabel(
-        section.key,
-        section.type,
-        machineId,
-        personalRowTitle(PIBU_ROW_NAME, user.username),
-        ratingKeys,
-        personalRowLabels(user.username, PIBU_LABEL),
-      );
-      if (!created) return;
-      collectionKey = created;
-      await client.updateCollection(collectionKey, { summary });
-      // Pinned on creation only, so a person who moved or hid it isn't overruled
-      // every night. A row removed while empty is pinned again when it returns.
-      if (pin) await client.pinToHomepage(section.key, collectionKey, personalRowPin(user.isOwner));
-      ctx.log(`Created "${PIBU_ROW_NAME}" for ${user.name} (${ratingKeys.length} shows).`);
-    }
-    try {
-      await upsertCollectionByKey(client, section, collectionKey);
-    } catch (err) {
-      ctx.log(`Failed to sync "${PIBU_ROW_NAME}" to local DB: ${errorMessage(err)}`);
-    }
   }
 
   async function run(ctx: JobContext, config: PibuJobConfig): Promise<void> {
@@ -171,14 +93,8 @@ export function createPickItBackUpCommand(
         `"Stopped after" (${stallDays} days) has to be shorter than "Given up after" (${maxStallDays} days).`,
       );
     }
-    const users = targetUsers(allowlist);
-    if (users.length === 0) {
-      throw new Error(
-        allowlist.length > 0
-          ? `No matching users found for allowlist: ${allowlist.join(", ")}`
-          : "No users synced yet — run Sync users, or refresh the Users page.",
-      );
-    }
+    const users = targetUsers(db, allowlist);
+    if (users.length === 0) throw noUsersError(allowlist);
     const retention = getConfig("playback_retention_days") ?? 0;
     if (retention > 0 && retention < maxStallDays) {
       ctx.log(
@@ -190,6 +106,14 @@ export function createPickItBackUpCommand(
     ctx.log(`tinkerbell pick-it-back-up`);
     ctx.log(`Server: ${url}`);
     const machineId = (await client.getIdentity()).machineIdentifier;
+    const rows = createPersonalRowWriter({
+      client,
+      ctx,
+      machineId,
+      label: PIBU_LABEL,
+      rowName: PIBU_ROW_NAME,
+      collections,
+    });
     ctx.log(`Users: ${users.map((u) => u.name).join(", ")}`);
     ctx.log(
       `Stopped: not played for ${stallDays}–${maxStallDays} days, with at least ${minEpisodes} episode(s) finished.`,
@@ -200,11 +124,9 @@ export function createPickItBackUpCommand(
     const sections = new Map<string, SectionState>();
     for (const section of await resolveTargetSections(client, getConfig, config.sections)) {
       if (section.type !== "show") continue;
-      const rows = (await client.getCollectionsWithLabels(section.key, { label: PIBU_LABEL })).filter((row) =>
-        row.labels.some((l) => l.toLowerCase() === PIBU_LABEL.toLowerCase()),
-      );
-      sections.set(section.key, { section, rows });
-      ctx.log(`"${section.title}": ${rows.length} existing row(s).`);
+      const existing = await rows.listRows(section.key);
+      sections.set(section.key, { section, rows: existing });
+      ctx.log(`"${section.title}": ${existing.length} existing row(s).`);
     }
     if (sections.size === 0) {
       ctx.log("No TV library to build in.");
@@ -237,7 +159,7 @@ export function createPickItBackUpCommand(
       if (declined) {
         for (const state of sections.values()) {
           const existing = ownPibuRow(state.rows, user.username);
-          if (existing) await deleteRow(client, ctx, existing.ratingKey, `${user.name} said it wasn't for them`);
+          if (existing) await rows.deleteRow(existing.ratingKey, `${user.name} said it wasn't for them`);
         }
         continue;
       }
@@ -267,7 +189,7 @@ export function createPickItBackUpCommand(
         const where = `${user.name} — "${state.section.title}"`;
         if (mine.length === 0) {
           ctx.log(`${where}: nothing to pick back up.`);
-          if (existing) await deleteRow(client, ctx, existing.ratingKey, "nothing left in it");
+          if (existing) await rows.deleteRow(existing.ratingKey, "nothing left in it");
           continue;
         }
         ctx.log(
@@ -278,11 +200,9 @@ export function createPickItBackUpCommand(
             )
             .join("; ")}.`,
         );
-        await writeRow(
-          client,
-          ctx,
-          machineId,
-          state,
+        await rows.writeRow(
+          state.section,
+          state.rows,
           user,
           mine.map((p) => p.showKey),
           pickUpSummary(mine),
@@ -293,16 +213,11 @@ export function createPickItBackUpCommand(
 
     // Rows for people no longer on the Users page. Not with an allowlist set:
     // narrowing it decides who gets a new row, not whose to delete.
-    if (allowlist.length === 0) {
-      const known = new Set(users.map((u) => `User:${u.username}`));
-      for (const state of sections.values()) {
-        for (const row of state.rows) {
-          const owner = row.labels.find((l) => l.startsWith("User:"));
-          if (owner && !known.has(owner))
-            await deleteRow(client, ctx, row.ratingKey, `${owner.slice(5)} is no longer a user`);
-        }
-      }
-    }
+    if (allowlist.length === 0)
+      await rows.sweepOrphans(
+        [...sections.values()].map((s) => s.rows),
+        users,
+      );
 
     ctx.progress(users.length, users.length, "Done");
     ctx.log("All done!");
