@@ -68,6 +68,14 @@ export function seasonRowTitle(title: string, seasonKey: string): string {
   return marked(title, `season:${seasonKey}`);
 }
 
+/**
+ * `title` made unique to one feature job, for a shared row with a plain name
+ * — Leaving Soon's "Leaving Soon" — that someone may well have made by hand.
+ */
+export function jobRowTitle(title: string, jobId: string): string {
+  return marked(title, `job:${jobId}`);
+}
+
 /** A title as people read it: the per-person marks removed. */
 export function displayTitle(title: string): string {
   return title.replace(MARKS, "");

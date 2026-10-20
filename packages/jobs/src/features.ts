@@ -74,6 +74,15 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     // A row per person needs it, and readiness says so for that mode.
   },
   {
+    id: "leaving-soon",
+    name: "Leaving Soon",
+    command: "leaving-soon",
+    // Daily, after the night's cleanup has advanced the streaks and removed
+    // what was due. Clear of every schedule preset's night chain.
+    defaultSchedule: "20 7 * * *",
+    defaultConfig: {},
+  },
+  {
     id: "shuffle",
     name: "Shuffle Hubs",
     command: "shuffle",
@@ -109,6 +118,7 @@ const TEARDOWN_JOBS: Record<string, CommandName> = {
   "we-think-youd-like": "wtyl-remove",
   "pick-it-back-up": "pibu-remove",
   "season-collections": "season-remove",
+  "leaving-soon": "leaving-remove",
 };
 
 function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {

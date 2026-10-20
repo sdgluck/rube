@@ -6,6 +6,7 @@ import BecauseYouWatchedJob from "./BecauseYouWatched";
 import WeThinkYoudLikeJob from "./WeThinkYoudLike";
 import PickItBackUpJob from "./PickItBackUp";
 import SeasonCollectionsJob from "./SeasonCollections";
+import LeavingSoonJob from "./LeavingSoon";
 
 const registry: Record<string, ComponentType<JobPageProps>> = {
   generate: GenerateJob,
@@ -16,6 +17,7 @@ const registry: Record<string, ComponentType<JobPageProps>> = {
   "we-think-youd-like": WeThinkYoudLikeJob,
   "pick-it-back-up": PickItBackUpJob,
   "season-collections": SeasonCollectionsJob,
+  "leaving-soon": LeavingSoonJob,
 };
 
 export function resolveJobComponent(command: string): ComponentType<JobPageProps> {

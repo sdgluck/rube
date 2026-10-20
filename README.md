@@ -23,6 +23,8 @@ and notifications on a schedule.
   they started and stopped watching. [More](#pick-it-back-up)
 - **Season collections**: a Christmas, Halloween or other holiday collection
   in each library while the holiday is on. [More](#season-collections)
+- **Leaving soon**: a collection in each library of what cleanup is about to
+  remove. [More](#leaving-soon)
 - **Personalized home screens**: each Plex user sets their own tastes.
   [More](#personalized-home-screens)
 - **Movie match**: a group swipes through a movie library together until
@@ -323,6 +325,26 @@ Limits:
   the portal removes it for that user.
 - A date window repeats every year on the same days, so a holiday whose date
   moves, such as Easter, needs its dates updating each year.
+
+## Leaving soon
+
+Each library gets a "Leaving Soon" collection on everyone's home screen,
+holding the titles cleanup rules are about to remove — a last chance to watch
+them. Install it from **Jobs**. It runs every morning, after the night's
+cleanup.
+
+- It shows exactly what the Cleanup page says will go: titles from rules that
+  delete or unmonitor, which aren't held, protected or waiting for approval.
+  The portal's Leaving soon tab and the digest use the same list.
+- **Look ahead** (6 runs) sets how far ahead it looks. A rule's streak
+  advances once a day, so that is about a week. Soonest first.
+- The collection is updated in place. Titles leave it once they are removed
+  or spared, and it is taken down when nothing is leaving.
+- While cleanup is switched off, or the library index is too stale for
+  cleanup to act, nothing is leaving and there is no collection.
+
+Removing the feature deletes its collections only. What cleanup removes is
+unchanged.
 
 ## Movie match
 

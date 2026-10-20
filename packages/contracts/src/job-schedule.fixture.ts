@@ -45,6 +45,7 @@ const FEATURES: Array<[id: string, lane: ScheduleLane, timeoutMs: number, schedu
   ["we-think-youd-like", "default", 30 * MINUTE_MS, "0 3 * * 0"],
   ["pick-it-back-up", "default", 30 * MINUTE_MS, "30 2 * * *"],
   ["season-collections", "default", HOUR_MS, "45 7 * * *"],
+  ["leaving-soon", "default", 30 * MINUTE_MS, "20 7 * * *"],
   ["shuffle", "default", 30 * MINUTE_MS, "*/30 * * * *"],
   ["overlays", "interactive", 2 * HOUR_MS, ""],
   ["digest", "default", 30 * MINUTE_MS, "0 9 * * MON"],

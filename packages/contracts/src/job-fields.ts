@@ -47,6 +47,13 @@ export const SEASON_DEFAULTS = {
   useAi: true,
 } as const;
 
+export const LEAVING_DEFAULTS = {
+  withinRuns: 6,
+  maxItems: 30,
+  minItems: 1,
+  pinToHomepage: true,
+} as const;
+
 export const DIGEST_DEFAULTS = {
   frequency: "weekly",
   minAddedItems: 1,
@@ -308,6 +315,36 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       label: "Most items",
       control: { kind: "number", min: 5, max: 100 },
       default: SEASON_DEFAULTS.maxItems,
+      advanced: true,
+    },
+  ],
+  "leaving-soon": [
+    {
+      key: "withinRuns",
+      label: "Look ahead",
+      help: "Include titles this many cleanup runs or fewer from being removed. A rule's streak advances once a day, so this is roughly days.",
+      control: { kind: "number", min: 0, max: 30, unit: "runs" },
+      default: LEAVING_DEFAULTS.withinRuns,
+    },
+    {
+      key: "pinToHomepage",
+      label: "Pin to home screen",
+      control: { kind: "boolean" },
+      default: LEAVING_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "minItems",
+      label: "Fewest items",
+      help: "A library with fewer titles leaving than this gets no row.",
+      control: { kind: "number", min: 1, max: 20 },
+      default: LEAVING_DEFAULTS.minItems,
+      advanced: true,
+    },
+    {
+      key: "maxItems",
+      label: "Most items",
+      control: { kind: "number", min: 5, max: 100 },
+      default: LEAVING_DEFAULTS.maxItems,
       advanced: true,
     },
   ],

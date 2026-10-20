@@ -25,9 +25,9 @@ export type ReadinessItem = {
 };
 
 export function createReadiness(
-  deps: Pick<Services, "backups" | "config" | "notifications" | "overlays" | "playback" | "preferences">,
+  deps: Pick<Services, "backups" | "cleanup" | "config" | "notifications" | "overlays" | "playback" | "preferences">,
 ) {
-  const { backups, config, notifications, overlays, playback, preferences } = deps;
+  const { backups, cleanup, config, notifications, overlays, playback, preferences } = deps;
   const { getConfig, getLlmConfig, getPersonalizedSharingStatus } = config;
 
   function plex(): ReadinessItem {
@@ -97,6 +97,18 @@ export function createReadiness(
       case "pick-it-back-up":
         items.push(personalization(), watchHistory());
         break;
+      case "leaving-soon": {
+        const refusal = cleanup.standingRefusal();
+        items.push({
+          id: "cleanup",
+          label: "Cleanup able to remove things",
+          met: refusal === null,
+          detail: refusal ? `Not right now: ${refusal}` : "Only titles a cleanup rule will really delete are shown.",
+          href: "/cleanup",
+          severity: "required",
+        });
+        break;
+      }
       case "season-collections":
         items.push({
           id: "tmdb",

@@ -54,6 +54,7 @@ export const FEATURE_IDS = [
   "we-think-youd-like",
   "pick-it-back-up",
   "season-collections",
+  "leaving-soon",
   "shuffle",
   "overlays",
   "digest",
@@ -258,6 +259,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     description:
       "Puts a collection for each holiday — Christmas, Halloween, Valentine's Day and any you add — in each library while it's on, and takes it down afterwards.",
   },
+  "leaving-soon": {
+    kind: "feature",
+    requires: "Cleanup switched on, with a rule that deletes or unmonitors.",
+    description:
+      "Puts a “Leaving Soon” collection in each library of the titles cleanup is about to remove, so people get a last chance to watch them.",
+  },
   shuffle: {
     kind: "feature",
     description: "Randomises the order of items in shuffled hub collections so the homescreen stays fresh.",
@@ -308,6 +315,10 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "hidden",
     description:
       "Tears down Season Collections: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
+  },
+  "leaving-remove": {
+    kind: "hidden",
+    description: "Tears down Leaving Soon: deletes its collections from Plex. The cleanup queue is unchanged.",
   },
   "personalize-enable": {
     kind: "hidden",

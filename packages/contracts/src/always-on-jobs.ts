@@ -20,6 +20,7 @@ export const ALWAYS_ON_JOB_IDS = [
   "generate",
   "healthcheck",
   "label",
+  "leaving-remove",
   "personalize-disable",
   "personalize-enable",
   "pibu-remove",

@@ -108,6 +108,19 @@ export const seasonCollectionsJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type SeasonCollectionsJobConfig = z.infer<typeof seasonCollectionsJobConfigSchema>;
 
+/**
+ * Leaving Soon: one row per library of what cleanup is about to delete. The
+ * queue decides what is leaving; this only decides how far ahead to look.
+ */
+export const leavingSoonJobConfigSchema = commonJobConfigSchema.extend({
+  /** Include items this many cleanup runs (days) or fewer from being removed. 0 = only what goes next. */
+  withinRuns: z.number().int().min(0).max(30).optional(),
+  maxItems: z.number().int().min(5).max(100).optional(),
+  minItems: z.number().int().min(1).max(20).optional(),
+  pinToHomepage: z.boolean().optional(),
+});
+export type LeavingSoonJobConfig = z.infer<typeof leavingSoonJobConfigSchema>;
+
 export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
   /**
    * Report what would be deleted and stop. Off by default — the job's own log
@@ -193,6 +206,8 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   "pibu-remove": pibuJobConfigSchema,
   "season-collections": seasonCollectionsJobConfigSchema,
   "season-remove": seasonCollectionsJobConfigSchema,
+  "leaving-soon": leavingSoonJobConfigSchema,
+  "leaving-remove": leavingSoonJobConfigSchema,
   "collections-sweep": collectionsSweepJobConfigSchema,
   "collection-art": collectionArtJobConfigSchema,
   overlays: overlaysJobConfigSchema,
@@ -211,6 +226,13 @@ export function configSchemaFor(command: string): z.ZodObject {
 export function configIssues(command: string, config: Record<string, unknown>): string[] {
   const issues: string[] = [];
   if (command === "because-you-watched" || command === "we-think-youd-like" || command === "season-collections") {
+    const min = config.minItems;
+    const max = config.maxItems;
+    if (typeof min === "number" && typeof max === "number" && min > max) {
+      issues.push(`Minimum items (${min}) can't be more than maximum items (${max})`);
+    }
+  }
+  if (command === "leaving-soon") {
     const min = config.minItems;
     const max = config.maxItems;
     if (typeof min === "number" && typeof max === "number" && min > max) {

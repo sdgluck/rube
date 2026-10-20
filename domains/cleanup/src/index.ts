@@ -529,6 +529,7 @@ export function createCleanup(deps: CleanupDeps) {
     sectionKeys: readonly string[] = [],
   ): Array<{
     ratingKey: string;
+    sectionId: string;
     title: string;
     runsRemaining: number;
   }> {
@@ -546,7 +547,7 @@ export function createCleanup(deps: CleanupDeps) {
           (!inScope || inScope.has(c.sectionId)),
       )
       .slice(0, limit)
-      .map((c) => ({ ratingKey: c.ratingKey, title: c.title, runsRemaining: c.runsRemaining }));
+      .map((c) => ({ ratingKey: c.ratingKey, sectionId: c.sectionId, title: c.title, runsRemaining: c.runsRemaining }));
   }
 
   /**

@@ -13,6 +13,7 @@ export const SYSTEM_COLLECTION_LABELS: readonly string[] = [
   "wethinkyoudlike",
   "pickitbackup",
   "seasoncollections",
+  "leavingsoon",
 ];
 
 /**
