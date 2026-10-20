@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.45.0] - 2026-10-20
+
+### Added
+
+- **More From… is a new installable feature.** Each morning it gives every user up to "Rows per person" (default 2) collections in each film library, such as "More from Denis Villeneuve". Each row holds that person's films in the library the user hasn't seen yet. The people are the directors and top-three-billed actors whose films the user keeps finishing, and no AI is involved.
+  - A name counts once the user has finished "Films seen to count" (default 2) of that person's films, and recent viewing weighs more.
+  - A name with nothing left to offer is skipped in favour of the next one.
+  - When someone's favourites change, the old row is replaced by a new one. A row for a name that is still on top is edited in place.
+  - Pressing Not for me on a More From… row in the portal drops only that name. The next name down takes its place, and the user's other More From… rows stay as they are.
+- **New For You is a new installable feature.** Each morning it gives every user a "New For You" collection in each library. It holds what was added within the last "Added within" (default 30 days) that the user hasn't watched, sorted by their taste, like Plex's Recently Added with their likely favourites first.
+  - The order comes from the built-in recommender when it is on, and otherwise from the user's genre shares. Someone with no watch history gets the newest items first.
+  - Anything the user has ever watched, film or show, is left out, and no AI is involved.
+  - Its remove job deletes only New For You's own rows.
+- The readiness check now recommends turning on the built-in recommender for anyone installing the New For You feature.
+- **Watch It Again is a new installable feature.** Each morning it gives every user a "Watch It Again" collection in each film library. It holds films they watched all the way through and haven't played for "Not watched for" (default 2 years).
+  - Their most-rewatched films come first, then the better-rated ones. It uses no AI and no TMDb.
+  - A film counts as one film across all its copies, so rewatching the 4K version last week also keeps the 1080p copy out of the row.
+  - Its remove job deletes only Watch It Again's own rows.
+
 ## [0.44.0] - 2026-10-20
 
 ### Added
