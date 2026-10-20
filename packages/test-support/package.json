@@ -11,6 +11,7 @@
     "./lists": "./src/mock-list-server.ts",
     "./plex": "./src/mock-plex-server.ts",
     "./plex-tv": "./src/mock-plex-tv.ts",
+    "./seerr": "./src/mock-seerr-server.ts",
     "./tmdb": "./src/mock-tmdb-server.ts"
   },
   "files": [

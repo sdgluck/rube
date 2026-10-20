@@ -107,6 +107,12 @@ export const COMMANDS = {
     lane: "default",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
+  // A few paged Overseerr reads and local queries.
+  "requests-arrived": {
+    load: () => import("./requests-arrived/index.ts"),
+    lane: "default",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
   // One read of the cleanup queue and an edit per library.
   "leaving-soon": {
     load: () => import("./leaving-soon/index.ts"),
@@ -141,6 +147,11 @@ export const COMMANDS = {
   "leaving-remove": { load: () => import("./leaving-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   "franchise-remove": {
     load: () => import("./franchise-remove.ts"),
+    lane: "interactive",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
+  "requests-remove": {
+    load: () => import("./requests-remove.ts"),
     lane: "interactive",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },

@@ -134,11 +134,13 @@ export default function JobPageShell({ job, actions, children }: Props) {
                   ? "Deletes its config, run history and every Pick It Back Up collection from Plex. Sharing restrictions stay with Personalized Home Screens."
                   : job.id === "season-collections"
                     ? "Deletes its config, its seasons, run history and every Season Collections collection from Plex."
-                    : job.id === "finish-the-franchise"
-                      ? "Deletes its config, run history and every Finish the Franchise collection from Plex. Sharing restrictions stay with Personalized Home Screens."
-                      : job.id === "leaving-soon"
-                        ? "Deletes its config, run history and every Leaving Soon collection from Plex. What cleanup removes is unchanged."
-                        : "Deletes its config and run history. It can be re-installed later."
+                    : job.id === "requests-arrived"
+                      ? "Deletes its config, run history and every Your Requests Are Here collection from Plex. Sharing restrictions stay with Personalized Home Screens."
+                      : job.id === "finish-the-franchise"
+                        ? "Deletes its config, run history and every Finish the Franchise collection from Plex. Sharing restrictions stay with Personalized Home Screens."
+                        : job.id === "leaving-soon"
+                          ? "Deletes its config, run history and every Leaving Soon collection from Plex. What cleanup removes is unchanged."
+                          : "Deletes its config and run history. It can be re-installed later."
           }
           title={`Remove ${job.name}?`}
           confirmLabel="Remove"

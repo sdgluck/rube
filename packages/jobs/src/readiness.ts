@@ -107,6 +107,20 @@ export function createReadiness(
           severity: "required",
         });
         break;
+      case "requests-arrived":
+        items.push(
+          {
+            id: "seerr",
+            label: "Overseerr connected",
+            met: Boolean(getConfig("global_seerr_url") && getConfig("global_seerr_api_key")),
+            detail: "Where the requests, and who made them, come from.",
+            href: "/settings/arrs/seerr",
+            severity: "required",
+          },
+          personalization(),
+          watchHistory(),
+        );
+        break;
       case "leaving-soon": {
         const refusal = cleanup.standingRefusal();
         items.push({

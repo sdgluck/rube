@@ -105,6 +105,19 @@ export const franchiseJobConfigSchema = commonJobConfigSchema.extend({
 export type FranchiseJobConfig = z.infer<typeof franchiseJobConfigSchema>;
 
 /**
+ * Your Requests Are Here: one row per person per library of what they asked
+ * for in Overseerr that has arrived and they haven't got to yet.
+ */
+export const requestsJobConfigSchema = commonJobConfigSchema.extend({
+  users: z.array(z.string()).optional(),
+  /** Arrivals older than this drop out, watched or not. */
+  maxAgeDays: z.number().int().min(7).max(365).optional(),
+  maxItems: z.number().int().min(1).max(50).optional(),
+  pinToHomepage: z.boolean().optional(),
+});
+export type RequestsJobConfig = z.infer<typeof requestsJobConfigSchema>;
+
+/**
  * Season Collections: a row per holiday per library, there only while the
  * holiday is. `server` builds one row everybody sees and needs nothing set up;
  * `per-user` builds one per person, ranked by their taste, and needs
@@ -224,6 +237,8 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   "pibu-remove": pibuJobConfigSchema,
   "finish-the-franchise": franchiseJobConfigSchema,
   "franchise-remove": franchiseJobConfigSchema,
+  "requests-arrived": requestsJobConfigSchema,
+  "requests-remove": requestsJobConfigSchema,
   "season-collections": seasonCollectionsJobConfigSchema,
   "season-remove": seasonCollectionsJobConfigSchema,
   "leaving-soon": leavingSoonJobConfigSchema,

@@ -15,6 +15,7 @@ export const SYSTEM_COLLECTION_LABELS: readonly string[] = [
   "seasoncollections",
   "leavingsoon",
   "finishthefranchise",
+  "requestsarrived",
 ];
 
 /**

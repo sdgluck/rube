@@ -30,6 +30,7 @@ export const ALWAYS_ON_JOB_IDS = [
   "preroll-process",
   "purge-runs",
   "registry-updates",
+  "requests-remove",
   "season-remove",
   "sync-collections",
   "sync-media",

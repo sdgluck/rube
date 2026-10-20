@@ -47,6 +47,12 @@ export const FRANCHISE_DEFAULTS = {
   skipMissing: false,
 } as const;
 
+export const REQUESTS_DEFAULTS = {
+  maxAgeDays: 60,
+  maxItems: 20,
+  pinToHomepage: true,
+} as const;
+
 export const SEASON_DEFAULTS = {
   mode: "server",
   pinToHomepage: true,
@@ -312,6 +318,34 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       label: "Most items",
       control: { kind: "number", min: 1, max: 50 },
       default: FRANCHISE_DEFAULTS.maxItems,
+      advanced: true,
+    },
+  ],
+  "requests-arrived": [
+    {
+      key: "users",
+      label: "Users",
+      help: "Leave empty for everyone on the Users page.",
+      control: { kind: "users", source: "plex-users" },
+    },
+    {
+      key: "maxAgeDays",
+      label: "Keep for",
+      help: "A request that arrived longer ago than this drops out, watched or not.",
+      control: { kind: "number", min: 7, max: 365, unit: "days" },
+      default: REQUESTS_DEFAULTS.maxAgeDays,
+    },
+    {
+      key: "pinToHomepage",
+      label: "Pin to home screen",
+      control: { kind: "boolean" },
+      default: REQUESTS_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "maxItems",
+      label: "Most items",
+      control: { kind: "number", min: 1, max: 50 },
+      default: REQUESTS_DEFAULTS.maxItems,
       advanced: true,
     },
   ],

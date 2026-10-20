@@ -1,14 +1,31 @@
 import { httpRequest, HttpError } from "@tinkerbell/http";
 
+/** Overseerr's media status: 4 is partially available (some requested seasons), 5 available. */
+export const SEERR_PARTIALLY_AVAILABLE = 4;
+export const SEERR_AVAILABLE = 5;
+
 export interface SeerrRequest {
   id: number;
   media: {
     tmdbId: number;
     mediaType: "movie" | "tv";
     status: number;
+    /** The Plex rating key, once Overseerr has seen it in Plex. A show's is the show's. */
+    ratingKey?: string | null;
+    /** When it arrived in Plex, ISO. */
+    mediaAddedAt?: string | null;
   };
+  /**
+   * Who asked. Overseerr's own `username` is often unset for Plex-linked
+   * accounts, which carry `plexId`/`plexUsername` instead — so matching a
+   * request to a Plex user has to try those.
+   */
   requestedBy: {
-    username: string;
+    username?: string | null;
+    plexId?: number | null;
+    plexUsername?: string | null;
+    email?: string | null;
+    displayName?: string | null;
   };
   createdAt: string;
 }

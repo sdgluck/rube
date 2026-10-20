@@ -71,6 +71,16 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     requiresPersonalizedSharing: true,
   },
   {
+    id: "requests-arrived",
+    name: "Your Requests Are Here",
+    command: "requests-arrived",
+    // Daily, after the night's media sync has indexed what arrived. Clear of
+    // every schedule preset's night chain.
+    defaultSchedule: "25 7 * * *",
+    defaultConfig: {},
+    requiresPersonalizedSharing: true,
+  },
+  {
     id: "season-collections",
     name: "Season Collections",
     command: "season-collections",
@@ -130,6 +140,7 @@ const TEARDOWN_JOBS: Record<string, CommandName> = {
   "season-collections": "season-remove",
   "leaving-soon": "leaving-remove",
   "finish-the-franchise": "franchise-remove",
+  "requests-arrived": "requests-remove",
 };
 
 function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {

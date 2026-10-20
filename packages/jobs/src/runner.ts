@@ -249,6 +249,13 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     enabled: 1,
   },
   {
+    id: "requests-remove",
+    name: "Remove Your Requests Are Here",
+    command: "requests-remove",
+    schedule: "",
+    enabled: 1,
+  },
+  {
     id: "personalize-enable",
     name: "Enable Personalized Home Screens",
     command: "personalize-enable",

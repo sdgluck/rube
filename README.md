@@ -23,6 +23,8 @@ and notifications on a schedule.
   they started and stopped watching. [More](#pick-it-back-up)
 - **Finish the franchise**: one collection per user per film library of the
   next film in each series they've started. [More](#finish-the-franchise)
+- **Your requests are here**: one collection per user per library of what
+  they asked for in Overseerr that has arrived. [More](#your-requests-are-here)
 - **Season collections**: a Christmas, Halloween or other holiday collection
   in each library while the holiday is on. [More](#season-collections)
 - **Leaving soon**: a collection in each library of what cleanup is about to
@@ -319,6 +321,27 @@ Limits:
 - A film is matched by its TMDb id from the library index, so run **Sync
   Media** first. A watched film that has since been deleted still counts when
   Radarr remembers it.
+
+## Your requests are here
+
+Each user gets a "Your Requests Are Here" collection in each library, holding
+what they asked for in Overseerr that has arrived and they haven't watched
+yet. Install it from **Jobs**. It runs every morning and uses no AI.
+
+- A request is theirs when Overseerr's requester matches them on the Users
+  page: by Plex account first, then by username, then by email. Requests from
+  someone with no match are listed in the run log and get no collection.
+- A film leaves the collection once they've watched it; a show once they've
+  played any of it since it arrived. Anything that arrived more than **Keep
+  for** (60 days) ago leaves either way.
+- Newest arrivals come first. The collection is updated in place, removed
+  when it's empty, and **Not for me** in the portal removes it.
+
+Limits:
+
+- It needs Overseerr, Personalized Home Screens and recorded watch history.
+- It reads the 500 most recent available requests each run. An arrival has to
+  be in the library index, so it shows after the next **Sync Media**.
 
 ## Season collections
 

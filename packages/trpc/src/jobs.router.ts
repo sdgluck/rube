@@ -288,6 +288,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "config" |
     pibuCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("PickItBackUp")),
     seasonCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("SeasonCollections")),
     franchiseCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("FinishTheFranchise")),
+    requestsCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("RequestsArrived")),
     leavingCollections: procedure.query(() => getGeneratedCollectionsGroupedByUser("LeavingSoon")),
 
     /**

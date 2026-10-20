@@ -99,6 +99,7 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   // personalization. Per-person mode's need is the readiness check's to state.
   "season-collections": { estimateMs: 5 * MINUTE_MS },
   "finish-the-franchise": { requires: "personalizedSharing", estimateMs: 5 * MINUTE_MS },
+  "requests-arrived": { requires: "personalizedSharing", estimateMs: 2 * MINUTE_MS },
   "leaving-soon": { estimateMs: 2 * MINUTE_MS },
   shuffle: { estimateMs: 2 * MINUTE_MS },
   overlays: { heavy: true, estimateMs: 30 * MINUTE_MS },
@@ -114,6 +115,7 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "pibu-remove": { estimateMs: 5 * MINUTE_MS },
   "season-remove": { estimateMs: 5 * MINUTE_MS },
   "franchise-remove": { estimateMs: 5 * MINUTE_MS },
+  "requests-remove": { estimateMs: 5 * MINUTE_MS },
   "leaving-remove": { estimateMs: 5 * MINUTE_MS },
   "personalize-enable": { estimateMs: 30 * MINUTE_MS },
   "personalize-disable": { estimateMs: 30 * MINUTE_MS },
@@ -212,6 +214,11 @@ export const JOB_ORDER: readonly JobOrderEdge[] = [
     before: "sync-media",
     after: "finish-the-franchise",
     reason: "it finds each film's TMDb id and library in the library index",
+  },
+  {
+    before: "sync-media",
+    after: "requests-arrived",
+    reason: "it finds where each arrival is in the library index",
   },
   {
     before: "cleanup",

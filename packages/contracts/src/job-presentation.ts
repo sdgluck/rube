@@ -54,6 +54,7 @@ export const FEATURE_IDS = [
   "we-think-youd-like",
   "pick-it-back-up",
   "finish-the-franchise",
+  "requests-arrived",
   "season-collections",
   "leaving-soon",
   "shuffle",
@@ -260,6 +261,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     description:
       "Builds a “Finish the Franchise” collection in each film library for each Plex user, of the next film in each series they've started.",
   },
+  "requests-arrived": {
+    kind: "feature",
+    requires: "Personalized Home Screens, Overseerr, and recorded watch history.",
+    description:
+      "Builds a “Your Requests Are Here” collection in each library for each Plex user, of what they asked for in Overseerr that has arrived and they haven't watched yet.",
+  },
   "season-collections": {
     kind: "feature",
     requires: "A TMDb API key. Personalized Home Screens too, for a row per person.",
@@ -322,6 +329,11 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "hidden",
     description:
       "Tears down Finish the Franchise: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
+  },
+  "requests-remove": {
+    kind: "hidden",
+    description:
+      "Tears down Your Requests Are Here: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
   },
   "season-remove": {
     kind: "hidden",
