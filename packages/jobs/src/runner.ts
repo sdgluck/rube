@@ -255,6 +255,7 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     schedule: "",
     enabled: 1,
   },
+  { id: "watch-again-remove", name: "Remove Watch It Again", command: "watch-again-remove", schedule: "", enabled: 1 },
   {
     id: "personalize-enable",
     name: "Enable Personalized Home Screens",

@@ -25,6 +25,8 @@ and notifications on a schedule.
   next film in each series they've started. [More](#finish-the-franchise)
 - **Your requests are here**: one collection per user per library of what
   they asked for in Overseerr that has arrived. [More](#your-requests-are-here)
+- **Watch it again**: one collection per user per film library of films they
+  loved and haven't watched in years. [More](#watch-it-again)
 - **Season collections**: a Christmas, Halloween or other holiday collection
   in each library while the holiday is on. [More](#season-collections)
 - **Leaving soon**: a collection in each library of what cleanup is about to
@@ -342,6 +344,26 @@ Limits:
 - It needs Overseerr, Personalized Home Screens and recorded watch history.
 - It reads the 500 most recent available requests each run. An arrival has to
   be in the library index, so it shows after the next **Sync Media**.
+
+## Watch it again
+
+Each user gets a "Watch It Again" collection in each film library, holding
+films they watched through and haven't played since — favourites they may be
+ready to see again. Install it from **Jobs**. It runs every morning and uses
+no AI.
+
+- A film is in it when they finished it and haven't played it for **Not
+  watched for** (2 years). A play of any copy, 4K or not, counts.
+- The films they've rewatched most come first, then the better rated.
+- The collection is updated in place, removed when it holds fewer than
+  **Fewest items**, and **Not for me** in the portal removes it.
+
+Limits:
+
+- It needs Personalized Home Screens and recorded watch history. Most of
+  what it looks back over happened before Tinkerbell, so run **Import Plex
+  Watch History** once.
+- Films only.
 
 ## Season collections
 

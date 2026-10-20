@@ -68,6 +68,13 @@ export const LEAVING_DEFAULTS = {
   pinToHomepage: true,
 } as const;
 
+export const WATCH_AGAIN_DEFAULTS = {
+  minYearsAgo: 2,
+  minItems: 3,
+  maxItems: 20,
+  pinToHomepage: true,
+} as const;
+
 export const DIGEST_DEFAULTS = {
   frequency: "weekly",
   minAddedItems: 1,
@@ -431,6 +438,42 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       label: "Most items",
       control: { kind: "number", min: 5, max: 100 },
       default: LEAVING_DEFAULTS.maxItems,
+      advanced: true,
+    },
+  ],
+  "watch-it-again": [
+    {
+      key: "users",
+      label: "Users",
+      help: "Leave empty for everyone on the Users page.",
+      control: { kind: "users", source: "plex-users" },
+    },
+    {
+      key: "minYearsAgo",
+      label: "Not watched for",
+      help: "Only films someone finished and hasn't played for at least this long.",
+      control: { kind: "number", min: 1, max: 20, unit: "years" },
+      default: WATCH_AGAIN_DEFAULTS.minYearsAgo,
+    },
+    {
+      key: "pinToHomepage",
+      label: "Pin to home screen",
+      control: { kind: "boolean" },
+      default: WATCH_AGAIN_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "minItems",
+      label: "Fewest items",
+      help: "A person with fewer films than this gets no row.",
+      control: { kind: "number", min: 1, max: 20 },
+      default: WATCH_AGAIN_DEFAULTS.minItems,
+      advanced: true,
+    },
+    {
+      key: "maxItems",
+      label: "Most items",
+      control: { kind: "number", min: 5, max: 50 },
+      default: WATCH_AGAIN_DEFAULTS.maxItems,
       advanced: true,
     },
   ],

@@ -55,6 +55,7 @@ export const FEATURE_IDS = [
   "pick-it-back-up",
   "finish-the-franchise",
   "requests-arrived",
+  "watch-it-again",
   "season-collections",
   "leaving-soon",
   "shuffle",
@@ -261,6 +262,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     description:
       "Builds a “Finish the Franchise” collection in each film library for each Plex user, of the next film in each series they've started.",
   },
+  "watch-it-again": {
+    kind: "feature",
+    requires: "Personalized Home Screens, and recorded watch history going back a few years.",
+    description:
+      "Builds a \u201cWatch It Again\u201d collection in each film library for each Plex user, of films they loved and haven't watched in years.",
+  },
   "requests-arrived": {
     kind: "feature",
     requires: "Personalized Home Screens, Overseerr, and recorded watch history.",
@@ -329,6 +336,11 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "hidden",
     description:
       "Tears down Finish the Franchise: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
+  },
+  "watch-again-remove": {
+    kind: "hidden",
+    description:
+      "Tears down Watch It Again: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
   },
   "requests-remove": {
     kind: "hidden",

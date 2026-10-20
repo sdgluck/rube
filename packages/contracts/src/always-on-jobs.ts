@@ -17,8 +17,8 @@ export const ALWAYS_ON_JOB_IDS = [
   "bandwidth-test",
   "byw-remove",
   "collections-sweep",
-  "generate",
   "franchise-remove",
+  "generate",
   "healthcheck",
   "label",
   "leaving-remove",
@@ -36,6 +36,7 @@ export const ALWAYS_ON_JOB_IDS = [
   "sync-media",
   "sync-recently-added",
   "sync-users",
+  "watch-again-remove",
   "wtyl-remove",
 ] as const;
 

@@ -71,6 +71,15 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     requiresPersonalizedSharing: true,
   },
   {
+    id: "watch-it-again",
+    name: "Watch It Again",
+    command: "watch-it-again",
+    // Daily, so a film rewatched last night leaves the row by morning. Clear of every schedule preset's night chain.
+    defaultSchedule: "05 7 * * *",
+    defaultConfig: {},
+    requiresPersonalizedSharing: true,
+  },
+  {
     id: "requests-arrived",
     name: "Your Requests Are Here",
     command: "requests-arrived",
@@ -141,6 +150,7 @@ const TEARDOWN_JOBS: Record<string, CommandName> = {
   "leaving-soon": "leaving-remove",
   "finish-the-franchise": "franchise-remove",
   "requests-arrived": "requests-remove",
+  "watch-it-again": "watch-again-remove",
 };
 
 function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {

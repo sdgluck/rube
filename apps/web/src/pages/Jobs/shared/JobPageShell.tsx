@@ -28,6 +28,30 @@ const STATUS_LABELS: Record<string, string> = {
   cancelled: "Cancelled",
 };
 
+/**
+ * What removing a feature takes with it, where that is more than its config.
+ * A map rather than the nested ternary it was: eight features deep, the
+ * ternary was the one place a new feature's wording could go missing unseen.
+ */
+const REMOVE_MESSAGES: Record<string, string> = {
+  "because-you-watched":
+    "Deletes its config, run history and every Because You Watched collection from Plex, and clears shared users' restrictions. Item labels stay — clear them in Settings › Maintenance.",
+  "we-think-youd-like":
+    "Deletes its config, run history and every We Think You'd Like collection from Plex. Sharing restrictions stay with Personalized Home Screens.",
+  "pick-it-back-up":
+    "Deletes its config, run history and every Pick It Back Up collection from Plex. Sharing restrictions stay with Personalized Home Screens.",
+  "finish-the-franchise":
+    "Deletes its config, run history and every Finish the Franchise collection from Plex. Sharing restrictions stay with Personalized Home Screens.",
+  "watch-it-again":
+    "Deletes its config, run history and every Watch It Again collection from Plex. Sharing restrictions stay with Personalized Home Screens.",
+  "requests-arrived":
+    "Deletes its config, run history and every Your Requests Are Here collection from Plex. Sharing restrictions stay with Personalized Home Screens.",
+  "season-collections":
+    "Deletes its config, its seasons, run history and every Season Collections collection from Plex.",
+  "leaving-soon":
+    "Deletes its config, run history and every Leaving Soon collection from Plex. What cleanup removes is unchanged.",
+};
+
 export default function JobPageShell({ job, actions, children }: Props) {
   const navigate = useNavigate();
   const { isRunning, latestRun, start, starting, cancel, cancelling } = actions;
@@ -125,23 +149,7 @@ export default function JobPageShell({ job, actions, children }: Props) {
 
       {confirmRemove && (
         <ConfirmModal
-          message={
-            job.id === "because-you-watched"
-              ? "Deletes its config, run history and every Because You Watched collection from Plex, and clears shared users' restrictions. Item labels stay — clear them in Settings › Maintenance."
-              : job.id === "we-think-youd-like"
-                ? "Deletes its config, run history and every We Think You'd Like collection from Plex. Sharing restrictions stay with Personalized Home Screens."
-                : job.id === "pick-it-back-up"
-                  ? "Deletes its config, run history and every Pick It Back Up collection from Plex. Sharing restrictions stay with Personalized Home Screens."
-                  : job.id === "season-collections"
-                    ? "Deletes its config, its seasons, run history and every Season Collections collection from Plex."
-                    : job.id === "requests-arrived"
-                      ? "Deletes its config, run history and every Your Requests Are Here collection from Plex. Sharing restrictions stay with Personalized Home Screens."
-                      : job.id === "finish-the-franchise"
-                        ? "Deletes its config, run history and every Finish the Franchise collection from Plex. Sharing restrictions stay with Personalized Home Screens."
-                        : job.id === "leaving-soon"
-                          ? "Deletes its config, run history and every Leaving Soon collection from Plex. What cleanup removes is unchanged."
-                          : "Deletes its config and run history. It can be re-installed later."
-          }
+          message={REMOVE_MESSAGES[job.id] ?? "Deletes its config and run history. It can be re-installed later."}
           title={`Remove ${job.name}?`}
           confirmLabel="Remove"
           danger

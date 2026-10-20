@@ -152,6 +152,20 @@ export const leavingSoonJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type LeavingSoonJobConfig = z.infer<typeof leavingSoonJobConfigSchema>;
 
+/**
+ * Watch It Again: one row per person per film library of films they finished
+ * and haven't played in years — rewatched most first.
+ */
+export const watchAgainJobConfigSchema = commonJobConfigSchema.extend({
+  users: z.array(z.string()).optional(),
+  /** Not played for at least this many years. */
+  minYearsAgo: z.number().int().min(1).max(20).optional(),
+  minItems: z.number().int().min(1).max(20).optional(),
+  maxItems: z.number().int().min(5).max(50).optional(),
+  pinToHomepage: z.boolean().optional(),
+});
+export type WatchAgainJobConfig = z.infer<typeof watchAgainJobConfigSchema>;
+
 export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
   /**
    * Report what would be deleted and stop. Off by default — the job's own log
@@ -239,6 +253,8 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   "franchise-remove": franchiseJobConfigSchema,
   "requests-arrived": requestsJobConfigSchema,
   "requests-remove": requestsJobConfigSchema,
+  "watch-it-again": watchAgainJobConfigSchema,
+  "watch-again-remove": watchAgainJobConfigSchema,
   "season-collections": seasonCollectionsJobConfigSchema,
   "season-remove": seasonCollectionsJobConfigSchema,
   "leaving-soon": leavingSoonJobConfigSchema,
@@ -267,7 +283,7 @@ export function configIssues(command: string, config: Record<string, unknown>): 
       issues.push(`Minimum items (${min}) can't be more than maximum items (${max})`);
     }
   }
-  if (command === "leaving-soon") {
+  if (command === "watch-it-again" || command === "leaving-soon") {
     const min = config.minItems;
     const max = config.maxItems;
     if (typeof min === "number" && typeof max === "number" && min > max) {

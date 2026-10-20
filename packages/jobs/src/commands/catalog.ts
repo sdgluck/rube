@@ -107,6 +107,12 @@ export const COMMANDS = {
     lane: "default",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
+  // Local queries only — no TMDb, no model.
+  "watch-it-again": {
+    load: () => import("./watch-it-again/index.ts"),
+    lane: "default",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
   // A few paged Overseerr reads and local queries.
   "requests-arrived": {
     load: () => import("./requests-arrived/index.ts"),
@@ -152,6 +158,11 @@ export const COMMANDS = {
   },
   "requests-remove": {
     load: () => import("./requests-remove.ts"),
+    lane: "interactive",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
+  "watch-again-remove": {
+    load: () => import("./watch-again-remove.ts"),
     lane: "interactive",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },

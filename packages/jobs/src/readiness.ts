@@ -107,6 +107,13 @@ export function createReadiness(
           severity: "required",
         });
         break;
+      case "watch-it-again":
+        items.push(personalization(), {
+          ...watchHistory(),
+          detail:
+            "Its films were mostly watched before Tinkerbell was installed, so run Import Plex Watch History once.",
+        });
+        break;
       case "requests-arrived":
         items.push(
           {
