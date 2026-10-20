@@ -100,6 +100,7 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "season-collections": { estimateMs: 5 * MINUTE_MS },
   "finish-the-franchise": { requires: "personalizedSharing", estimateMs: 5 * MINUTE_MS },
   "requests-arrived": { requires: "personalizedSharing", estimateMs: 2 * MINUTE_MS },
+  "new-for-you": { requires: "personalizedSharing", estimateMs: 2 * MINUTE_MS },
   "watch-it-again": { requires: "personalizedSharing", estimateMs: 2 * MINUTE_MS },
   "leaving-soon": { estimateMs: 2 * MINUTE_MS },
   shuffle: { estimateMs: 2 * MINUTE_MS },
@@ -117,6 +118,7 @@ export const JOB_SCHEDULE_META: Record<string, JobScheduleMeta> = {
   "season-remove": { estimateMs: 5 * MINUTE_MS },
   "franchise-remove": { estimateMs: 5 * MINUTE_MS },
   "requests-remove": { estimateMs: 5 * MINUTE_MS },
+  "new-for-you-remove": { estimateMs: 5 * MINUTE_MS },
   "watch-again-remove": { estimateMs: 5 * MINUTE_MS },
   "leaving-remove": { estimateMs: 5 * MINUTE_MS },
   "personalize-enable": { estimateMs: 30 * MINUTE_MS },
@@ -226,6 +228,11 @@ export const JOB_ORDER: readonly JobOrderEdge[] = [
     before: "sync-media",
     after: "watch-it-again",
     reason: "it finds each film's library, rating and TMDb id in the library index",
+  },
+  {
+    before: "sync-media",
+    after: "new-for-you",
+    reason: "it reads what arrived, and when, from the library index",
   },
   {
     before: "cleanup",

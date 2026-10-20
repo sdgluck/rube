@@ -27,6 +27,8 @@ and notifications on a schedule.
   they asked for in Overseerr that has arrived. [More](#your-requests-are-here)
 - **Watch it again**: one collection per user per film library of films they
   loved and haven't watched in years. [More](#watch-it-again)
+- **New for you**: one collection per user per library of what was added
+  lately, in the order they're likeliest to enjoy it. [More](#new-for-you)
 - **Season collections**: a Christmas, Halloween or other holiday collection
   in each library while the holiday is on. [More](#season-collections)
 - **Leaving soon**: a collection in each library of what cleanup is about to
@@ -364,6 +366,24 @@ Limits:
   what it looks back over happened before Tinkerbell, so run **Import Plex
   Watch History** once.
 - Films only.
+
+## New for you
+
+Each user gets a "New For You" collection in each library, holding what was
+added in the last **Added within** (30 days) that they haven't watched,
+ordered by their taste. Plex's Recently Added is one list for everyone; this
+is the same arrivals, theirs first. Install it from **Jobs**. It runs every
+morning and uses no AI.
+
+- With the built-in recommender on (Settings → AI), titles are ordered by how
+  close they are to what the person watches. Without it, by how well they
+  match their favourite genres.
+- Someone with no history yet still gets a collection, newest first.
+- Anything they've ever watched is left out. The collection is updated in
+  place, removed when fewer than **Fewest items** are new to them, and **Not
+  for me** in the portal removes it.
+
+It needs Personalized Home Screens and recorded watch history.
 
 ## Season collections
 

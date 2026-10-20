@@ -75,6 +75,13 @@ export const WATCH_AGAIN_DEFAULTS = {
   pinToHomepage: true,
 } as const;
 
+export const NEW_FOR_YOU_DEFAULTS = {
+  windowDays: 30,
+  minItems: 3,
+  maxItems: 20,
+  pinToHomepage: true,
+} as const;
+
 export const DIGEST_DEFAULTS = {
   frequency: "weekly",
   minAddedItems: 1,
@@ -474,6 +481,42 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       label: "Most items",
       control: { kind: "number", min: 5, max: 50 },
       default: WATCH_AGAIN_DEFAULTS.maxItems,
+      advanced: true,
+    },
+  ],
+  "new-for-you": [
+    {
+      key: "users",
+      label: "Users",
+      help: "Leave empty for everyone on the Users page.",
+      control: { kind: "users", source: "plex-users" },
+    },
+    {
+      key: "windowDays",
+      label: "Added within",
+      help: "How recently something has to have been added to count as new.",
+      control: { kind: "number", min: 7, max: 180, unit: "days" },
+      default: NEW_FOR_YOU_DEFAULTS.windowDays,
+    },
+    {
+      key: "pinToHomepage",
+      label: "Pin to home screen",
+      control: { kind: "boolean" },
+      default: NEW_FOR_YOU_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "minItems",
+      label: "Fewest items",
+      help: "A person with fewer new titles than this gets no row.",
+      control: { kind: "number", min: 1, max: 20 },
+      default: NEW_FOR_YOU_DEFAULTS.minItems,
+      advanced: true,
+    },
+    {
+      key: "maxItems",
+      label: "Most items",
+      control: { kind: "number", min: 5, max: 50 },
+      default: NEW_FOR_YOU_DEFAULTS.maxItems,
       advanced: true,
     },
   ],

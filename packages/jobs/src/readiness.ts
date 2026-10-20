@@ -25,9 +25,12 @@ export type ReadinessItem = {
 };
 
 export function createReadiness(
-  deps: Pick<Services, "backups" | "cleanup" | "config" | "notifications" | "overlays" | "playback" | "preferences">,
+  deps: Pick<
+    Services,
+    "backups" | "cleanup" | "config" | "notifications" | "overlays" | "playback" | "preferences" | "recommendations"
+  >,
 ) {
-  const { backups, cleanup, config, notifications, overlays, playback, preferences } = deps;
+  const { backups, cleanup, config, notifications, overlays, playback, preferences, recommendations } = deps;
   const { getConfig, getLlmConfig, getPersonalizedSharingStatus } = config;
 
   function plex(): ReadinessItem {
@@ -114,6 +117,19 @@ export function createReadiness(
             "Its films were mostly watched before Tinkerbell was installed, so run Import Plex Watch History once.",
         });
         break;
+      case "new-for-you": {
+        items.push(personalization(), watchHistory());
+        const rec = recommendations.status();
+        items.push({
+          id: "recommender",
+          label: "Built-in recommender on",
+          met: rec.enabled && rec.available,
+          detail: "Orders each row by the person's taste. Without it, rows follow their favourite genres.",
+          href: "/settings/ai",
+          severity: "recommended",
+        });
+        break;
+      }
       case "requests-arrived":
         items.push(
           {

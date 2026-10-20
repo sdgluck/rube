@@ -80,6 +80,15 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     requiresPersonalizedSharing: true,
   },
   {
+    id: "new-for-you",
+    name: "New For You",
+    command: "new-for-you",
+    // Daily, after the night's media sync has indexed what arrived. Clear of every schedule preset's night chain.
+    defaultSchedule: "10 7 * * *",
+    defaultConfig: {},
+    requiresPersonalizedSharing: true,
+  },
+  {
     id: "requests-arrived",
     name: "Your Requests Are Here",
     command: "requests-arrived",
@@ -150,6 +159,7 @@ const TEARDOWN_JOBS: Record<string, CommandName> = {
   "leaving-soon": "leaving-remove",
   "finish-the-franchise": "franchise-remove",
   "requests-arrived": "requests-remove",
+  "new-for-you": "new-for-you-remove",
   "watch-it-again": "watch-again-remove",
 };
 

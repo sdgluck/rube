@@ -44,6 +44,8 @@ const REMOVE_MESSAGES: Record<string, string> = {
     "Deletes its config, run history and every Finish the Franchise collection from Plex. Sharing restrictions stay with Personalized Home Screens.",
   "watch-it-again":
     "Deletes its config, run history and every Watch It Again collection from Plex. Sharing restrictions stay with Personalized Home Screens.",
+  "new-for-you":
+    "Deletes its config, run history and every New For You collection from Plex. Sharing restrictions stay with Personalized Home Screens.",
   "requests-arrived":
     "Deletes its config, run history and every Your Requests Are Here collection from Plex. Sharing restrictions stay with Personalized Home Screens.",
   "season-collections":

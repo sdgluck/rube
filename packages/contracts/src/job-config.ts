@@ -166,6 +166,20 @@ export const watchAgainJobConfigSchema = commonJobConfigSchema.extend({
 });
 export type WatchAgainJobConfig = z.infer<typeof watchAgainJobConfigSchema>;
 
+/**
+ * New For You: one row per person per library of what arrived in the last
+ * `windowDays` that they haven't seen, ordered by their taste.
+ */
+export const newForYouJobConfigSchema = commonJobConfigSchema.extend({
+  users: z.array(z.string()).optional(),
+  /** How far back "new" reaches. */
+  windowDays: z.number().int().min(7).max(180).optional(),
+  minItems: z.number().int().min(1).max(20).optional(),
+  maxItems: z.number().int().min(5).max(50).optional(),
+  pinToHomepage: z.boolean().optional(),
+});
+export type NewForYouJobConfig = z.infer<typeof newForYouJobConfigSchema>;
+
 export const collectionsSweepJobConfigSchema = commonJobConfigSchema.extend({
   /**
    * Report what would be deleted and stop. Off by default — the job's own log
@@ -253,6 +267,8 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   "franchise-remove": franchiseJobConfigSchema,
   "requests-arrived": requestsJobConfigSchema,
   "requests-remove": requestsJobConfigSchema,
+  "new-for-you": newForYouJobConfigSchema,
+  "new-for-you-remove": newForYouJobConfigSchema,
   "watch-it-again": watchAgainJobConfigSchema,
   "watch-again-remove": watchAgainJobConfigSchema,
   "season-collections": seasonCollectionsJobConfigSchema,
@@ -283,7 +299,7 @@ export function configIssues(command: string, config: Record<string, unknown>): 
       issues.push(`Minimum items (${min}) can't be more than maximum items (${max})`);
     }
   }
-  if (command === "watch-it-again" || command === "leaving-soon") {
+  if (command === "watch-it-again" || command === "new-for-you" || command === "leaving-soon") {
     const min = config.minItems;
     const max = config.maxItems;
     if (typeof min === "number" && typeof max === "number" && min > max) {

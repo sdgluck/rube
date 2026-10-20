@@ -55,6 +55,7 @@ export const FEATURE_IDS = [
   "pick-it-back-up",
   "finish-the-franchise",
   "requests-arrived",
+  "new-for-you",
   "watch-it-again",
   "season-collections",
   "leaving-soon",
@@ -268,6 +269,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     description:
       "Builds a \u201cWatch It Again\u201d collection in each film library for each Plex user, of films they loved and haven't watched in years.",
   },
+  "new-for-you": {
+    kind: "feature",
+    requires: "Personalized Home Screens and recorded watch history. Best with the built-in recommender on.",
+    description:
+      "Builds a \u201cNew For You\u201d collection in each library for each Plex user, of what was added lately, in the order they're likeliest to enjoy it.",
+  },
   "requests-arrived": {
     kind: "feature",
     requires: "Personalized Home Screens, Overseerr, and recorded watch history.",
@@ -341,6 +348,11 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "hidden",
     description:
       "Tears down Watch It Again: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
+  },
+  "new-for-you-remove": {
+    kind: "hidden",
+    description:
+      "Tears down New For You: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
   },
   "requests-remove": {
     kind: "hidden",

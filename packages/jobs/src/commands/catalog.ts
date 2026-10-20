@@ -113,6 +113,12 @@ export const COMMANDS = {
     lane: "default",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },
+  // Local queries and the recommender's ranking — no model.
+  "new-for-you": {
+    load: () => import("./new-for-you/index.ts"),
+    lane: "default",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
   // A few paged Overseerr reads and local queries.
   "requests-arrived": {
     load: () => import("./requests-arrived/index.ts"),
@@ -158,6 +164,11 @@ export const COMMANDS = {
   },
   "requests-remove": {
     load: () => import("./requests-remove.ts"),
+    lane: "interactive",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
+  "new-for-you-remove": {
+    load: () => import("./new-for-you-remove.ts"),
     lane: "interactive",
     timeoutMs: DEFAULT_TIMEOUT_MS,
   },

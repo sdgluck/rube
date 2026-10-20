@@ -28,6 +28,7 @@ const KINDS = {
   // Its description names the next film in each series.
   "finish-the-franchise": { name: "Finish the Franchise", showSummary: true },
   "requests-arrived": { name: "Your Requests Are Here", showSummary: true },
+  "new-for-you": { name: "New For You", showSummary: true },
   "watch-it-again": { name: "Watch It Again", showSummary: true },
 } as const;
 
@@ -72,6 +73,10 @@ export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof type
     refetchInterval: 10000,
     enabled: jobId === "watch-it-again",
   });
+  const newForYouQuery = trpc.jobs.newForYouCollections.useQuery(undefined, {
+    refetchInterval: 10000,
+    enabled: jobId === "new-for-you",
+  });
   const collectionsQuery = {
     "because-you-watched": bywQuery,
     "we-think-youd-like": wtylQuery,
@@ -80,6 +85,7 @@ export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof type
     "leaving-soon": leavingQuery,
     "finish-the-franchise": franchiseQuery,
     "requests-arrived": requestsQuery,
+    "new-for-you": newForYouQuery,
     "watch-it-again": watchAgainQuery,
   }[jobId];
   const [confirming, setConfirming] = useState<{ title: string; ratingKey: string } | null>(null);
@@ -94,6 +100,7 @@ export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof type
         "leaving-soon": utils.jobs.leavingCollections,
         "finish-the-franchise": utils.jobs.franchiseCollections,
         "requests-arrived": utils.jobs.requestsCollections,
+        "new-for-you": utils.jobs.newForYouCollections,
         "watch-it-again": utils.jobs.watchAgainCollections,
       })[jobId].invalidate(),
   });
