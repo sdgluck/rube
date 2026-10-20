@@ -40,25 +40,6 @@ export function rankCandidates(keys: Iterable<string>, info: ReadonlyMap<string,
   });
 }
 
-/**
- * Order `pool` by how much of a person's genre taste each title shares — the
- * fallback when the recommender can't rank. A title scores the sum of the
- * person's shares of its genres; ties keep `pool`'s order.
- */
-export function rankByGenreShare(
-  pool: string[],
-  genresByKey: ReadonlyMap<string, string[]>,
-  shares: ReadonlyArray<{ name: string; share: number }>,
-): string[] {
-  const share = new Map(shares.map((g) => [g.name.toLowerCase(), g.share]));
-  const score = (key: string) =>
-    (genresByKey.get(key) ?? []).reduce((n, g) => n + (share.get(g.toLowerCase()) ?? 0), 0);
-  return pool
-    .map((key, i) => ({ key, i, s: score(key) }))
-    .sort((a, b) => b.s - a.s || a.i - b.i)
-    .map((x) => x.key);
-}
-
 /** Which season a row is for, and whose it is (`null` for a row everyone sees). */
 export function rowIdentity(labels: string[]): { season: string; user: string | null } | null {
   const season = labels.find((l) => l.startsWith(SEASON_KEY_PREFIX))?.slice(SEASON_KEY_PREFIX.length);

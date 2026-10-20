@@ -43,7 +43,7 @@ import {
   type ResolvedSeason,
 } from "@tinkerbell/contracts";
 import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { DAY_MS, displayTitle, errorMessage, personalRowTitle, seasonRowTitle } from "@tinkerbell/core";
+import { displayTitle, errorMessage, personalRowTitle, seasonRowTitle } from "@tinkerbell/core";
 import type { JobContext, SeasonCollectionsJobConfig } from "@tinkerbell/core";
 import { mediaItems, plexUsers } from "@tinkerbell/db";
 import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
@@ -56,12 +56,11 @@ import { createTmdbMetadataCommand } from "../generate/tmdb-metadata.ts";
 import { indexItemsByTmdb } from "../generate/plex-index.ts";
 import { personalRowLabels, personalRowPin } from "../../personalize/personal-row.ts";
 import { BASELINE_LABEL } from "../../personalize/reconcile.ts";
-import { buildTasteProfile, historyUserIds, titleWeight, watchedTitles } from "../we-think-youd-like/profile.ts";
+import { createTasteOrder } from "../../personalize/taste-order.ts";
 import {
   matchSeason,
   parseSeasonAnswer,
   personalSeasonName,
-  rankByGenreShare,
   rankCandidates,
   rowId,
   rowIdentity,
@@ -75,8 +74,6 @@ import {
 export { SEASON_LABEL } from "./match.ts";
 
 const ANSWER_MAX_TOKENS = 2048;
-/** How far back a person's taste is read, for ordering their row. */
-const HISTORY_DAYS = 365;
 /** A shared row is on every Home, like Because You Watched's server mode. */
 const SHARED_PIN: PinOptions = { promotedToOwnHome: 1, promotedToRecommended: 1, promotedToSharedHome: 1 };
 
@@ -363,30 +360,7 @@ export function createSeasonCollectionsCommand(
       return pool;
     }
 
-    const recommender = recommendations.status();
-    const ranked = recommender.enabled && recommender.available;
-    // Each person's history once, however many libraries and seasons.
-    const tastes = new Map<string, ReturnType<typeof tasteOf>>();
-    function tasteOf(user: TargetUser) {
-      const titles = watchedTitles(db, historyUserIds(user), now() - HISTORY_DAYS * DAY_MS);
-      return {
-        history: titles.map((t) => ({ ratingKey: t.key, weight: titleWeight(t, now()) })),
-        genres: titles.length > 0 ? buildTasteProfile(titles, now()).genres : [],
-      };
-    }
-
-    /** `pool` in this person's order: the recommender's, else their genre shares, else the pool's own. */
-    function orderFor(user: TargetUser, pool: string[], library: Library): string[] {
-      let taste = tastes.get(user.username);
-      if (!taste) tastes.set(user.username, (taste = tasteOf(user)));
-      if (ranked && taste.history.length > 0) {
-        const ranking = recommendations.shortlist({ history: taste.history, candidates: pool, limit: pool.length });
-        // The recommender leaves out titles it has no vector for; they go
-        // after the ones it could rank rather than out of the row.
-        if ("ratingKeys" in ranking) return [...new Set([...ranking.ratingKeys, ...pool])];
-      }
-      return taste.genres.length > 0 ? rankByGenreShare(pool, library.genresByKey, taste.genres) : pool;
-    }
+    const taste = createTasteOrder({ db, recommendations, now });
 
     let step = 0;
     for (const section of sections) {
@@ -491,7 +465,7 @@ export function createSeasonCollectionsCommand(
               existingFor(user.username),
               personalRowTitle(personalName, user.username),
               personalRowLabels(user.username, SEASON_LABEL, seasonLabel),
-              orderFor(user, theirs, library).slice(0, maxItems),
+              taste.order(user, theirs, library.genresByKey).slice(0, maxItems),
               summary,
               personalRowPin(user.isOwner),
             );

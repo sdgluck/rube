@@ -60,9 +60,19 @@ export function hasLabel(row: { labels: string[] }, label: string): boolean {
   return row.labels.some((l) => l.toLowerCase() === label.toLowerCase());
 }
 
-/** This person's row in a section's listing, if they have one. */
-export function ownRow<T extends { labels: string[] }>(rows: T[], label: string, username: string): T | undefined {
-  return rows.find((row) => hasLabel(row, label) && row.labels.some((l) => l === `User:${username}`));
+/**
+ * This person's row in a section's listing, if they have one. `key` picks one
+ * of several — More From… keeps a row per director, each labelled for whom.
+ */
+export function ownRow<T extends { labels: string[] }>(
+  rows: T[],
+  label: string,
+  username: string,
+  key?: string,
+): T | undefined {
+  return rows.find(
+    (row) => hasLabel(row, label) && row.labels.some((l) => l === `User:${username}`) && (!key || hasLabel(row, key)),
+  );
 }
 
 export function createPersonalRowWriter(opts: {
@@ -82,8 +92,8 @@ export function createPersonalRowWriter(opts: {
     return (await client.getCollectionsWithLabels(sectionKey, { label })).filter((row) => hasLabel(row, label));
   }
 
-  async function deleteRow(ratingKey: string, why: string): Promise<void> {
-    ctx.log(`Deleting "${rowName}" (${ratingKey}) — ${why}.`);
+  async function deleteRow(ratingKey: string, why: string, name = rowName): Promise<void> {
+    ctx.log(`Deleting "${name}" (${ratingKey}) — ${why}.`);
     await client.deleteItem(ratingKey);
     collections.forgetCollections([ratingKey]);
   }
@@ -93,6 +103,11 @@ export function createPersonalRowWriter(opts: {
    * it exists. Pinned on creation only, so a person who moved or hid it isn't
    * overruled every night; a row removed while empty is pinned again when it
    * comes back.
+   *
+   * `opts.key` and `opts.rowName` are for a job with several rows per person:
+   * the row is found by its key label, and called `rowName`. A keyed row whose
+   * title no longer matches is replaced, since a title can't be changed without
+   * moving the tag every item in it carries.
    */
   async function writeRow(
     section: PlexSection,
@@ -101,8 +116,15 @@ export function createPersonalRowWriter(opts: {
     ratingKeys: string[],
     summary: string,
     pin: boolean,
+    opts: { key?: string; rowName?: string } = {},
   ): Promise<void> {
-    const existing = ownRow(rows, label, user.username);
+    const name = opts.rowName ?? rowName;
+    const title = personalRowTitle(name, user.username);
+    let existing = ownRow(rows, label, user.username, opts.key);
+    if (existing && opts.rowName && existing.title !== title) {
+      await deleteRow(existing.ratingKey, `rebuilding it as "${name}"`, name);
+      existing = undefined;
+    }
     let collectionKey: string;
     if (existing) {
       collectionKey = existing.ratingKey;
@@ -114,26 +136,26 @@ export function createPersonalRowWriter(opts: {
       await client.addCollectionItems(collectionKey, machineId, add);
       for (const key of remove) await client.removeCollectionItem(collectionKey, key);
       await client.updateCollection(collectionKey, { summary });
-      ctx.log(`Updated "${rowName}" for ${user.name}: ${add.length} added, ${remove.length} removed.`);
+      ctx.log(`Updated "${name}" for ${user.name}: ${add.length} added, ${remove.length} removed.`);
     } else {
       const created = await client.createCollectionWithLabel(
         section.key,
         section.type,
         machineId,
-        personalRowTitle(rowName, user.username),
+        title,
         ratingKeys,
-        personalRowLabels(user.username, label),
+        personalRowLabels(user.username, label, ...(opts.key ? [opts.key] : [])),
       );
       if (!created) return;
       collectionKey = created;
       await client.updateCollection(collectionKey, { summary });
       if (pin) await client.pinToHomepage(section.key, collectionKey, personalRowPin(user.isOwner));
-      ctx.log(`Created "${rowName}" for ${user.name} (${ratingKeys.length} items).`);
+      ctx.log(`Created "${name}" for ${user.name} (${ratingKeys.length} items).`);
     }
     try {
       await collections.upsertCollectionByKey(client, section, collectionKey);
     } catch (err) {
-      ctx.log(`Failed to sync "${rowName}" to local DB: ${errorMessage(err)}`);
+      ctx.log(`Failed to sync "${name}" to local DB: ${errorMessage(err)}`);
     }
   }
 

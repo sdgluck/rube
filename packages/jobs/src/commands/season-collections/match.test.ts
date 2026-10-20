@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { matchSeason, parseSeasonAnswer, rankByGenreShare, rankCandidates, rowId, rowIdentity } from "./match.ts";
+import { matchSeason, parseSeasonAnswer, rankCandidates, rowId, rowIdentity } from "./match.ts";
 
 test("matchSeason needs a keyword; the release month alone is nothing", () => {
   const christmas = new Set([207317, 260365]);
@@ -17,19 +17,6 @@ test("rankCandidates orders by rating, then newest, then key — and drops repea
     ["d", { rating: null, year: 2020 }],
   ]);
   assert.deepEqual(rankCandidates(["d", "a", "b", "c", "a"], info), ["b", "c", "a", "d"]);
-});
-
-test("rankByGenreShare puts the person's genres first and keeps order on ties", () => {
-  const genres = new Map([
-    ["horror", ["Horror"]],
-    ["comedy", ["Comedy"]],
-    ["family", ["Family", "Comedy"]],
-  ]);
-  const shares = [
-    { name: "comedy", share: 0.6 },
-    { name: "family", share: 0.3 },
-  ];
-  assert.deepEqual(rankByGenreShare(["horror", "comedy", "family"], genres, shares), ["family", "comedy", "horror"]);
 });
 
 test("rowIdentity reads the season and owner from a row's labels", () => {
