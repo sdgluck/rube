@@ -403,7 +403,8 @@ morning and uses no AI.
   skipped for the next one down.
 - As favourites change, old collections are removed and new ones made. A
   collection for a name still on top is updated in place. **Not for me** on
-  any of them in the portal removes them all.
+  one of them in the portal drops that name, and the next one down takes its
+  place.
 
 It needs Personalized Home Screens, a TMDb API key and recorded watch
 history. Each run asks TMDb for the filmography of every name in play, once

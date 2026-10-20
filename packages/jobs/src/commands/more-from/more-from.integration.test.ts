@@ -48,6 +48,7 @@ const FILMS = [
   { key: "113", tmdb: 13, title: "Half Nelson", year: 2006, director: { id: 4, name: "Fleck" }, cast: [GOSLING] },
   { key: "120", tmdb: 20, title: "Memento", year: 2000, director: NOLAN, cast: [] },
   { key: "121", tmdb: 21, title: "Inception", year: 2010, director: NOLAN, cast: [] },
+  { key: "122", tmdb: 22, title: "Dunkirk", year: 2017, director: NOLAN, cast: [] },
 ];
 // Fourth-billed in two films Alice saw: not a lead.
 const CAMEO_FILMS = [1, 2];
@@ -105,7 +106,7 @@ before(async () => {
     people: [
       { id: VILLENEUVE.id, name: VILLENEUVE.name, directed: [1, 2, 3, 4, 5] },
       { id: GOSLING.id, name: GOSLING.name, actedIn: [2, 10, 11, 12, 13] },
-      { id: NOLAN.id, name: NOLAN.name, directed: [20, 21] },
+      { id: NOLAN.id, name: NOLAN.name, directed: [20, 21, 22] },
       { id: CAMEO.id, name: CAMEO.name, actedIn: [1, 2, 10, 11, 12] },
     ],
   });
@@ -213,8 +214,11 @@ describe("more-from", () => {
     );
   });
 
-  it("takes the rows away when the person said they weren't for them, and the teardown removes only its own", async () => {
+  it("Not for me drops that one name, and the next one down takes its place", async () => {
+    // A third name in reach: a second Nolan for Alice.
+    watched("121", 40);
     await run(testContext().ctx, {});
+    assert.ok(rowFor("alice", GOSLING.id));
     db.insert(userPreferences)
       .values({
         userId: 10,
@@ -223,10 +227,18 @@ describe("more-from", () => {
         updatedAt: NOW,
       })
       .run();
-    await run(testContext().ctx, {});
-    assert.equal(rowsOf("alice").length, 0);
+    const { ctx, log } = testContext();
+    await run(ctx, { minItems: 1 });
+    assert.equal(rowFor("alice", GOSLING.id), undefined, "Gosling declined");
+    assert.ok(rowFor("alice", VILLENEUVE.id), "Villeneuve stays");
+    assert.ok(rowFor("alice", NOLAN.id), "Nolan takes the slot");
+    assert.match(log.join("\n"), /alice said it wasn't for them/);
 
     db.delete(userPreferences).run();
+    await run(testContext().ctx, {});
+  });
+
+  it("is torn down by its remove job, which leaves other rows alone", async () => {
     await run(testContext().ctx, {});
     plex.collections.set("9999", {
       ratingKey: "9999",

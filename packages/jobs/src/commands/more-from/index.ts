@@ -44,6 +44,9 @@ import { moreFromSummary, personKey, scorePeople, type Person } from "./people.t
 
 export const MORE_FROM_LABEL = "MoreFrom";
 export const MORE_FROM_ROW_NAME = "More From…";
+/** A row's name, as the person reads it — and as the portal's "Not for me" records it. */
+const rowName = (person: Pick<Person, "name">) => `More from ${person.name}`;
+
 /** How far down someone's list to look for names with something left to offer. */
 const CANDIDATES = 10;
 
@@ -170,19 +173,15 @@ export function createMoreFromCommand(
       const prefs = getOptedInPreferencesByUsername(user.username);
       const mine = (state: SectionState) =>
         state.rows.filter((r) => hasLabel(r, MORE_FROM_LABEL) && r.labels.includes(`User:${user.username}`));
-      const declined = (prefs?.excludedCollections ?? []).some((t) =>
-        displayTitle(t).toLowerCase().startsWith("more from "),
-      );
-      if (declined) {
-        for (const state of sections.values())
-          for (const row of mine(state)) await writer.deleteRow(row.ratingKey, `${user.name} said it wasn't for them`);
-        continue;
-      }
+      // "Not for me" names one row — "More from Ryan Gosling" — so it drops
+      // that name, and the next one down takes its place. The row itself goes
+      // in the sweep below, as any name no longer chosen does.
+      const declined = new Set((prefs?.excludedCollections ?? []).map((t) => displayTitle(t).toLowerCase()));
       const excluded = new Set((prefs?.excludedTitles ?? []).map((t) => t.toLowerCase()));
       const watched = watchedBy.get(user.username)!;
       const finished = [...watched.values()].filter((f) => f.finished);
       const candidates = scorePeople(finished, details, now(), { includeActors })
-        .filter((p) => p.seen.size >= minSeen)
+        .filter((p) => p.seen.size >= minSeen && !declined.has(rowName(p).toLowerCase()))
         .slice(0, CANDIDATES);
 
       // Their top names that still have films to offer, and what those are, per library.
@@ -229,14 +228,17 @@ export function createMoreFromCommand(
             films.map((f) => f.ratingKey),
             moreFromSummary(person),
             pin,
-            { key, rowName: `More from ${person.name}` },
+            { key, rowName: rowName(person) },
           );
         }
         // Their rows for names no longer on top.
         for (const row of mine(state)) {
           const key = row.labels.find((l) => l.startsWith("Person:"));
           if (key && wanted.has(key)) continue;
-          await writer.deleteRow(row.ratingKey, "no longer one of their top names", displayTitle(row.title));
+          const why = declined.has(displayTitle(row.title).toLowerCase())
+            ? `${user.name} said it wasn't for them`
+            : "no longer one of their top names";
+          await writer.deleteRow(row.ratingKey, why, displayTitle(row.title));
         }
       }
     }
