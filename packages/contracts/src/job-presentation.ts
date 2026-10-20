@@ -53,6 +53,7 @@ export const FEATURE_IDS = [
   "because-you-watched",
   "we-think-youd-like",
   "pick-it-back-up",
+  "finish-the-franchise",
   "season-collections",
   "leaving-soon",
   "shuffle",
@@ -253,6 +254,12 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     description:
       "Builds a “Pick It Back Up” collection in each TV library for each Plex user, of the shows they started and stopped watching partway through.",
   },
+  "finish-the-franchise": {
+    kind: "feature",
+    requires: "Personalized Home Screens, a TMDb API key, and recorded watch history.",
+    description:
+      "Builds a “Finish the Franchise” collection in each film library for each Plex user, of the next film in each series they've started.",
+  },
   "season-collections": {
     kind: "feature",
     requires: "A TMDb API key. Personalized Home Screens too, for a row per person.",
@@ -310,6 +317,11 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "hidden",
     description:
       "Tears down Pick It Back Up: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
+  },
+  "franchise-remove": {
+    kind: "hidden",
+    description:
+      "Tears down Finish the Franchise: deletes its collections from Plex. Sharing restrictions belong to Personalized Home Screens and are left alone.",
   },
   "season-remove": {
     kind: "hidden",

@@ -100,6 +100,13 @@ export const COMMANDS = {
     lane: "default",
     timeoutMs: HOUR_MS,
   },
+  // Local queries, one TMDb details fetch per newly watched film and one
+  // collection fetch per series in play. The default budget is ample.
+  "finish-the-franchise": {
+    load: () => import("./finish-the-franchise/index.ts"),
+    lane: "default",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
   // One read of the cleanup queue and an edit per library.
   "leaving-soon": {
     load: () => import("./leaving-soon/index.ts"),
@@ -132,6 +139,11 @@ export const COMMANDS = {
   "pibu-remove": { load: () => import("./pibu-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   "season-remove": { load: () => import("./season-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
   "leaving-remove": { load: () => import("./leaving-remove.ts"), lane: "interactive", timeoutMs: DEFAULT_TIMEOUT_MS },
+  "franchise-remove": {
+    load: () => import("./franchise-remove.ts"),
+    lane: "interactive",
+    timeoutMs: DEFAULT_TIMEOUT_MS,
+  },
   // Both walk every item in the managed libraries. Batched labelling should
   // make that minutes, but a first pass on a large library or a slow server
   // took 30+ with one item per request, and the old 30-minute budget aborted

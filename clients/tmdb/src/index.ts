@@ -114,6 +114,8 @@ const movieDetailsSchema = z.object({
     .optional(),
   release_dates: z.object({ results: z.array(releaseDateEntrySchema).default([]) }).optional(),
   keywords: keywordsObjSchema.optional(),
+  /** The franchise TMDb files the film under — at most one. */
+  belongs_to_collection: z.object({ id: z.number(), name: z.string() }).nullable().optional(),
 });
 
 const tvDetailsSchema = z.object({
@@ -192,6 +194,8 @@ export interface TmdbItemDetails {
   keywords: number[];
   /** Calendar month of release / first air date (1–12), undefined when TMDb has no date. */
   releaseMonth?: number;
+  /** The TMDb collection (franchise) a film belongs to; null for a standalone film, and always for TV. */
+  collectionId: number | null;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────
@@ -367,6 +371,7 @@ export async function fetchItemDetails(
       contentRatings: pickMovieCertification(data.release_dates?.results ?? []),
       keywords: (data.keywords?.keywords ?? []).map((k) => k.id),
       releaseMonth: monthFromDate(data.release_date),
+      collectionId: data.belongs_to_collection?.id ?? null,
     };
   }
 
@@ -396,5 +401,6 @@ export async function fetchItemDetails(
     contentRatings: pickTvCertification(data.content_ratings?.results ?? []),
     keywords: (data.keywords?.results ?? []).map((k) => k.id),
     releaseMonth: monthFromDate(data.first_air_date),
+    collectionId: null,
   };
 }

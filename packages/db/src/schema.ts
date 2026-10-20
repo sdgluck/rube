@@ -1149,6 +1149,12 @@ export interface TmdbCachedDetails {
   contentRatings?: Record<string, string>;
   /** TMDb keyword IDs (no names — those are looked up from a static map at use time). */
   keywords?: number[];
+  /**
+   * The TMDb collection (franchise) a film belongs to — Finish the Franchise
+   * reads it. `null` is "standalone"; absent is a row cached before the field
+   * existed, which that job treats as stale and refetches.
+   */
+  collectionId?: number | null;
   /** Calendar month of release_date / first_air_date (1–12). Used by the seasonal rule. */
   releaseMonth?: number;
 }

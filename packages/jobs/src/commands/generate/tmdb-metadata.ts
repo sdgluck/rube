@@ -34,6 +34,7 @@ function toCached(details: TmdbItemDetails): TmdbCachedDetails {
     contentRatings: Object.keys(details.contentRatings).length > 0 ? details.contentRatings : undefined,
     keywords: details.keywords.length > 0 ? details.keywords : undefined,
     releaseMonth: details.releaseMonth,
+    collectionId: details.collectionId,
   };
 }
 
@@ -55,6 +56,14 @@ export const createTmdbMetadataCommand = perDeps(function createTmdbMetadataComm
     ctx: JobContext,
     cfg: TmdbConfig,
     pairs: Array<{ tmdbId: number; mediaType: "movie" | "tv" }>,
+    opts: {
+      /**
+       * Treat a fresh row as stale anyway — for a reader that needs a field
+       * added since the row was cached. Only the pairs this caller asks about
+       * are refetched, so a new field doesn't cost every reader a full refill.
+       */
+      stale?: (data: TmdbCachedDetails) => boolean;
+    } = {},
   ): Promise<Map<string, TmdbCachedDetails>> {
     if (pairs.length === 0) return new Map();
 
@@ -79,7 +88,7 @@ export const createTmdbMetadataCommand = perDeps(function createTmdbMetadataComm
     for (const p of pairs) {
       const id = cacheId(p.tmdbId, p.mediaType);
       const hit = existing.get(id);
-      if (hit && now - hit.fetchedAt < CACHE_TTL_MS) {
+      if (hit && now - hit.fetchedAt < CACHE_TTL_MS && !opts.stale?.(hit.data)) {
         result.set(id, hit.data);
       } else {
         toFetch.push({ ...p, id });

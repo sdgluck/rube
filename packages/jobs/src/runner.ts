@@ -242,6 +242,13 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   { id: "season-remove", name: "Remove Season Collections", command: "season-remove", schedule: "", enabled: 1 },
   { id: "leaving-remove", name: "Remove Leaving Soon", command: "leaving-remove", schedule: "", enabled: 1 },
   {
+    id: "franchise-remove",
+    name: "Remove Finish the Franchise",
+    command: "franchise-remove",
+    schedule: "",
+    enabled: 1,
+  },
+  {
     id: "personalize-enable",
     name: "Enable Personalized Home Screens",
     command: "personalize-enable",

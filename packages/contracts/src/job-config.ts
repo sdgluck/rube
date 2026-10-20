@@ -87,6 +87,24 @@ export const pibuJobConfigSchema = commonJobConfigSchema.extend({
 export type PibuJobConfig = z.infer<typeof pibuJobConfigSchema>;
 
 /**
+ * Finish the Franchise: one row per person per film library of the next film
+ * in each series they've started. No AI — what they've seen is in the
+ * playback ledger and a series' order is on TMDb.
+ */
+export const franchiseJobConfigSchema = commonJobConfigSchema.extend({
+  users: z.array(z.string()).optional(),
+  /** A series nobody has touched in this long is one they've left, and drops out. */
+  maxIdleDays: z.number().int().min(30).max(3650).optional(),
+  /** Films finished before a series counts as started. */
+  minWatched: z.number().int().min(1).max(10).optional(),
+  maxItems: z.number().int().min(1).max(50).optional(),
+  pinToHomepage: z.boolean().optional(),
+  /** When the next part isn't in the library, offer the one after it instead of nothing. */
+  skipMissing: z.boolean().optional(),
+});
+export type FranchiseJobConfig = z.infer<typeof franchiseJobConfigSchema>;
+
+/**
  * Season Collections: a row per holiday per library, there only while the
  * holiday is. `server` builds one row everybody sees and needs nothing set up;
  * `per-user` builds one per person, ranked by their taste, and needs
@@ -204,6 +222,8 @@ const SCHEMAS_BY_COMMAND: Record<string, z.ZodObject> = {
   "wtyl-remove": wtylJobConfigSchema,
   "pick-it-back-up": pibuJobConfigSchema,
   "pibu-remove": pibuJobConfigSchema,
+  "finish-the-franchise": franchiseJobConfigSchema,
+  "franchise-remove": franchiseJobConfigSchema,
   "season-collections": seasonCollectionsJobConfigSchema,
   "season-remove": seasonCollectionsJobConfigSchema,
   "leaving-soon": leavingSoonJobConfigSchema,

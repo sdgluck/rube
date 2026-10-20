@@ -39,6 +39,14 @@ export const PIBU_DEFAULTS = {
   pinToHomepage: true,
 } as const;
 
+export const FRANCHISE_DEFAULTS = {
+  maxIdleDays: 365,
+  minWatched: 1,
+  maxItems: 20,
+  pinToHomepage: true,
+  skipMissing: false,
+} as const;
+
 export const SEASON_DEFAULTS = {
   mode: "server",
   pinToHomepage: true,
@@ -260,6 +268,50 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       label: "Most items",
       control: { kind: "number", min: 1, max: 50 },
       default: PIBU_DEFAULTS.maxItems,
+      advanced: true,
+    },
+  ],
+  "finish-the-franchise": [
+    {
+      key: "users",
+      label: "Users",
+      help: "Leave empty for everyone on the Users page.",
+      control: { kind: "users", source: "plex-users" },
+    },
+    {
+      key: "maxIdleDays",
+      label: "Left alone after",
+      help: "A series nobody has played any part of for this long is treated as one they've moved on from.",
+      control: { kind: "number", min: 30, max: 3650, unit: "days" },
+      default: FRANCHISE_DEFAULTS.maxIdleDays,
+    },
+    {
+      key: "pinToHomepage",
+      label: "Pin to home screen",
+      control: { kind: "boolean" },
+      default: FRANCHISE_DEFAULTS.pinToHomepage,
+    },
+    {
+      key: "minWatched",
+      label: "Films seen to count",
+      help: "How many films in a series someone has to finish before it counts as one they've started.",
+      control: { kind: "number", min: 1, max: 10, unit: "films" },
+      default: FRANCHISE_DEFAULTS.minWatched,
+      advanced: true,
+    },
+    {
+      key: "skipMissing",
+      label: "Skip gaps",
+      help: "When the next film isn't in the library, offer the one after it. Off, the series is left out until the gap is filled.",
+      control: { kind: "boolean" },
+      default: FRANCHISE_DEFAULTS.skipMissing,
+      advanced: true,
+    },
+    {
+      key: "maxItems",
+      label: "Most items",
+      control: { kind: "number", min: 1, max: 50 },
+      default: FRANCHISE_DEFAULTS.maxItems,
       advanced: true,
     },
   ],

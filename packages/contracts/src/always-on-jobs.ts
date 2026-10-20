@@ -18,6 +18,7 @@ export const ALWAYS_ON_JOB_IDS = [
   "byw-remove",
   "collections-sweep",
   "generate",
+  "franchise-remove",
   "healthcheck",
   "label",
   "leaving-remove",

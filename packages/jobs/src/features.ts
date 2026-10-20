@@ -61,6 +61,16 @@ export const FEATURE_TEMPLATES: FeatureTemplate[] = [
     requiresPersonalizedSharing: true,
   },
   {
+    id: "finish-the-franchise",
+    name: "Finish the Franchise",
+    command: "finish-the-franchise",
+    // Daily: finishing a film tonight should put the next one up by morning.
+    // Clear of every schedule preset's night chain.
+    defaultSchedule: "15 7 * * *",
+    defaultConfig: {},
+    requiresPersonalizedSharing: true,
+  },
+  {
     id: "season-collections",
     name: "Season Collections",
     command: "season-collections",
@@ -119,6 +129,7 @@ const TEARDOWN_JOBS: Record<string, CommandName> = {
   "pick-it-back-up": "pibu-remove",
   "season-collections": "season-remove",
   "leaving-soon": "leaving-remove",
+  "finish-the-franchise": "franchise-remove",
 };
 
 function getFeatureTemplate(featureId: string): FeatureTemplate | undefined {

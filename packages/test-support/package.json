@@ -10,7 +10,8 @@
     "./download-clients": "./src/mock-download-clients.ts",
     "./lists": "./src/mock-list-server.ts",
     "./plex": "./src/mock-plex-server.ts",
-    "./plex-tv": "./src/mock-plex-tv.ts"
+    "./plex-tv": "./src/mock-plex-tv.ts",
+    "./tmdb": "./src/mock-tmdb-server.ts"
   },
   "files": [
     "src"

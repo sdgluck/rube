@@ -97,6 +97,16 @@ export function createReadiness(
       case "pick-it-back-up":
         items.push(personalization(), watchHistory());
         break;
+      case "finish-the-franchise":
+        items.push(personalization(), watchHistory(), {
+          id: "tmdb",
+          label: "TMDb API key set",
+          met: Boolean(getConfig("global_tmdb_api_key")),
+          detail: "Finds which series each film belongs to, and in what order.",
+          href: "/settings/databases/tmdb",
+          severity: "required",
+        });
+        break;
       case "leaving-soon": {
         const refusal = cleanup.standingRefusal();
         items.push({

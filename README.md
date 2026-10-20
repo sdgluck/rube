@@ -21,6 +21,8 @@ and notifications on a schedule.
   from their recent watch history. [More](#we-think-youd-like)
 - **Pick it back up**: one collection per user per TV library of the shows
   they started and stopped watching. [More](#pick-it-back-up)
+- **Finish the franchise**: one collection per user per film library of the
+  next film in each series they've started. [More](#finish-the-franchise)
 - **Season collections**: a Christmas, Halloween or other holiday collection
   in each library while the holiday is on. [More](#season-collections)
 - **Leaving soon**: a collection in each library of what cleanup is about to
@@ -291,6 +293,32 @@ Limits:
   install, run **Import Plex Watch History** first.
 - It reads Tinkerbell's own playback history, so playback retention limits how
   far back **Given up after** can reach.
+
+## Finish the franchise
+
+Each user gets a "Finish the Franchise" collection in each film library,
+holding the next film in each series they've started — watched Alien and
+Aliens, and Alien 3 is waiting. Install it from **Jobs**. It runs every
+morning and uses no AI.
+
+- "Next" is the first film after the furthest one they've finished, in
+  release order, using TMDb's collections. Someone who skipped from Alien to
+  Alien 3 is offered Alien Resurrection, not Aliens.
+- When the next film isn't in the library, that series is left out rather
+  than skipping ahead. **Skip gaps** offers the one after it instead.
+- Films not yet released aren't offered. A series nobody has played for
+  **Left alone after** (365 days) drops out.
+- Most recently watched series come first. The collection is updated in
+  place, removed when there is nothing next, and **Not for me** in the portal
+  removes it.
+
+Limits:
+
+- It needs Personalized Home Screens, a TMDb API key and recorded watch
+  history. On a new install, run **Import Plex Watch History** first.
+- A film is matched by its TMDb id from the library index, so run **Sync
+  Media** first. A watched film that has since been deleted still counts when
+  Radarr remembers it.
 
 ## Season collections
 

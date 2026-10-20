@@ -25,6 +25,8 @@ const KINDS = {
   // Its description says which dates the row is up for.
   "season-collections": { name: "Season Collections", showSummary: true },
   "leaving-soon": { name: "Leaving Soon", showSummary: true },
+  // Its description names the next film in each series.
+  "finish-the-franchise": { name: "Finish the Franchise", showSummary: true },
 } as const;
 
 export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof typeof KINDS }) {
@@ -56,12 +58,17 @@ export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof type
     refetchInterval: 10000,
     enabled: jobId === "leaving-soon",
   });
+  const franchiseQuery = trpc.jobs.franchiseCollections.useQuery(undefined, {
+    refetchInterval: 10000,
+    enabled: jobId === "finish-the-franchise",
+  });
   const collectionsQuery = {
     "because-you-watched": bywQuery,
     "we-think-youd-like": wtylQuery,
     "pick-it-back-up": pibuQuery,
     "season-collections": seasonQuery,
     "leaving-soon": leavingQuery,
+    "finish-the-franchise": franchiseQuery,
   }[jobId];
   const [confirming, setConfirming] = useState<{ title: string; ratingKey: string } | null>(null);
 
@@ -73,6 +80,7 @@ export default function GeneratedCollectionsPanel({ jobId }: { jobId: keyof type
         "pick-it-back-up": utils.jobs.pibuCollections,
         "season-collections": utils.jobs.seasonCollections,
         "leaving-soon": utils.jobs.leavingCollections,
+        "finish-the-franchise": utils.jobs.franchiseCollections,
       })[jobId].invalidate(),
   });
 
