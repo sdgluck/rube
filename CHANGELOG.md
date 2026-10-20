@@ -6,6 +6,57 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.44.0] - 2026-10-20
+
+### Added
+
+- A new installable "Your Requests Are Here" feature builds a collection for each user in each library every morning. It holds what that user asked for in Overseerr that has arrived and they haven't watched yet, and it uses no AI. Requests are matched to a Plex user by plex.tv id, then username, then email, and the run log names any request it couldn't match. A film leaves the row once it is watched through, and a show leaves once they've played any of it since it arrived. Arrivals older than the Keep for setting (60 days) leave the row anyway.
+- A new installable "Finish the Franchise" feature builds a collection for each user in each film library every morning. It holds the next film in every series they're partway through, so someone who watched Alien and Aliens is offered Alien 3, and it uses no AI. "Next" is the first released film after the furthest one they've finished, in TMDb's release order. A series with a gap in the library is left out unless Skip gaps is on, which offers the film after the gap. Series left untouched for longer than "Left alone after" drop out. A 4K copy and a 1080p copy count as one film, and a film that cleanup deleted still counts as watched.
+- A new installable "Leaving Soon" feature adds a collection to everyone's Home in every library each morning, after the night's cleanup. It holds the titles that cleanup rules are about to delete, as a last chance to watch them. It uses the same list as the portal's leaving-soon tab and the digest, so all three agree. The row drops titles once they are removed or spared, and it is taken down when nothing is leaving. Removing the feature deletes only its own rows and leaves the cleanup queue untouched.
+- A new installable season collections feature, beside Because You Watched and We Think You'd Like, builds a collection each morning in every library for each holiday that is in season. Examples are Christmas from 1 to 26 December and Halloween in October. Each row is deleted the morning after its season ends, and it keeps its Plex key and pin for the whole season.
+  - **Modes:** by default there is one row that everybody sees, which needs no personalization. Alternatively you can have per-person rows such as "Christmas picks for you", ordered by each person's watch history, which require Personalized Home Screens.
+  - **Titles:** they come from the TMDb keywords a holiday is filed under. If those find too few titles and an AI provider is set, the AI tops up the row.
+- The job page's new Seasons card lets you turn the built-in seasons on or off, rename them and change their dates. You can also choose keywords by searching TMDb and add your own custom seasons. Only your changes are stored, so later corrections to the built-in presets still reach a server where one has been edited.
+- A new installable "Pick It Back Up" feature adds a row for each person in every TV library. It shows the shows they started and stopped, and names the next episode for each.
+- Rules can now draft a smart filter from a sentence you type. The draft is checked against the library's own genres and users before it reaches the filter editor.
+- The problems area can now scan Plex for a folder that was downloaded but is missing from the library, and it can mark a stuck grab as failed.
+- There is a new native iOS app built in SwiftUI. Everyone the server shares with gets the full portal, and whoever can administer the server also gets an Admin part with the overview, jobs, cleanup, collections and users. The two parts connect to their own servers separately. Sign-in uses Plex's PIN flow and then signs in to each server on its own. Connecting by QR code or deep link, the biometric lock and share-sheet invites all carry over from the old apps, and users are named by their Plex username, as in the web admin. The movie-match room menu also has Start Over, which used to be reachable only once the deck ran out.
+- There is a new native Android app built with Compose. It matches the portal and includes a subset of the admin pages. It signs in with a Plex PIN and then signs in to the admin and portal servers separately.
+- The portal now asks for a second tap on the Account row before it signs you out, so an accidental tap no longer ends your session.
+- The preview page now puts the viewed user and library in the URL, so a specific preview can be bookmarked or shared.
+- Shuffling on the preview page now asks you to confirm first, and then shows its progress for each library.
+- From a hub on the preview page you can now open the exact rule that built it.
+- The user picker on the preview page is now searchable, which helps on servers with many users.
+- The preview page can now refresh past the server's cache, so you see the current state of a home rather than a cached copy.
+
+### Changed
+
+- **Existing `seasonal` rules will build smaller, correct collections after upgrading.** The rule type now uses the same season table as the season collections feature and requires a keyword. Most of its old keyword ids pointed at unrelated keywords such as "space", "zombie" and "pop star". It also took every film released in the holiday's month, so every December release counted as Christmas.
+- **If you installed the registry's Spooky Season pack, version 4 narrows its "Halloween Picks" rule to Halloween titles in an October window.** The previous version built a collection for every holiday all year round.
+- **The QR codes in Settings now open the single new Tinkerbell app, and one scan sets up both its admin and portal parts.** Settings → Mobile app also warns when you have it open at a loopback address, because a phone would resolve that address to itself.
+- **On phones, the admin web interface is now a plain responsive page and no longer imitates a native app.** Below 768px the sidebar becomes a drawer that the menu button opens. Dialogs and menus are the desktop ones, tables scroll sideways, and search pickers open their own popover.
+- **On phones, the portal now has one mobile-web look and no longer imitates iOS and Material.** Movie-match room options sit in a menu, and rows have visible buttons instead of swipe actions. The swipe deck and bottom sheets stay.
+- The Settings sidebar has been regrouped under shorter headings, eight including About, so no group runs past six pages.
+
+### Fixed
+
+- Importing a settings export no longer fails when the export contains a setting this version no longer has; that setting is now skipped.
+- Signing in with a Plex token that plex.tv rejects now returns a proper unauthorized error instead of a server error (500).
+- The sign-in rate limit now measures elapsed time, so a frozen clock can no longer lock sign-in shut.
+- A movie-match room no longer fails on every poll when Plex doesn't report its server's identifier. Before, the native app's deck never dealt any cards in this case.
+- The preview page now shows a loading state while you switch the viewed user or library, instead of leaving the previous home on screen unchanged.
+- The Jobs entry in the navigation now turns red when the latest run of any enabled job failed, not only when the healthcheck job failed.
+- The recent runs list now leaves out the repeated runs of polling jobs, so it reaches back to the runs that did real work.
+- The problems area no longer reports a grab as stuck when a later import has replaced it.
+- The rules page's warning about same-named collections now says correctly that each collection keeps its own items, and that people simply can't tell the two apart.
+
+### Removed
+
+- **The old "Tinkerbell" and "Tinkerbell Portal" phone apps stop working with this release.** Install the new native app and connect it from Settings → Mobile app.
+- **Neither the admin server nor the portal server answers cross-origin (CORS) requests any more, for any caller.**
+- **Media links that carry an `?access_token=` parameter are no longer accepted, because the media tokens behind them have been removed.** The new native app is unaffected because it sends its sign-in token with every request, image requests included.
+- The bottom navigation tabs setting has been retired, because the new responsive phone layout no longer uses bottom tabs.
+
 ## [0.43.0] - 2026-10-17
 
 ### Added
