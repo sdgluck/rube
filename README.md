@@ -8,44 +8,37 @@ and notifications on a schedule.
 
 ## Features
 
-- **Rules**: build Plex collections from your library on a schedule, with a
-  history of every run.
-- **Smart filters**: match on Plex metadata, IMDb ratings, Overseerr
-  requests, or let AI build with prompts. Describe a filter in a sentence and
-  AI drafts the clauses for you to check, using your library's own genres and
-  users.
-- **Collections**: sort order, pinning to the home screen, and shuffled hubs.
-- **Overlays**: draw ratings, badges and labels on posters.
-- **Ready-made collections**: per-user rows built from each person's watch
-  history (because you watched, picked by AI, shows to pick back up, the next
-  film in a franchise, requests that have arrived, films to watch again, new
-  additions in their order, more from favourite directors and actors), plus
-  library-wide ones for the current holiday and what cleanup will remove next.
+- **Rules**: build Plex collections from your library on a schedule.
+- **Smart filters**: match on Plex, IMDb and Overseerr, or have AI draft one.
+- **Collections**: sort order, home-screen pinning and shuffled hubs.
+- **Overlays**: ratings, badges and labels drawn on posters.
+- **Ready-made collections**: per-user picks, seasonal and leaving-soon rows.
+  [More](#we-think-youd-like)
 - **Personalized home screens**: each Plex user sets their own tastes.
   [More](#personalized-home-screens)
-- **Movie match**: a group swipes through a movie library together until
-  everyone likes the same film. [More](#movie-match)
-- **Prerolls**: upload videos for Plex to play before a movie.
-  [More](#prerolls)
-- **Problems**: one page for what is wrong across Plex, Radarr/Sonarr and your
-  rules. [More](#problems)
-- **Labels**: apply and undo Plex labels in bulk, with a preview.
-- **Discover**: search TMDb, see what Plex and Radarr/Sonarr already have, and
-  send the rest to Radarr or Sonarr.
+- **Movie match**: a group swipes until everyone likes the same film.
+  [More](#movie-match)
+- **Prerolls**: videos for Plex to play before a movie. [More](#prerolls)
+- **Problems**: what's wrong across Plex, Radarr/Sonarr and your rules.
+  [More](#problems)
+- **Labels**: apply and undo Plex labels in bulk.
+- **Discover**: search TMDb and send what's missing to Radarr or Sonarr.
 - **Watchlist sync**: send new Plex watchlist items to Radarr or Sonarr.
-- **Unused 4K**: find 4K films nobody watches in 4K and swap them to 1080p
-  without a gap. [More](#unused-4k)
-- **Home Assistant**: streams, jobs, failing rules and health as MQTT
-  sensors. [More](#home-assistant)
-- **Notifications**: Discord, Slack, Telegram, Gotify, Pushbullet, Pushover,
-  LunaSea, email and webhooks.
+- **Unused 4K**: swap 4K films nobody watches in 4K to 1080p.
+  [More](#unused-4k)
+- **Home Assistant**: streams, jobs and health as MQTT sensors.
+  [More](#home-assistant)
+- **Notifications**: Discord, Slack, Telegram, email, webhooks and more.
 - **Backup, export and change history**.
   [More](#backup-export-and-change-history)
-- **Stats and events**: library stats, an activity feed and playback history.
+- **Stats and events**: library stats, activity feed and playback history.
 - **Stress test**: find how many streams your server can handle.
   [More](#stress-test)
-- **Users**: invite people, choose their libraries, set limits, and see or stop
-  what they're streaming.
+- **Users**: invite people, set their libraries and limits, see what they stream.
+- **Mobile apps**: one iOS and Android app for guests and admins.
+  [More](#mobile-apps)
+- **API and MCP**: a read-only API for AI assistants and scripts.
+  [More](#api-and-mcp)
 
 ## Install
 
