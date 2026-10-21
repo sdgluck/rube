@@ -10,6 +10,38 @@ and notifications on a schedule.
 
 > [Screenshots](screenshots/) · [Development guide](DEVELOPMENT.md)
 
+## Contents
+
+- [Features](#features)
+- [Install](#install)
+- [Security](#security)
+- [For your users](#for-your-users)
+  - [Personalized home screens](#personalized-home-screens)
+  - [Mobile apps](#mobile-apps)
+  - [Movie match](#movie-match)
+- [Ready-made collections](#ready-made-collections)
+  - [We think you'd like](#we-think-youd-like)
+  - [Pick it back up](#pick-it-back-up)
+  - [Finish the franchise](#finish-the-franchise)
+  - [Your requests are here](#your-requests-are-here)
+  - [Watch it again](#watch-it-again)
+  - [New for you](#new-for-you)
+  - [More from…](#more-from)
+  - [Season collections](#season-collections)
+  - [Leaving soon](#leaving-soon)
+- [Library](#library)
+  - [Problems](#problems)
+  - [Unused 4K](#unused-4k)
+  - [Prerolls](#prerolls)
+- [Integrations](#integrations)
+  - [API and MCP](#api-and-mcp)
+  - [Home Assistant](#home-assistant)
+- [Operations](#operations)
+  - [Backup, export and change history](#backup-export-and-change-history)
+  - [Stress test](#stress-test)
+  - [Running unattended](#running-unattended)
+- [Development](#development)
+
 ## Features
 
 - **Rules**: build and update Plex collections and playlists from your library on a schedule.
@@ -102,63 +134,33 @@ that, only the Plex account that owns your server can sign in.
   feature is on.
 - Set the portal's public address under **Settings → Portal → Address**.
 
-## API and MCP
+## For your users
 
-AI assistants and scripts can read a Tinkerbell instance through a read-only
-API. Create a key under **Settings → API & MCP**; the page shows the exact
-command to connect.
+What the people you share your server with get.
 
-- **MCP** at `http://<host>:3000/mcp` (Streamable HTTP). For Claude Code:
-  `claude mcp add --transport http tinkerbell http://<host>:3000/mcp --header "Authorization: Bearer <key>"`
-- **JSON over HTTP** at `/api/v1/tools/<tool>` — `GET` with query parameters
-  or `POST` with a JSON body. `/api/v1` lists the tools and
-  `/api/v1/openapi.json` describes them.
-- Send the key as `Authorization: Bearer <key>` or `X-Api-Key: <key>`. A key is
-  always required, even with admin sign-in off.
-- Tools cover rules and their runs (logs, changes, why an item does or doesn't
-  match), jobs, collections, media, cleanup, health, events, library changes,
-  watch statistics, users, AI usage and settings. Secrets stay redacted, and
-  nothing can be changed.
-- Keys are stored hashed and shown once. Revoke one and it stops working
-  immediately. Keys aren't included in an export.
+### Personalized home screens
 
-## Unused 4K
+Each user gets their own recommendation collections, and only they can see them.
+Turn it on under **Settings → Personalization**.
 
-**Managers → Unused 4K** lists 4K films that nobody has watched in 4K: every
-play was a transcode, or there were none. Films added in the last 30 days are
-left out, and so is any film with a play whose details weren't recorded.
+- **Enable** labels your libraries and limits each shared user to their own
+  collections. Each user's previous sharing settings are saved first.
+- **Disable** removes the per-user collections and restores those settings.
+- Users set their tastes in the portal by signing in with Plex. Admins can also
+  set them under **Settings → User Preferences**.
+- Mark a rule **Personalizable** and every run of it also builds a copy for each
+  user who opted in, without the titles they excluded, pinned to their Home.
 
-Radarr doesn't downgrade a film by itself, so Tinkerbell runs the swap:
+Limits:
 
-1. Sets the 1080p quality profile you picked.
-2. Searches for a 1080p release, one film at a time.
-3. Grabs Radarr's best acceptable 1080p release.
-4. Once the download finishes, imports it over the 4K file.
+- The server owner can't be restricted. Your Home and each library's
+  Recommended tab show only your own rows, but each library's Collections list
+  shows everyone's.
+- Plex has one Recommended setting per row for everyone, so a shared user's rows
+  appear on their Home and not on their Recommended tab.
+- Click **Reconcile users** after sharing with someone new.
 
-The 4K file stays until that import, which deletes it or moves it to Radarr's
-recycle bin. If a swap fails or you cancel it, the original profile is put
-back. Each swap's progress is on the page. "4K Replaced With 1080p" and "4K
-Replacement Failed" are available as notifications.
-
-## Home Assistant
-
-Tinkerbell can publish its state to an MQTT broker with Home Assistant
-discovery. Turn it on under **Settings → Home Assistant** with the broker's
-address (the Mosquitto add-on listens on `mqtt://<ha-host>:1883`).
-
-- A **Tinkerbell** device appears in Home Assistant by itself, with streams,
-  transcodes, stream bandwidth, now playing (each session is an attribute),
-  the current job, a "working" sensor, failing rules, problems, cleanup due
-  soon, services down, library totals and the version.
-- It is publish-only. Tinkerbell never subscribes to anything, so nothing on
-  the broker can make it act.
-- State updates within 30 seconds of a change. Messages are retained, so a
-  restarted Home Assistant gets the current state straight away. While
-  Tinkerbell is stopped, its entities show as unavailable.
-- Change the topic prefix to run a second Tinkerbell against the same broker.
-  The entities under the old prefix are removed.
-
-## Mobile apps
+### Mobile apps
 
 Tinkerbell has one phone app, for iOS and Android. The people you share your
 server with use its **Portal** part: their collections, tastes, movie match and
@@ -203,27 +205,33 @@ The app's sign-in hands the session back to the app itself, so the server
 refuses it from a web browser. Exposing the server for the app doesn't let a
 web page sign in on anyone's behalf.
 
-## Personalized home screens
+### Movie match
 
-Each user gets their own recommendation collections, and only they can see them.
-Turn it on under **Settings → Personalization**.
+A group picks a film by swiping through one of your movie libraries in the
+portal. A film everyone in the room likes is a match. Turn it on under
+**Settings → Portal → Movie match**. It is off by default.
 
-- **Enable** labels your libraries and limits each shared user to their own
-  collections. Each user's previous sharing settings are saved first.
-- **Disable** removes the per-user collections and restores those settings.
-- Users set their tastes in the portal by signing in with Plex. Admins can also
-  set them under **Settings → User Preferences**.
-- Mark a rule **Personalizable** and every run of it also builds a copy for each
-  user who opted in, without the titles they excluded, pinned to their Home.
+- Only users of your Plex server can make a room, and only from a movie library
+  shared with them. They can narrow the films by genre, length and release year,
+  or start from a suggestion such as "hidden gem Thriller of the 90s".
+- Everyone in a room sees the films in the same shuffled order. Swiping right
+  likes a film and swiping left skips it. The arrow keys and the buttons under
+  the card do the same.
+- **Invite link**: anyone with a room's link can join as a guest with just a
+  name. They don't need a Plex account. A guest sees that room's films (titles,
+  posters and synopses) and nothing else in the portal. They can't play
+  anything.
+- **Room code**: typing a room's four-letter code works only for a user of your
+  server who already has the room's library.
+- Matches list the films everyone liked, then the films more than one person
+  liked. Each person can vote for one of them.
 
 Limits:
 
-- The server owner can't be restricted. Your Home and each library's
-  Recommended tab show only your own rows, but each library's Collections list
-  shows everyone's.
-- Plex has one Recommended setting per row for everyone, so a shared user's rows
-  appear on their Home and not on their Recommended tab.
-- Click **Reconcile users** after sharing with someone new.
+- Guests open the link in a browser, so the portal must be reachable from where
+  they are. Set its public address under **Settings → Portal → Address**.
+- A room closes after 30 days without a visit. It also closes when whoever made
+  it loses access to its library or leaves your server.
 
 ## Ready-made collections
 
@@ -443,35 +451,11 @@ cleanup.
 Removing the feature deletes its collections only. What cleanup removes is
 unchanged.
 
-## Movie match
+## Library
 
-A group picks a film by swiping through one of your movie libraries in the
-portal. A film everyone in the room likes is a match. Turn it on under
-**Settings → Portal → Movie match**. It is off by default.
+Tools for keeping your Plex library in shape.
 
-- Only users of your Plex server can make a room, and only from a movie library
-  shared with them. They can narrow the films by genre, length and release year,
-  or start from a suggestion such as "hidden gem Thriller of the 90s".
-- Everyone in a room sees the films in the same shuffled order. Swiping right
-  likes a film and swiping left skips it. The arrow keys and the buttons under
-  the card do the same.
-- **Invite link**: anyone with a room's link can join as a guest with just a
-  name. They don't need a Plex account. A guest sees that room's films (titles,
-  posters and synopses) and nothing else in the portal. They can't play
-  anything.
-- **Room code**: typing a room's four-letter code works only for a user of your
-  server who already has the room's library.
-- Matches list the films everyone liked, then the films more than one person
-  liked. Each person can vote for one of them.
-
-Limits:
-
-- Guests open the link in a browser, so the portal must be reachable from where
-  they are. Set its public address under **Settings → Portal → Address**.
-- A room closes after 30 days without a visit. It also closes when whoever made
-  it loses access to its library or leaves your server.
-
-## Problems
+### Problems
 
 **Library → Problems** lists what is wrong across Plex, Radarr/Sonarr and your
 rules. Some problems have a **Fix** button. The rest link to where you can fix
@@ -504,7 +488,25 @@ Limits:
 - New problems can be sent as a **New Problems Found** notification. Each one is
   sent once, not every night.
 
-## Prerolls
+### Unused 4K
+
+**Managers → Unused 4K** lists 4K films that nobody has watched in 4K: every
+play was a transcode, or there were none. Films added in the last 30 days are
+left out, and so is any film with a play whose details weren't recorded.
+
+Radarr doesn't downgrade a film by itself, so Tinkerbell runs the swap:
+
+1. Sets the 1080p quality profile you picked.
+2. Searches for a 1080p release, one film at a time.
+3. Grabs Radarr's best acceptable 1080p release.
+4. Once the download finishes, imports it over the 4K file.
+
+The 4K file stays until that import, which deletes it or moves it to Radarr's
+recycle bin. If a swap fails or you cancel it, the original profile is put
+back. Each swap's progress is on the page. "4K Replaced With 1080p" and "4K
+Replacement Failed" are available as notifications.
+
+### Prerolls
 
 A preroll is a short video that Plex plays before a movie. Prerolls need Plex
 Pass.
@@ -529,15 +531,61 @@ Videos that Plex can't play directly are converted to H.264/AAC MP4. The Docker
 image includes `ffmpeg`; outside Docker, install it yourself. Set
 `PREROLLS_DIR` to change where Tinkerbell keeps prerolls.
 
-### Portal preroll
+#### Portal preroll
 
 **Settings → Portal → Preroll** makes a short video telling users where to find
 the portal. It shows a message, the portal address and an optional QR code. It
 plays alongside your other prerolls.
 
-## Backup, export and change history
+## Integrations
 
-### Backups
+Ways for other tools to read Tinkerbell.
+
+### API and MCP
+
+AI assistants and scripts can read a Tinkerbell instance through a read-only
+API. Create a key under **Settings → API & MCP**; the page shows the exact
+command to connect.
+
+- **MCP** at `http://<host>:3000/mcp` (Streamable HTTP). For Claude Code:
+  `claude mcp add --transport http tinkerbell http://<host>:3000/mcp --header "Authorization: Bearer <key>"`
+- **JSON over HTTP** at `/api/v1/tools/<tool>` — `GET` with query parameters
+  or `POST` with a JSON body. `/api/v1` lists the tools and
+  `/api/v1/openapi.json` describes them.
+- Send the key as `Authorization: Bearer <key>` or `X-Api-Key: <key>`. A key is
+  always required, even with admin sign-in off.
+- Tools cover rules and their runs (logs, changes, why an item does or doesn't
+  match), jobs, collections, media, cleanup, health, events, library changes,
+  watch statistics, users, AI usage and settings. Secrets stay redacted, and
+  nothing can be changed.
+- Keys are stored hashed and shown once. Revoke one and it stops working
+  immediately. Keys aren't included in an export.
+
+### Home Assistant
+
+Tinkerbell can publish its state to an MQTT broker with Home Assistant
+discovery. Turn it on under **Settings → Home Assistant** with the broker's
+address (the Mosquitto add-on listens on `mqtt://<ha-host>:1883`).
+
+- A **Tinkerbell** device appears in Home Assistant by itself, with streams,
+  transcodes, stream bandwidth, now playing (each session is an attribute),
+  the current job, a "working" sensor, failing rules, problems, cleanup due
+  soon, services down, library totals and the version.
+- It is publish-only. Tinkerbell never subscribes to anything, so nothing on
+  the broker can make it act.
+- State updates within 30 seconds of a change. Messages are retained, so a
+  restarted Home Assistant gets the current state straight away. While
+  Tinkerbell is stopped, its entities show as unavailable.
+- Change the topic prefix to run a second Tinkerbell against the same broker.
+  The entities under the old prefix are removed.
+
+## Operations
+
+Keeping an instance safe and healthy.
+
+### Backup, export and change history
+
+#### Backups
 
 A compressed copy of the database is made every night at 03:30, and the last 7
 are kept. Configure it under **Settings → Backup & Restore**. In Docker, keep the
@@ -551,7 +599,7 @@ To restore:
    `tinkerbell.db-wal` and `tinkerbell.db-shm` if they exist.
 4. Start the container.
 
-### Export and import
+#### Export and import
 
 Export saves your rules, job schedules, overlay presets and settings to a JSON
 file that another Tinkerbell can import.
@@ -560,7 +608,7 @@ file that another Tinkerbell can import.
 - Import shows a preview first. Items that differ from yours keep your version
   unless you choose otherwise.
 
-### Change history
+#### Change history
 
 Every change to a rule, setting, job schedule, overlay preset or preroll is
 logged with its old value and who made it. See **Settings → Change History**, or
@@ -569,7 +617,7 @@ hidden, and entries are kept for 180 days.
 
 The **Changes** page is different: it lists what Tinkerbell did to Plex.
 
-## Stress test
+### Stress test
 
 **Settings → Stress Test** starts real Plex streams one at a time until your
 server can't keep up, then reports how many it handled.
@@ -580,7 +628,7 @@ server can't keep up, then reports how many it handled.
 - Test streams are left out of your stats and playback history.
 - You can watch the run live and replay past runs.
 
-## Running unattended
+### Running unattended
 
 - **Timezone:** set it in **Jobs → Schedule**. Otherwise `TZ` is used.
 - **Missed schedules** run once at the next start. Jobs that run more often than
@@ -594,7 +642,7 @@ server can't keep up, then reports how many it handled.
 - **Run one copy only.** Two copies on the same database will run every job
   twice.
 
-### Logging
+#### Logging
 
 | Variable     | Values                                     |
 | ------------ | ------------------------------------------ |
