@@ -4,9 +4,10 @@
 > Tinkerbell is in beta. Expect rough edges and changes between releases, and
 > keep [backups](#backups) before upgrading.
 
-**Plex on autopilot.** Write a rule once and Tinkerbell keeps your collections,
-overlays and playlists fresh, clears out what nobody watches, and gives everyone
-a home screen of their own. Self-hosted, one container.
+Tinkerbell runs rules over your Plex library and turns them into collections,
+playlists, poster overlays and cleanup. Everyone you share with gets their own
+home screen, with rows picked from what they watch. Groups can swipe through
+your films to agree on one, and there's an app for iOS and Android.
 
 > [Screenshots](screenshots/) · [Development guide](DEVELOPMENT.md)
 
