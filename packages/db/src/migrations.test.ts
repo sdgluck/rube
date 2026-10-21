@@ -50,8 +50,8 @@ const journal: Journal = JSON.parse(readFileSync(join(MIGRATIONS_DIR, "meta", "_
 
 /** A raw sqlite handle in its own temp dir. */
 function rawDb(): { sqlite: Database.Database; dir: string; dispose: () => void } {
-  const dir = mkdtempSync(join(tmpdir(), "tinkerbell-migrate-"));
-  const sqlite = new Database(join(dir, "tinkerbell.db"));
+  const dir = mkdtempSync(join(tmpdir(), "rube-migrate-"));
+  const sqlite = new Database(join(dir, "rube.db"));
   sqlite.pragma("foreign_keys = ON");
   return {
     sqlite,

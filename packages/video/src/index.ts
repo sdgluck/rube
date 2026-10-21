@@ -3,7 +3,7 @@
  *
  * A deliberate leaf package — it depends on nothing else in the workspace, so
  * both `jobs` and the tRPC layer can use it without a cycle. Mirrors how
- * `@tinkerbell/http` and `@tinkerbell/posters` are structured.
+ * `@rube/http` and `@rube/posters` are structured.
  *
  * Usage:
  *   const info = await probe(path);

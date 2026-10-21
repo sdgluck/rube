@@ -16,7 +16,7 @@ import { describeCron } from "#/utils";
 import styles from "#pages/Jobs/Jobs.module.css";
 import shared from "#/styles/shared.module.css";
 import FeatureWizard from "#pages/Jobs/FeatureWizard";
-import { isFeatureId } from "@tinkerbell/contracts";
+import { isFeatureId } from "@rube/contracts";
 import { isRunActive } from "#pages/Jobs/shared/useRunLog";
 import { useJobsData } from "#pages/Jobs/useJobsData";
 import { downloadJson } from "#pages/Rules/utils";
@@ -196,7 +196,7 @@ export function FeaturesPanel({ dragHandle, dragProps }: DashboardPanelProps) {
             className={styles.headerBtn}
             disabled={featureJobs.length === 0}
             options={[
-              { label: "File", onClick: () => downloadJson(getExportData(), "tinkerbell-features.json") },
+              { label: "File", onClick: () => downloadJson(getExportData(), "rube-features.json") },
               {
                 label: "Clipboard",
                 onClick: async () => {

@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import { UI_SCALES, type UiScale } from "@tinkerbell/contracts";
+import { UI_SCALES, type UiScale } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { getUiScale, setUiScale, subscribeUiScale } from "#/ui-scale";
 import controls from "#/styles/controls.module.css";

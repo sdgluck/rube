@@ -21,7 +21,7 @@ export type NotificationService = (typeof NOTIFICATION_SERVICES)[number];
  * Every event a user can subscribe a service to.
  *
  * Two audiences share this list. Most of it is **operator telemetry** — job
- * and health events that answer "is Tinkerbell working". The library events
+ * and health events that answer "is Rube working". The library events
  * (`media.added`, `collection.created`) are the other kind: they're about the
  * server rather than the app, and they're what a digest is built from.
  *

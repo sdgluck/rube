@@ -24,7 +24,7 @@ COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json tsconfig.base.js
 # that reads source (the root `prepare` is husky, a no-op without .git).
 #
 # The three apps that ship in this image are named. `apps/*` would also drag in
-# apps/tinkerbell.dev — the marketing site — whose devDependencies are
+# apps/rube.fyi — the marketing site — whose devDependencies are
 # playwright and a second sharp. Nothing here serves it, and pulling it in is
 # what made the install reach for a playwright tarball it had no reason to want.
 COPY --parents packages/*/package.json clients/*/package.json domains/*/package.json apps/server/package.json apps/web/package.json apps/portal/package.json ./
@@ -48,8 +48,8 @@ COPY CHANGELOG.md ./
 # has to be handed in. Unset just means the UI doesn't name a commit.
 ARG TB_GIT_SHA=""
 ENV TB_GIT_SHA=$TB_GIT_SHA
-RUN pnpm --filter @tinkerbell/web run build
-RUN pnpm --filter @tinkerbell/portal run build
+RUN pnpm --filter @rube/web run build
+RUN pnpm --filter @rube/portal run build
 
 # The server's production subgraph, resolved on its own rather than pruned out
 # of the build stage. Pruning in place doesn't work: `install --prod` unlinks
@@ -117,9 +117,9 @@ console.log('smoke: sharp', sharp.versions.sharp, 'libvips', sharp.versions.vips
 # registers has to resolve for the router to exist at all.
 RUN cd apps/server && node --input-type=module -e "\
 import { mkdtempSync } from 'node:fs'; import { tmpdir } from 'node:os'; import { join } from 'node:path';\
-import { buildContainer, ServicesToken } from '@tinkerbell/composition';\
-import { JobsToken, registerJobs } from '@tinkerbell/jobs';\
-import { createTrpc } from '@tinkerbell/trpc';\
+import { buildContainer, ServicesToken } from '@rube/composition';\
+import { JobsToken, registerJobs } from '@rube/jobs';\
+import { createTrpc } from '@rube/trpc';\
 const c = buildContainer({ dataDir: mkdtempSync(join(tmpdir(), 'tb-smoke-')) }, [registerJobs]);\
 const { appRouter } = createTrpc({ ...c.resolve(ServicesToken), jobs: c.resolve(JobsToken) });\
 const n = Object.keys(appRouter._def.procedures).length;\
@@ -138,7 +138,7 @@ RUN apk add --no-cache su-exec tini ffmpeg
 WORKDIR /app
 RUN mkdir -p /config /prerolls
 
-# The workspace tree, not a `pnpm deploy` bundle. Every @tinkerbell/* package
+# The workspace tree, not a `pnpm deploy` bundle. Every @rube/* package
 # is raw TypeScript (`main: ./src/index.ts`) that Node type-strips at load, and
 # Node refuses to strip types for any file whose real path is under
 # node_modules. pnpm links workspace packages as symlinks, so the real path is
@@ -201,8 +201,8 @@ EXPOSE 3000 3100
 VOLUME /config /prerolls
 
 LABEL net.unraid.docker.webui="http://[IP]:[PORT:3000]"
-LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/sdgluck/tinkerbell/master/icon.png"
-LABEL org.opencontainers.image.source="https://github.com/sdgluck/tinkerbell"
+LABEL net.unraid.docker.icon="https://raw.githubusercontent.com/sdgluck/rube/master/icon.png"
+LABEL org.opencontainers.image.source="https://github.com/sdgluck/rube"
 
 # 127.0.0.1, not localhost: the server binds 0.0.0.0, which is IPv4 only, while
 # /etc/hosts maps localhost to ::1 as well and busybox wget tries that first.

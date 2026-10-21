@@ -8,7 +8,7 @@
  * but reads still come straight from Sonarr so a page is never behind.
  */
 
-import type { ServarrHttp } from "@tinkerbell/servarr-http";
+import type { ServarrHttp } from "@rube/servarr-http";
 import type {
   SonarrBlocklistItem,
   SonarrHistoryRecord,

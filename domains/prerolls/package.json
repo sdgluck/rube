@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.prerolls",
+  "name": "@rube/domain.prerolls",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,14 +15,14 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/http": "workspace:*",
-    "@tinkerbell/overlays": "workspace:*",
-    "@tinkerbell/ports": "workspace:*",
-    "@tinkerbell/video": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/contracts": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
+    "@rube/http": "workspace:*",
+    "@rube/overlays": "workspace:*",
+    "@rube/ports": "workspace:*",
+    "@rube/video": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "sharp": "^0.34.5",
     "uqr": "^0.1.3"

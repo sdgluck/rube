@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.rule-drafts",
+  "name": "@rube/domain.rule-drafts",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,17 +15,17 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/domain.ai-usage": "workspace:*",
-    "@tinkerbell/llm": "workspace:*",
-    "@tinkerbell/plex": "workspace:*",
-    "@tinkerbell/plex-smart-filter": "workspace:*"
+    "@rube/container": "workspace:*",
+    "@rube/contracts": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
+    "@rube/domain.ai-usage": "workspace:*",
+    "@rube/llm": "workspace:*",
+    "@rube/plex": "workspace:*",
+    "@rube/plex-smart-filter": "workspace:*"
   },
   "devDependencies": {
-    "@tinkerbell/test-support": "workspace:*",
+    "@rube/test-support": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"
   }

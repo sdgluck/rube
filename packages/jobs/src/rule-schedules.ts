@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 import { createDeferral } from "./deferral.ts";
 import { createRuleQueue } from "./rule-queue.ts";
 import { createSchedule } from "./schedule.ts";
@@ -20,9 +20,9 @@ import { createSchedule } from "./schedule.ts";
  */
 
 import { Cron } from "croner";
-import { createLogger, errorMessage, type JobContext } from "@tinkerbell/core";
-import { type Rule } from "@tinkerbell/domain.rules";
-import { isRuleActiveOn, ruleConfigSchema, type RuleSchedule } from "@tinkerbell/contracts";
+import { createLogger, errorMessage, type JobContext } from "@rube/core";
+import { type Rule } from "@rube/domain.rules";
+import { isRuleActiveOn, ruleConfigSchema, type RuleSchedule } from "@rube/contracts";
 
 const log = createLogger("rule-schedules");
 

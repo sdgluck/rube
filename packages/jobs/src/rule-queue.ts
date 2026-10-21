@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 /**
  * One door for every rule run the server decides to make.
  *
@@ -40,10 +40,10 @@ import { type Services } from "@tinkerbell/composition";
  * that matters, which is the case the lease was written for.
  */
 
-import { createLogger, deriveJobContext, errorMessage, type JobContext } from "@tinkerbell/core";
-import { type RuleRunTrigger } from "@tinkerbell/domain.rule-runs";
-import { RuleLockedError } from "@tinkerbell/domain.rules";
-import { isRuleActiveOn } from "@tinkerbell/contracts";
+import { createLogger, deriveJobContext, errorMessage, type JobContext } from "@rube/core";
+import { type RuleRunTrigger } from "@rube/domain.rule-runs";
+import { RuleLockedError } from "@rube/domain.rules";
+import { isRuleActiveOn } from "@rube/contracts";
 
 const log = createLogger("rule-queue");
 

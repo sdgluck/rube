@@ -13,15 +13,15 @@
  */
 import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext } from "@rube/core";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { cleanupCandidates, cleanupProtections, config, events, jobRuns, jobs, rules } from "@tinkerbell/db";
-import { noopCheckpoint } from "@tinkerbell/core";
-import { CleanupToken } from "@tinkerbell/domain.cleanup";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { cleanupCandidates, cleanupProtections, config, events, jobRuns, jobs, rules } from "@rube/db";
+import { noopCheckpoint } from "@rube/core";
+import { CleanupToken } from "@rube/domain.cleanup";
 import { createCleanupCommand } from "./cleanup.ts";
 
 const c = createTestContainer();
@@ -34,7 +34,7 @@ const { recordMatches, listCandidates, holdCandidate, markActioned, setCandidate
   c.resolve(CleanupToken);
 const { runHandlerWithCleanup, createCleanupBudget } = createCleanupCommand(services);
 
-const { createPlexClient } = await import("@tinkerbell/plex");
+const { createPlexClient } = await import("@rube/plex");
 
 const RULE_ID = "cleanup-rule";
 const DAY = 86_400_000;
@@ -918,7 +918,7 @@ describe("cleanup.pending", () => {
  * Cleanup used to build a shelf collection per section. It doesn't any more:
  * a rule matching badly put a collection of most of the library in front of
  * the household before anyone had agreed to anything, and the review surface
- * is Tinkerbell's own queue page. These tests are what stops it coming back.
+ * is Rube's own queue page. These tests are what stops it coming back.
  */
 describe("no Plex collections", () => {
   it("writes no collection in any mode", async () => {

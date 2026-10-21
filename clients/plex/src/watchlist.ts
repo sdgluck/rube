@@ -20,7 +20,7 @@
  *   related but not interchangeable, so the rating key is returned alongside
  *   the guid and stored — an item cannot be removed from a guid alone.
  */
-import { httpRequest, httpRequestJson, HttpError } from "@tinkerbell/http";
+import { httpRequest, httpRequestJson, HttpError } from "@rube/http";
 
 const METADATA_PROVIDER = "https://metadata.provider.plex.tv";
 
@@ -65,8 +65,8 @@ function headers(token: string): Record<string, string> {
   return {
     Accept: "application/json",
     "X-Plex-Token": token,
-    "X-Plex-Client-Identifier": "tinkerbell",
-    "X-Plex-Product": "Tinkerbell",
+    "X-Plex-Client-Identifier": "rube",
+    "X-Plex-Product": "Rube",
   };
 }
 

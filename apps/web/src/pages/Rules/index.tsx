@@ -26,7 +26,7 @@ import {
   ruleCollectionCount,
   type RuleAction,
   type RuleConfig,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import shared from "#/styles/shared.module.css";
 import MigrationBanner from "./MigrationBanner";
 import RegistryUpdatesBanner from "./RegistryUpdatesBanner";
@@ -297,7 +297,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
   }
 
   function handleExportFile() {
-    downloadJson(getExportData(), "tinkerbell-rules.json");
+    downloadJson(getExportData(), "rube-rules.json");
   }
 
   async function handleExportClipboard() {

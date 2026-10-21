@@ -13,9 +13,9 @@ const PAGE_SIZE = 50;
 export default function Activity() {
   const { userId } = useUserDetail();
 
-  // Plex's own history rather than Tinkerbell's playback log: it goes back
+  // Plex's own history rather than Rube's playback log: it goes back
   // further than the poller has been running, and this page is asking what
-  // the *user* watched, not what Tinkerbell happened to observe.
+  // the *user* watched, not what Rube happened to observe.
   const query = trpc.users.history.useQuery({ userId, offset: 0, limit: PAGE_SIZE }, { refetchOnWindowFocus: false });
 
   if (query.isLoading) return <SkeletonTable />;

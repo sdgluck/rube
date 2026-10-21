@@ -18,7 +18,7 @@ function col(overrides: Partial<CollectionInput> & { title: string }): Collectio
 test("detect: keeps Kometa-labelled, drops others", () => {
   const all = [
     col({ title: "A24", labels: ["Kometa"] }),
-    col({ title: "Manual", labels: ["Tinkerbell"] }),
+    col({ title: "Manual", labels: ["Rube"] }),
     col({ title: "Old PMM", labels: ["PMM"] }),
     col({ title: "No labels", labels: [] }),
   ];
@@ -52,7 +52,7 @@ test("classify: studios, genres, countries, awards, universes, seasonal, based-o
   assert.equal(classifyOne(col({ title: "Japan" })).bucket, "country");
   assert.equal(classifyOne(col({ title: "Oscar Winners" })).bucket, "award");
   // Kometa's universe/ folder is short-keyed; display names live under
-  // franchise/ — so MCU classifies as franchise (Tinkerbell's tmdb_franchises
+  // franchise/ — so MCU classifies as franchise (Rube's tmdb_franchises
   // rule type covers it).
   assert.equal(classifyOne(col({ title: "Marvel Cinematic Universe" })).bucket, "franchise");
   assert.equal(classifyOne(col({ title: "Halloween" })).bucket, "seasonal");

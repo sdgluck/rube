@@ -7,7 +7,7 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import sharp from "sharp";
-import { POSTER_MAX_BYTES } from "@tinkerbell/contracts";
+import { POSTER_MAX_BYTES } from "@rube/contracts";
 import { fetchPosterUrl } from "./fetch-url.ts";
 
 const OK_URL = "https://raw.githubusercontent.com/pack/poster.jpg";

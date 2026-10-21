@@ -35,7 +35,7 @@ const CONCEPTS = [
 export default function WelcomeStep() {
   return (
     <div className={styles.stepBody}>
-      <h2 className={styles.stepTitle}>Welcome to Tinkerbell</h2>
+      <h2 className={styles.stepTitle}>Welcome to Rube</h2>
       <div className={styles.conceptGrid}>
         {CONCEPTS.map((concept) => (
           <div key={concept.title} className={styles.concept}>

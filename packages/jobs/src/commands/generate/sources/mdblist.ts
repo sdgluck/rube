@@ -1,11 +1,11 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 
 /**
  * MDBList as the rules engine wants it: a name and two flat id arrays.
  *
  * The HTTP, the api key and the reference parsing all live in
- * `@tinkerbell/mdblist` — they moved there when Discover grew a list search
+ * `@rube/mdblist` — they moved there when Discover grew a list search
  * and `packages/trpc` needed the same three things. What stays here is the
  * shape `handlers/list-source.ts` matches against, which is deliberately
  * *not* the client's shape: downstream we match against the section's library

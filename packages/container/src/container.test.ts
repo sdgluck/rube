@@ -231,7 +231,7 @@ describe("disposal", () => {
 
 describe("introspection", () => {
   /**
-   * What `@tinkerbell/composition`'s resolve-all test is built on. The whole
+   * What `@rube/composition`'s resolve-all test is built on. The whole
    * point of the overhaul is that a missing edge fails a build instead of
    * defaulting to a no-op, and that requires the graph to be enumerable.
    */

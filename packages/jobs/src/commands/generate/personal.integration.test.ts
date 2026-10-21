@@ -9,10 +9,10 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { eq } from "drizzle-orm";
-import { ConfigStoreToken, noopCheckpoint, personalRowTitle, type JobContext } from "@tinkerbell/core";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, plexUsers, rules, userPreferences } from "@tinkerbell/db";
+import { ConfigStoreToken, noopCheckpoint, personalRowTitle, type JobContext } from "@rube/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, plexUsers, rules, userPreferences } from "@rube/db";
 import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 import { createGenerateCommand } from "./index.ts";
 
@@ -122,7 +122,7 @@ describe("personal copies in a rule's run", () => {
     const bob = copyOf("bob")!;
     assert.equal(alice.title, personalRowTitle(`Scary (${RULE_ID})`, "alice"));
     assert.equal(bob.title, personalRowTitle(`Scary (${RULE_ID})`, "bob"));
-    assert.ok(!alice.labels.includes("Tinkerbell"), "a copy never carries the baseline label");
+    assert.ok(!alice.labels.includes("Rube"), "a copy never carries the baseline label");
     assert.ok(!alice.memberKeys.includes("100"), "her excluded title is left out");
     assert.equal(bob.memberKeys.length, 6);
     // Each copy on its own person's Home: the owner's own, everyone else's

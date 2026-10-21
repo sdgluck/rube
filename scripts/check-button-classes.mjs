@@ -7,7 +7,7 @@
  * it renders as tinted text with no box: the *Arr pages shipped "New from
  * preset" as a 16px-tall green strip, and nineteen buttons like it across
  * Arr, Discover and the release table, because nothing could see them.
- * Stylelint's `tinkerbell/primitive-geometry` catches this in a `composes:`
+ * Stylelint's `rube/primitive-geometry` catches this in a `composes:`
  * line, but a className in a .tsx file is outside its reach — hence this.
  *
  * The rule: a className that uses a button variant (btnPrimary, btnSecondary,

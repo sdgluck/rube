@@ -19,9 +19,9 @@ import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
 import { sql } from "drizzle-orm";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken, mediaItems, rules } from "@tinkerbell/db";
-import { buildMatch, SearchToken } from "@tinkerbell/domain.search";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken, mediaItems, rules } from "@rube/db";
+import { buildMatch, SearchToken } from "@rube/domain.search";
 
 const c = createTestContainer();
 after(() => c.dispose());

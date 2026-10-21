@@ -3,7 +3,7 @@
  *
  * Read from `playback_sessions`, which files every episode play under its
  * show (`grandparentRatingKey`). Plex's own view state can't answer this for
- * anyone but the owner — it is per token, and Tinkerbell holds only the
+ * anyone but the owner — it is per token, and Rube holds only the
  * owner's — which is the same reason the `tb.` smart-filter fields exist.
  *
  * "Where they'd pick up" is placed against the show's episode list from Plex,
@@ -14,7 +14,7 @@
  * part retention keeps.
  */
 import { and, inArray, isNotNull, sql } from "drizzle-orm";
-import { playbackSessions, type Db } from "@tinkerbell/db";
+import { playbackSessions, type Db } from "@rube/db";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

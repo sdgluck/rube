@@ -11,9 +11,9 @@
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { NotificationsToken } from "@tinkerbell/domain.notifications";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ConfigStoreToken } from "@rube/core";
+import { NotificationsToken } from "@rube/domain.notifications";
 
 const c = createTestContainer();
 after(() => c.dispose());

@@ -1,6 +1,6 @@
 import { test, describe, after } from "node:test";
 import assert from "node:assert/strict";
-import { startMockTrakt, type MockListServer } from "@tinkerbell/test-support/lists";
+import { startMockTrakt, type MockListServer } from "@rube/test-support/lists";
 import { createTraktClient } from "./index.ts";
 
 /**

@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/db",
+  "name": "@rube/db",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -19,7 +19,7 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
+    "@rube/container": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "drizzle-orm": "^0.45.1"
   },

@@ -16,7 +16,7 @@
  * Deliberately free of database and Plex-client imports: the lookup arrives as
  * a callback, so this is testable without either.
  */
-import { smartFilterGroupSchema, type SmartFilterGroup, type SmartFilterNode } from "@tinkerbell/plex-smart-filter";
+import { smartFilterGroupSchema, type SmartFilterGroup, type SmartFilterNode } from "@rube/plex-smart-filter";
 
 import { isTagField } from "./rule-config.ts";
 

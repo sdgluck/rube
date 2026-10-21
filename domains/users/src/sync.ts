@@ -9,10 +9,10 @@
  */
 
 import { lt } from "drizzle-orm";
-import { plexUsers, plexUserShares, plexInvites, type Db } from "@tinkerbell/db";
+import { plexUsers, plexUserShares, plexInvites, type Db } from "@rube/db";
 
-import type { PlexClient, PlexUserRecord, PlexSharedServerFull } from "@tinkerbell/plex";
-import { type CollectionsReader } from "@tinkerbell/ports";
+import type { PlexClient, PlexUserRecord, PlexSharedServerFull } from "@rube/plex";
+import { type CollectionsReader } from "@rube/ports";
 
 export interface SyncStats {
   synced: number;

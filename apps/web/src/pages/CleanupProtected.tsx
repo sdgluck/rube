@@ -20,7 +20,7 @@ import styles from "./Cleanup.module.css";
  * four times a year is not expressing it at all.
  *
  * Protecting a collection is matched on its *title*, not its rating key.
- * Tinkerbell's own rules used to delete and recreate their collections every
+ * Rube's own rules used to delete and recreate their collections every
  * run; they reconcile now and mostly keep their keys, but one rebuilt after
  * heavy churn still gets a fresh key — and a protection holding onto the old
  * one would come loose the night that happened.

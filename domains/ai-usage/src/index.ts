@@ -17,11 +17,11 @@
  */
 
 import { and, desc, eq, gte, isNotNull, lt, sql } from "drizzle-orm";
-import { llmUsage, rules, type Db } from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
-import { DAY_MS, errorMessage, startOfLocalMonth, type ConfigStore } from "@tinkerbell/core";
-import type { LlmClient, LlmRequest, LlmResponse } from "@tinkerbell/llm";
-import type { Clock } from "@tinkerbell/ports";
+import { llmUsage, rules, type Db } from "@rube/db";
+import { token } from "@rube/container";
+import { DAY_MS, errorMessage, startOfLocalMonth, type ConfigStore } from "@rube/core";
+import type { LlmClient, LlmRequest, LlmResponse } from "@rube/llm";
+import type { Clock } from "@rube/ports";
 
 export const LLM_FEATURES = [
   "rule",

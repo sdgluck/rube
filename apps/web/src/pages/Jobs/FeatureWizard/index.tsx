@@ -9,7 +9,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { applyConfigPatch, fieldsFor, jobPresentation } from "@tinkerbell/contracts";
+import { applyConfigPatch, fieldsFor, jobPresentation } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import Modal from "#components/Modal";

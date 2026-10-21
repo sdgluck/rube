@@ -2,7 +2,7 @@
  * Who counts as an admin, and whether the admin API is gated at all.
  *
  * Identity is the Plex server owner rather than a username/password
- * Tinkerbell invents: the app is useless without a Plex token anyway, the
+ * Rube invents: the app is useless without a Plex token anyway, the
  * owner is unambiguously identifiable from that token, and it means no
  * password storage, no reset flow, and no email.
  *
@@ -14,8 +14,8 @@
  * account.
  */
 import { createHash } from "node:crypto";
-import { token as containerToken } from "@tinkerbell/container";
-import { getPlexAccount } from "@tinkerbell/plex";
+import { token as containerToken } from "@rube/container";
+import { getPlexAccount } from "@rube/plex";
 import type { ConfigStore } from "./config.ts";
 import type { Sessions } from "./sessions.ts";
 
@@ -30,7 +30,7 @@ const log = createLogger("auth");
  * existing `HOST` override.
  */
 export function authDisabledByEnv(): boolean {
-  const raw = (process.env.TINKERBELL_DISABLE_AUTH ?? "").trim().toLowerCase();
+  const raw = (process.env.RUBE_DISABLE_AUTH ?? "").trim().toLowerCase();
   return raw === "1" || raw === "true" || raw === "yes";
 }
 
@@ -44,7 +44,7 @@ export function startAuthDisabledWarning(): void {
   if (!authDisabledByEnv()) return;
   const warn = () =>
     log.warn(
-      "TINKERBELL_DISABLE_AUTH is set: the admin API is reachable without signing in. " +
+      "RUBE_DISABLE_AUTH is set: the admin API is reachable without signing in. " +
         "Unset it and restart once you can sign in again.",
     );
   warn();
@@ -128,7 +128,7 @@ export function createAdminAuth(deps: AdminAuthDeps) {
     const token = getConfig("global_plex_token");
     if (!token) {
       throw new OwnerUnresolvedError(
-        "No Plex token is configured, so Tinkerbell can't tell who owns this server. Add one in Settings → Plex first.",
+        "No Plex token is configured, so Rube can't tell who owns this server. Add one in Settings → Plex first.",
       );
     }
 

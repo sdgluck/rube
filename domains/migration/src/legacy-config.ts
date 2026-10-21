@@ -1,4 +1,4 @@
-import { type ConfigStore } from "@tinkerbell/core";
+import { type ConfigStore } from "@rube/core";
 
 export interface LegacyConfigDeps {
   config: ConfigStore;

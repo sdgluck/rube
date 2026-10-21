@@ -14,9 +14,9 @@
  * listed 200 additions would be a worse version of the server one.
  */
 import { and, desc, eq, gte, inArray, lt, ne, sql } from "drizzle-orm";
-import { collections, mediaItems, playbackSessions, watchState, type Db } from "@tinkerbell/db";
-import { type Cleanup } from "@tinkerbell/domain.cleanup";
-import { type UserPreferences, type Sharing } from "@tinkerbell/core";
+import { collections, mediaItems, playbackSessions, watchState, type Db } from "@rube/db";
+import { type Cleanup } from "@rube/domain.cleanup";
+import { type UserPreferences, type Sharing } from "@rube/core";
 
 export interface DigestInput {
   /** Inclusive lower bound, epoch ms. */

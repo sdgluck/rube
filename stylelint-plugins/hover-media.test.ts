@@ -6,7 +6,7 @@ import hoverMedia from "./hover-media.mjs";
 async function lint(code: string): Promise<number> {
   const { results } = await stylelint.lint({
     code,
-    config: { plugins: [hoverMedia], rules: { "tinkerbell/hover-media": true } },
+    config: { plugins: [hoverMedia], rules: { "rube/hover-media": true } },
   });
   return results[0]!.warnings.length;
 }

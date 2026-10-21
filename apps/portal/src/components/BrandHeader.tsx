@@ -20,7 +20,7 @@ export default function BrandHeader({ branding, size = 26 }: { branding: Brandin
   return (
     <span className="brand-head">
       <Icon size={size} color={branding.iconColor?.trim() || "var(--plex)"} />
-      <span>{branding.title?.trim() || "Tinkerbell"}</span>
+      <span>{branding.title?.trim() || "Rube"}</span>
     </span>
   );
 }

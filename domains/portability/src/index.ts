@@ -1,6 +1,6 @@
 /* ─── Getting your configuration out, and back in ───────────────────────────
  *
- * Everything Tinkerbell knows lives in one SQLite file. That is a good default
+ * Everything Rube knows lives in one SQLite file. That is a good default
  * and a bad boundary: there was no way to get a rule out of the app except by
  * publishing it to the public registry, no way to move to a new host except by
  * copying a binary database and hoping the schema versions lined up, and no way
@@ -13,7 +13,7 @@
  * and import writes through those domains' own functions rather than around
  * them — see `ImportWriters` for why that is load-bearing rather than tidy.
  */
-import { token } from "@tinkerbell/container";
+import { token } from "@rube/container";
 
 import { createExport, type ExportDeps, type ExportOptions, type ExportResult } from "./export.ts";
 import {

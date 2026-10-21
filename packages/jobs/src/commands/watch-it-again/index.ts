@@ -17,15 +17,15 @@
  *  - **Rewatched most first.** Three viewings is a favourite; one is a film
  *    they saw.
  *  - **`watch_state`, never pruned**, with imported Plex history folded in —
- *    the years this row reaches back over mostly predate Tinkerbell, so the
+ *    the years this row reaches back over mostly predate Rube, so the
  *    history import is what makes it worth having.
  */
-import { WATCH_AGAIN_DEFAULTS } from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { DAY_MS, displayTitle } from "@tinkerbell/core";
-import type { JobContext, WatchAgainJobConfig } from "@tinkerbell/core";
-import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
-import { ClockToken } from "@tinkerbell/ports";
+import { WATCH_AGAIN_DEFAULTS } from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { DAY_MS, displayTitle } from "@rube/core";
+import type { JobContext, WatchAgainJobConfig } from "@rube/core";
+import { createPlexClient, type PlexSection } from "@rube/plex";
+import { ClockToken } from "@rube/ports";
 import { plexConnection, resolveTargetSections } from "../ai-collection-shared.ts";
 import { historyUserIds } from "../we-think-youd-like/profile.ts";
 import {
@@ -68,7 +68,7 @@ export function createWatchItAgainCommand(
     if (users.length === 0) throw noUsersError(allowlist);
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell watch-it-again`);
+    ctx.log(`rube watch-it-again`);
     ctx.log(`Server: ${url}`);
     const machineId = (await client.getIdentity()).machineIdentifier;
     const writer = createPersonalRowWriter({

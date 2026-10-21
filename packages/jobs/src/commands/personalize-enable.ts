@@ -1,10 +1,10 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
-import { errorMessage } from "@tinkerbell/core";
-import { sharingRestrictionBackups } from "@tinkerbell/db";
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
+import { errorMessage } from "@rube/core";
+import { sharingRestrictionBackups } from "@rube/db";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
-const BASELINE_LABEL = "Tinkerbell";
+const BASELINE_LABEL = "Rube";
 
 /**
  * Fewest items a pass must label before its speed is worth remembering. A
@@ -19,9 +19,9 @@ export function createPersonalizeEnableCommand(deps: Pick<Services, "clients" | 
   const { getConfig, setConfig } = config;
 
   /**
-   * Enable the personalization master switch: stamp the `Tinkerbell` label on
+   * Enable the personalization master switch: stamp the `Rube` label on
    * every item (so restricted users keep full library access) and restrict
-   * every shared user to `[Tinkerbell, User:<self>]`. This is what makes
+   * every shared user to `[Rube, User:<self>]`. This is what makes
    * per-user collections visible only to their owner.
    *
    * Idempotent: re-running reconciles any users that aren't yet restricted
@@ -44,7 +44,7 @@ export function createPersonalizeEnableCommand(deps: Pick<Services, "clients" | 
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell personalize-enable`);
+    ctx.log(`rube personalize-enable`);
     const identity = await client.getIdentity();
     const machineId = identity.machineIdentifier;
     ctx.log(`Server: ${identity.friendlyName}`);
@@ -101,7 +101,7 @@ export function createPersonalizeEnableCommand(deps: Pick<Services, "clients" | 
         ctx.log(`Labelling ran at ${itemsPerSecond.toFixed(1)} items/s.`);
       }
 
-      // Phase 3: restrict every shared user to [Tinkerbell, User:<self>].
+      // Phase 3: restrict every shared user to [Rube, User:<self>].
       ctx.log(`Applying sharing restrictions...`);
       let configured = 0;
       for (let i = 0; i < sharings.length; i++) {

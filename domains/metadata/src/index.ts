@@ -1,7 +1,7 @@
 /**
  * The metadata write ledger.
  *
- * Every field Tinkerbell writes to a Plex item is snapshotted here first, so
+ * Every field Rube writes to a Plex item is snapshotted here first, so
  * that any write can be handed back. Metadata is the one thing in the app that
  * cannot be regenerated: a collection can be deleted and rebuilt from its rule,
  * but a sort title somebody spent an evening fixing exists in exactly one
@@ -19,9 +19,9 @@
  * trail people read when they notice a title looks wrong.
  */
 import { and, desc, eq, inArray, isNull, lt, sql } from "drizzle-orm";
-import { metadataOriginals, type Db } from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
-import { DAY_MS } from "@tinkerbell/core";
+import { metadataOriginals, type Db } from "@rube/db";
+import { token } from "@rube/container";
+import { DAY_MS } from "@rube/core";
 
 /** How a field is written, and therefore how it is reverted. */
 export type MetadataFieldKind = "scalar" | "tag";
@@ -68,7 +68,7 @@ function encode(value: string | string[] | null): string | null {
  * A tag row whose JSON is unparseable reads as an empty set rather than
  * throwing: the alternative is one corrupt row blocking the revert of every
  * other row in its batch, and an empty set is what the field looked like
- * before Tinkerbell wrote anything at least as often as not.
+ * before Rube wrote anything at least as often as not.
  */
 export function decodeTags(value: string | null): string[] {
   if (!value) return [];
@@ -225,7 +225,7 @@ export function createMetadata(deps: MetadataDeps) {
     return rows.map((r) => r.title).filter(Boolean);
   }
 
-  /** Everything Tinkerbell has written to one item, newest first. */
+  /** Everything Rube has written to one item, newest first. */
   function itemHistory(ratingKey: string, limit = 50): MetadataOriginal[] {
     return db
       .select()

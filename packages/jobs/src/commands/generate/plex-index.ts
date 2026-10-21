@@ -1,4 +1,4 @@
-import type { PlexClient } from "@tinkerbell/plex";
+import type { PlexClient } from "@rube/plex";
 
 export interface IndexedItem {
   ratingKey: string;

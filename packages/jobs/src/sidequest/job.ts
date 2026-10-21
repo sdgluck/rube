@@ -1,10 +1,10 @@
 import { Job } from "sidequest";
 import { eq, sql } from "drizzle-orm";
-import { jobRuns } from "@tinkerbell/db";
-import type { Scope } from "@tinkerbell/container";
-import { buildContainer, ServicesToken, type Services } from "@tinkerbell/composition";
+import { jobRuns } from "@rube/db";
+import type { Scope } from "@rube/container";
+import { buildContainer, ServicesToken, type Services } from "@rube/composition";
 import { registerJobs } from "../index.ts";
-import { validateJobConfig, stampLog } from "@tinkerbell/contracts";
+import { validateJobConfig, stampLog } from "@rube/contracts";
 import {
   createLogger,
   errorMessage,
@@ -12,7 +12,7 @@ import {
   runAsActor,
   type JobContext,
   type CommonJobConfig,
-} from "@tinkerbell/core";
+} from "@rube/core";
 import { COMMANDS, isCommandName, type CommandName } from "../commands/catalog.ts";
 import { createCheckpoint as createCheckpointFactory } from "../checkpoint.ts";
 import { isShuttingDown } from "../runner.ts";
@@ -33,12 +33,12 @@ const baseLog = createLogger("jobs");
  * the same graph.
  *
  * This one line replaces `registerCoreHooks()`, and the difference is not
- * cosmetic. That function assigned four mutable slots in `@tinkerbell/core`
+ * cosmetic. That function assigned four mutable slots in `@rube/core`
  * that each defaulted to a no-op, and for a long time nothing called it here:
  * every job in every worker ran with health reporting, notification traces,
  * provider rescans and collection counts silently switched off. Nothing threw,
  * nothing logged. A container that is missing an edge cannot resolve, and the
- * resolve-all test in `@tinkerbell/composition` fails before it ships.
+ * resolve-all test in `@rube/composition` fails before it ships.
  */
 
 export function createCommandJob(services: Services, scopeFor: (name: string) => Scope) {
@@ -141,7 +141,7 @@ export function createCommandJob(services: Services, scopeFor: (name: string) =>
           const trimmed = line.trim();
           if (trimmed) message = trimmed;
           // Stamped as written — a buffered block arrives already stamped and
-          // keeps its own times (`@tinkerbell/contracts` `stampLog`).
+          // keeps its own times (`@rube/contracts` `stampLog`).
           const text = stampLog(line, Date.now()) + "\n";
 
           if (capped) {
@@ -383,7 +383,7 @@ export function createCommandJob(services: Services, scopeFor: (name: string) =>
  * itself — the same `buildContainer()` the server calls, producing the same
  * wiring. This one line replaces `registerCoreHooks()`, and the difference is
  * not cosmetic: that function assigned four mutable slots in
- * `@tinkerbell/core` that each defaulted to a no-op, and for a long time
+ * `@rube/core` that each defaulted to a no-op, and for a long time
  * nothing called it here. Every job in every worker ran with health reporting,
  * notification traces, provider rescans and collection counts silently
  * switched off, with nothing thrown and nothing logged.

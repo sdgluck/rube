@@ -9,7 +9,7 @@
  * Singin' in the Rain. One short call over the finished rosters fixes every
  * name at once, and a name the model fumbles keeps the one it had.
  */
-import type { HistoricalCollection } from "@tinkerbell/domain.rule-history";
+import type { HistoricalCollection } from "@rube/domain.rule-history";
 import { VIBE_HINTS, NAME_STYLE_HINTS, type RuleConfig } from "#commands/generate/config.ts";
 
 /** Titles shown per collection: enough to read the group, few enough to keep the call short. */

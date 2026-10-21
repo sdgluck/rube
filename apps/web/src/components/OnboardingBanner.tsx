@@ -39,7 +39,7 @@ export default function OnboardingBanner() {
   return (
     <div className={`app-notice ${styles.banner}`} role="status">
       <span className={styles.text}>
-        <strong>Finish setting up Tinkerbell</strong>
+        <strong>Finish setting up Rube</strong>
       </span>
       <span className={styles.progress}>
         <span

@@ -11,7 +11,7 @@
  * and it is the one that reliably honours locks.
  *
  * **Every field carries a lock.** Writing a field without locking it means the
- * next agent refresh may revert it, so Tinkerbell would appear to work and then
+ * next agent refresh may revert it, so Rube would appear to work and then
  * silently undo itself. Writing *with* the lock means Plex stops updating that
  * field from metadata agents until someone unlocks it. Both are real choices,
  * so `lock` is an explicit argument with no default at this layer — the
@@ -21,7 +21,7 @@ import type { PlexHttp } from "./http.ts";
 import { SECTION_TYPE_MAP } from "./types.ts";
 
 /**
- * The scalar fields Tinkerbell can write. Deliberately a closed set: Plex
+ * The scalar fields Rube can write. Deliberately a closed set: Plex
  * accepts anything of the form `<field>.value`, and a typo in an open-ended
  * field name is a write that answers 200 and changes nothing.
  */

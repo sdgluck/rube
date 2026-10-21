@@ -1,7 +1,7 @@
 /**
  * The portable bundle: everything you configured, as one JSON document.
  *
- * Tinkerbell's whole state lives in one SQLite file, which makes "send me your
+ * Rube's whole state lives in one SQLite file, which makes "send me your
  * rule so I can see what's wrong" and "I'm moving to a new host" equally
  * impossible. This is the format that fixes both, and it is deliberately a
  * document rather than a database dump: a dump is a schema version you have to
@@ -86,7 +86,7 @@ const exportedOverlayConfigSchema = z.object({
 });
 
 /**
- * A quality profile Tinkerbell manages, as a decision rather than a record.
+ * A quality profile Rube manages, as a decision rather than a record.
  *
  * The *Arr's own profile and format ids never travel: they mean nothing on
  * another install. What travels is "this instance should have a profile
@@ -103,7 +103,7 @@ const exportedManagedProfileSchema = z.object({
 export const bundleSchema = z.object({
   formatVersion: z.number().int().positive(),
   exportedAt: z.number().int(),
-  tinkerbellVersion: z.string(),
+  rubeVersion: z.string(),
   /**
    * Which server it came from. Used to tell "restoring my own backup" from
    * "importing someone else's rules", which are different enough that the

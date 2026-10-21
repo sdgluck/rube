@@ -10,10 +10,10 @@
 import assert from "node:assert/strict";
 import { after, beforeEach, test } from "node:test";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ConfigStoreToken, REDACTED_SECRET } from "@tinkerbell/core";
-import { createMockQbittorrent, createMockSabnzbd } from "@tinkerbell/test-support/download-clients";
-import { DownloadClientsToken, UnknownDownloadClientError } from "@tinkerbell/domain.download-clients";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ConfigStoreToken, REDACTED_SECRET } from "@rube/core";
+import { createMockQbittorrent, createMockSabnzbd } from "@rube/test-support/download-clients";
+import { DownloadClientsToken, UnknownDownloadClientError } from "@rube/domain.download-clients";
 
 const GB = 1024 ** 3;
 

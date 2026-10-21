@@ -5,10 +5,10 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { errorMessage, type ArrInstance, type ArrInstances } from "@tinkerbell/core";
-import { createRadarrClient, type RadarrClient } from "@tinkerbell/radarr";
-import { createSonarrClient, type SonarrClient } from "@tinkerbell/sonarr";
-import { ARR_SERVICES } from "@tinkerbell/contracts";
+import { errorMessage, type ArrInstance, type ArrInstances } from "@rube/core";
+import { createRadarrClient, type RadarrClient } from "@rube/radarr";
+import { createSonarrClient, type SonarrClient } from "@rube/sonarr";
+import { ARR_SERVICES } from "@rube/contracts";
 
 export const serviceInput = z.object({
   service: z.enum(ARR_SERVICES),

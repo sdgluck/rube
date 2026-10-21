@@ -7,7 +7,7 @@ import { PageCrumbs } from "#layout/AppBar";
 import { useToast } from "#components/Toast";
 import styles from "#pages/Jobs/Jobs.module.css";
 import type { Job } from "#pages/Jobs/types";
-import { isFeatureId } from "@tinkerbell/contracts";
+import { isFeatureId } from "@rube/contracts";
 import { jobUi } from "#pages/Jobs/presentation";
 import { useJobActions } from "./useJobActions";
 import CheckpointNotice from "./CheckpointNotice";

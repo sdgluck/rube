@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "dev.tinkerbell.portal"
+    namespace = "fyi.rube.portal"
     compileSdk = 35
     defaultConfig {
         minSdk = 35

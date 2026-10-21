@@ -8,7 +8,7 @@
  *
  * Choices, each for a failure the obvious version has:
  *
- *  - **Read from Overseerr each run.** Tinkerbell keeps no mirror of requests
+ *  - **Read from Overseerr each run.** Rube keeps no mirror of requests
  *    (`seerr-poll` remembers only which ids it has announced), and a mirror
  *    would be one more thing to fall out of step; a run is a few paged reads.
  *  - **Matched to the person by plex.tv id first.** Overseerr's own username
@@ -21,14 +21,14 @@
  *  - **The row is the per-person writer's**: their own title, edited in place,
  *    removed when empty, "Not for me" honoured.
  */
-import { REQUESTS_DEFAULTS } from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { DAY_MS, displayTitle } from "@tinkerbell/core";
-import type { JobContext, RequestsJobConfig } from "@tinkerbell/core";
-import { mediaItems, plexUsers } from "@tinkerbell/db";
-import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
-import { ClockToken } from "@tinkerbell/ports";
-import { iterSeerrRequests } from "@tinkerbell/seerr";
+import { REQUESTS_DEFAULTS } from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { DAY_MS, displayTitle } from "@rube/core";
+import type { JobContext, RequestsJobConfig } from "@rube/core";
+import { mediaItems, plexUsers } from "@rube/db";
+import { createPlexClient, type PlexSection } from "@rube/plex";
+import { ClockToken } from "@rube/ports";
+import { iterSeerrRequests } from "@rube/seerr";
 import { inArray } from "drizzle-orm";
 import { plexConnection, resolveTargetSections } from "../ai-collection-shared.ts";
 import { historyUserIds } from "../we-think-youd-like/profile.ts";
@@ -81,7 +81,7 @@ export function createRequestsArrivedCommand(
     if (users.length === 0) throw noUsersError(allowlist);
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell requests-arrived`);
+    ctx.log(`rube requests-arrived`);
     ctx.log(`Server: ${url}`);
     const machineId = (await client.getIdentity()).machineIdentifier;
     const writer = createPersonalRowWriter({

@@ -8,7 +8,7 @@
  * downstream treats the bytes as an image.
  */
 import sharp from "sharp";
-import { POSTER_MAX_BYTES, posterUrlError } from "@tinkerbell/contracts";
+import { POSTER_MAX_BYTES, posterUrlError } from "@rube/contracts";
 
 export type PosterUrlFetch =
   | { status: "ok"; buffer: Buffer; contentType: string }

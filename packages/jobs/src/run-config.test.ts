@@ -1,10 +1,10 @@
 import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
 import { eq } from "drizzle-orm";
-import { variantFor } from "@tinkerbell/contracts";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, jobRuns, jobs } from "@tinkerbell/db";
+import { variantFor } from "@rube/contracts";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, jobRuns, jobs } from "@rube/db";
 import { buildRunConfig } from "./run-config.ts";
 import { createRunner } from "./runner.ts";
 

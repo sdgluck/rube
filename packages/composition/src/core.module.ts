@@ -1,5 +1,5 @@
 /**
- * Infrastructure and `@tinkerbell/core` registrations.
+ * Infrastructure and `@rube/core` registrations.
  *
  * Split from the domain registrations so a test — or the migrator, or any
  * future entrypoint that has no business standing up 29 domains — can build a
@@ -10,9 +10,9 @@
  * though the health domain registers it in a different module, later. The graph
  * is declared here and resolved on demand.
  */
-import type { Registry } from "@tinkerbell/container";
-import { closeDb, createDb, defaultDataDir, DbToken } from "@tinkerbell/db";
-import { ChangeRecorderToken, ClockToken, HealthReporterToken } from "@tinkerbell/ports";
+import type { Registry } from "@rube/container";
+import { closeDb, createDb, defaultDataDir, DbToken } from "@rube/db";
+import { ChangeRecorderToken, ClockToken, HealthReporterToken } from "@rube/ports";
 import {
   AdminAuthToken,
   ArrInstancesToken,
@@ -32,10 +32,10 @@ import {
   PreferencesToken,
   SessionsToken,
   SharingToken,
-} from "@tinkerbell/core";
+} from "@rube/core";
 
 export interface CoreEnv {
-  /** Where `tinkerbell.db` and the poster cache live. */
+  /** Where `rube.db` and the poster cache live. */
   dataDir?: string;
   /** Process start, for uptime. Passed in so a test can pin it. */
   startedAt?: number;
@@ -49,7 +49,7 @@ export function registerCore(r: Registry, env: CoreEnv = {}): void {
   r.register(ClockToken, () => () => Date.now());
 
   // The connection, and the disposer that closes it. This is the registration
-  // that replaces the import-time `new Database(...)` in `@tinkerbell/db` —
+  // that replaces the import-time `new Database(...)` in `@rube/db` —
   // and the reason a test can now have two of these at once.
   r.register(DbToken, () => createDb({ dataDir }), { dispose: closeDb });
 

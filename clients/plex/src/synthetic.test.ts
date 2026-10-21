@@ -1,6 +1,6 @@
 /**
  * The one thing keeping the stress harness's fabricated playback out of every
- * number Tinkerbell reports about the server.
+ * number Rube reports about the server.
  *
  * The harness starts genuine Plex sessions — that is the whole design — so from
  * `/status/sessions` they are indistinguishable from someone watching a film,
@@ -35,7 +35,7 @@ describe("isSyntheticSession", () => {
   });
 
   it("does not match a prefix that merely contains ours", () => {
-    assert.equal(isSyntheticSession({ playerMachineId: "not-tinkerbell-stress-1" }), false);
+    assert.equal(isSyntheticSession({ playerMachineId: "not-rube-stress-1" }), false);
   });
 });
 

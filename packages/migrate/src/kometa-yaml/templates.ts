@@ -158,12 +158,12 @@ export function expandDefinition(opts: {
 
     if (body.conditionals != null) {
       warnings.push(
-        `Template "${name}" uses \`conditionals:\`, which Tinkerbell doesn't evaluate — any value it would have chosen fell back to the template default.`,
+        `Template "${name}" uses \`conditionals:\`, which Rube doesn't evaluate — any value it would have chosen fell back to the template default.`,
       );
     }
     if (body.template != null) {
       warnings.push(
-        `Template "${name}" extends another template, which Tinkerbell doesn't follow — some settings may be missing.`,
+        `Template "${name}" extends another template, which Rube doesn't follow — some settings may be missing.`,
       );
     }
 

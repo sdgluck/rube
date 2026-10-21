@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import { createRunner, JobUpdateError } from "./runner.ts";
 import { createSchedule } from "./schedule.ts";
 /**
@@ -8,9 +8,9 @@ import { createSchedule } from "./schedule.ts";
  * (GET-122).
  */
 import { and, inArray, eq } from "drizzle-orm";
-import { jobs, jobRuns } from "@tinkerbell/db";
-import { createLogger, errorMessage } from "@tinkerbell/core";
-import { validateJobConfig } from "@tinkerbell/contracts";
+import { jobs, jobRuns } from "@rube/db";
+import { createLogger, errorMessage } from "@rube/core";
+import { validateJobConfig } from "@rube/contracts";
 import { DEFAULT_JOB_RUN_LIMIT } from "./limits.ts";
 import { Cron } from "croner";
 
@@ -301,7 +301,7 @@ export function createFeatures(deps: Services) {
     // Per-feature cleanup hooks. BYW leaves per-user sharing restrictions and
     // collections on the Plex server, We Think You'd Like its collections —
     // fire the teardown job so removing the feature actually undoes those
-    // side-effects. Item-level Tinkerbell labels are NOT touched here; users
+    // side-effects. Item-level Rube labels are NOT touched here; users
     // can clean those up via Settings → Maintenance.
     const teardown = TEARDOWN_JOBS[featureId];
     if (teardown) {

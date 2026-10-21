@@ -23,12 +23,12 @@
 
 import { randomUUID } from "node:crypto";
 import { asc, eq, inArray, sql } from "drizzle-orm";
-import { token } from "@tinkerbell/container";
-import { currentActor, errorMessage, type ArrInstances } from "@tinkerbell/core";
-import { qualitySwaps, type Db } from "@tinkerbell/db";
-import type { EventBus } from "@tinkerbell/ports";
-import { createRadarrClient, type RadarrClient, type RadarrRelease } from "@tinkerbell/radarr";
-import { formatFileSize } from "@tinkerbell/contracts";
+import { token } from "@rube/container";
+import { currentActor, errorMessage, type ArrInstances } from "@rube/core";
+import { qualitySwaps, type Db } from "@rube/db";
+import type { EventBus } from "@rube/ports";
+import { createRadarrClient, type RadarrClient, type RadarrRelease } from "@rube/radarr";
+import { formatFileSize } from "@rube/contracts";
 
 const DAY_MS = 86_400_000;
 /** Not offered until it has had a month to be watched. */
@@ -435,7 +435,7 @@ export function createQualitySwaps(deps: QualitySwapsDeps) {
       if (opts.signal?.aborted) break;
       const instance = instances.get(swap.instanceId);
       if (!instance) {
-        await fail(null, swap, "Its Radarr instance has been removed from Tinkerbell.");
+        await fail(null, swap, "Its Radarr instance has been removed from Rube.");
         continue;
       }
       if (swap.state === "pending" && searches <= 0) {

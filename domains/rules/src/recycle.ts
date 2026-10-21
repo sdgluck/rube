@@ -21,8 +21,8 @@
  */
 
 import { desc, eq, inArray, lt } from "drizzle-orm";
-import { deletedRules, rules, type Db } from "@tinkerbell/db";
-import { DAY_MS } from "@tinkerbell/core";
+import { deletedRules, rules, type Db } from "@rube/db";
+import { DAY_MS } from "@rube/core";
 import type { Rule } from "./index.ts";
 
 /**

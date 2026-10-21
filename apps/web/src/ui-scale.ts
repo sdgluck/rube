@@ -10,7 +10,7 @@
  * query landed, reflowing everything under the pointer.
  */
 
-import { DEFAULT_UI_SCALE, isUiScale, type UiScale } from "@tinkerbell/contracts";
+import { DEFAULT_UI_SCALE, isUiScale, type UiScale } from "@rube/contracts";
 import { readStorage, writeStorage } from "#/storage";
 
 /** Shared with the boot script in `index.html` — keep the two spellings equal. */

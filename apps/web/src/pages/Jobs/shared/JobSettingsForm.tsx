@@ -4,7 +4,7 @@
  * job page and the feature wizard.
  */
 import { useState } from "react";
-import type { FieldSpec } from "@tinkerbell/contracts";
+import type { FieldSpec } from "@rube/contracts";
 import ToggleSwitch from "#components/ToggleSwitch";
 import MultiSelect, { type MultiSelectOption } from "#components/MultiSelect";
 import { trpc } from "#/trpc";

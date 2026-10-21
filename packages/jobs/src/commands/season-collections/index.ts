@@ -41,15 +41,15 @@ import {
   resolveSeasons,
   SEASON_DEFAULTS,
   type ResolvedSeason,
-} from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { displayTitle, errorMessage, personalRowTitle, seasonRowTitle } from "@tinkerbell/core";
-import type { JobContext, SeasonCollectionsJobConfig } from "@tinkerbell/core";
-import { mediaItems, plexUsers } from "@tinkerbell/db";
-import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
-import { createLlmClient, estimateTokens, type LlmConfig } from "@tinkerbell/llm";
-import { createPlexClient, type PinOptions, type PlexSection } from "@tinkerbell/plex";
-import { ClockToken } from "@tinkerbell/ports";
+} from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { displayTitle, errorMessage, personalRowTitle, seasonRowTitle } from "@rube/core";
+import type { JobContext, SeasonCollectionsJobConfig } from "@rube/core";
+import { mediaItems, plexUsers } from "@rube/db";
+import { LlmBudgetExceededError } from "@rube/domain.ai-usage";
+import { createLlmClient, estimateTokens, type LlmConfig } from "@rube/llm";
+import { createPlexClient, type PinOptions, type PlexSection } from "@rube/plex";
+import { ClockToken } from "@rube/ports";
 import { asc, eq } from "drizzle-orm";
 import { itemLabel, libraryTitleMatcher, plexConnection, resolveTargetSections } from "../ai-collection-shared.ts";
 import { createTmdbMetadataCommand } from "../generate/tmdb-metadata.ts";
@@ -182,7 +182,7 @@ export function createSeasonCollectionsCommand(
     const today = new Date(now());
     const seasons = resolveSeasons(cfg);
     const active = activeSeasons(seasons, today, configuredTimezone());
-    ctx.log(`tinkerbell season-collections (${mode === "server" ? "one row for everyone" : "a row per person"})`);
+    ctx.log(`rube season-collections (${mode === "server" ? "one row for everyone" : "a row per person"})`);
     ctx.log(`Server: ${url}`);
     ctx.log(
       active.length > 0

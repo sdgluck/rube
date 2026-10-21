@@ -245,7 +245,7 @@ export default function ProviderPanel({ providerId, providerLabel }: ProviderPan
           titleClassName={styles.groupTitle}
           title={<>Recognized but not yet supported ({plan.future.length})</>}
         >
-          <p className={styles.hint}>Skipped — no matching Tinkerbell rule type yet.</p>
+          <p className={styles.hint}>Skipped — no matching Rube rule type yet.</p>
           <ul className={local.bullets}>
             {plan.future.map((f, i) => (
               <li key={`${f.bucket}-${f.sectionId}-${i}`}>

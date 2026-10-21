@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { DEFAULT_PRESENTATION } from "@tinkerbell/contracts";
+import { DEFAULT_PRESENTATION } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import ToggleSwitch from "#components/ToggleSwitch";

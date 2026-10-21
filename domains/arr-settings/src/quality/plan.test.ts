@@ -1,11 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { qualityPreset, type QualityPreset, type SizeLimit } from "@tinkerbell/contracts";
-import {
-  customFormatSchemaFixture,
-  qualityDefinitionsFixture,
-  qualityProfileSchemaFixture,
-} from "@tinkerbell/test-support";
+import { qualityPreset, type QualityPreset, type SizeLimit } from "@rube/contracts";
+import { customFormatSchemaFixture, qualityDefinitionsFixture, qualityProfileSchemaFixture } from "@rube/test-support";
 import { planPreset, PlanError, sizeFormatName, type Plan, type PlanInput } from "./plan.ts";
 import type { LiveQuality, WireCustomFormat, WireDefinition, WireProfile, WireSpec } from "./wire.ts";
 
@@ -200,7 +196,7 @@ describe("planPreset", () => {
     const live = input().live;
     live.profiles = [{ id: 1, name: "Any", items: [] }];
     const plan = planPreset(input({ live }));
-    assert.ok(plan.warnings.some((w) => w.includes("1 profile Tinkerbell does not manage")));
+    assert.ok(plan.warnings.some((w) => w.includes("1 profile Rube does not manage")));
   });
 
   test("a limit below a quality's minimum is refused, naming the quality", () => {

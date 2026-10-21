@@ -10,7 +10,7 @@
  * acknowledge anything, so whatever else reads this bot's updates still sees
  * them afterwards.
  */
-import { httpRequestJson, HttpError } from "@tinkerbell/http";
+import { httpRequestJson, HttpError } from "@rube/http";
 
 export interface TelegramChat {
   id: string;

@@ -8,8 +8,8 @@
  * tolerant JSON fallback for a model that wraps its answer in prose — must
  * not leave the other answering differently.
  */
-import type { Services } from "@tinkerbell/composition";
-import type { PlexClient, PlexItem, PlexSection } from "@tinkerbell/plex";
+import type { Services } from "@rube/composition";
+import type { PlexClient, PlexItem, PlexSection } from "@rube/plex";
 
 /** Where Plex is, from Settings, falling back to the environment. */
 export function plexConnection(getConfig: Services["config"]["getConfig"]): {
@@ -23,7 +23,7 @@ export function plexConnection(getConfig: Services["config"]["getConfig"]): {
 }
 
 /**
- * The libraries a run covers: the ones Tinkerbell manages, narrowed by the
+ * The libraries a run covers: the ones Rube manages, narrowed by the
  * job's own `sections` (by key or title). Throws when a narrowing names
  * nothing, so a renamed library reads as a misconfiguration rather than a run
  * that quietly did nothing.

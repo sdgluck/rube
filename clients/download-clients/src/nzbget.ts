@@ -9,7 +9,7 @@
  * `editqueue` is the three-argument form (command, param, ids) that NZBGet has
  * taken since v16; the four-argument form before it is a decade old.
  */
-import type { DownloadClientItem, DownloadItemState } from "@tinkerbell/contracts";
+import type { DownloadClientItem, DownloadItemState } from "@rube/contracts";
 import { basicAuth, createTransport, expectOk, fraction } from "./http.ts";
 import {
   DownloadClientError,

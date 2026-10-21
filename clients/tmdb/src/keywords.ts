@@ -1,7 +1,7 @@
 /**
  * TMDb keywords by name, for the person choosing which ones make a season.
  *
- * Tinkerbell otherwise only ever sees keyword *ids* — `fetchItemDetails` keeps
+ * Rube otherwise only ever sees keyword *ids* — `fetchItemDetails` keeps
  * the ids and drops the names, which is all matching needs. A season editor
  * that asked an admin to type `207317` would be asking them to go and look it
  * up on themoviedb.org, so the editor searches here and stores the name beside

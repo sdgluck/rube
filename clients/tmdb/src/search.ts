@@ -97,7 +97,7 @@ function isMediaType(value: string | undefined): value is TmdbMediaType {
  * Free-text search across films and shows.
  *
  * `include_adult` defaults to false and is deliberately not plumbed through to
- * a setting: nothing in Tinkerbell asks for it, and a default that quietly
+ * a setting: nothing in Rube asks for it, and a default that quietly
  * differs from TMDb's own is a surprise nobody asked for.
  */
 export async function searchMulti(

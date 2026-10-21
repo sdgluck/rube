@@ -1,5 +1,5 @@
 import type { RuleRunsDeps } from "./index.ts";
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 /**
  * The most recent test *preview* for each rule, in memory.
  *

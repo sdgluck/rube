@@ -1,4 +1,4 @@
-import { isDigestEmpty, renderDigest } from "@tinkerbell/domain.digest";
+import { isDigestEmpty, renderDigest } from "@rube/domain.digest";
 /**
  * `buildDigest` is pure and DB-only, so the interesting half is testable
  * against a seeded database with no network at all — which is the property
@@ -12,9 +12,9 @@ import { isDigestEmpty, renderDigest } from "@tinkerbell/domain.digest";
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
 import {
   cleanupCandidates,
   collections,
@@ -25,9 +25,9 @@ import {
   playbackSessions,
   rules,
   watchState,
-} from "@tinkerbell/db";
-import { DigestToken } from "@tinkerbell/domain.digest";
-import { defaultUserPreferences, userPreferencesSchema } from "@tinkerbell/core";
+} from "@rube/db";
+import { DigestToken } from "@rube/domain.digest";
+import { defaultUserPreferences, userPreferencesSchema } from "@rube/core";
 
 const c = createTestContainer();
 after(() => c.dispose());

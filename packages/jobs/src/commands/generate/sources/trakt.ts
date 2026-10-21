@@ -1,11 +1,11 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 
 /**
  * Trakt as the rules engine wants it: a name and two flat id arrays.
  *
  * The HTTP, the client id, the reference parsing and the "this list isn't
- * public" error mapping all live in `@tinkerbell/trakt` — they moved there
+ * public" error mapping all live in `@rube/trakt` — they moved there
  * when Discover grew a list search and `packages/trpc` needed the same four
  * things. Read that file's header for the public-lists-only scope note.
  */

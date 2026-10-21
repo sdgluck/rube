@@ -1,4 +1,4 @@
-import { configSchemaFor, isAlwaysOnJob, jobPresentation } from "@tinkerbell/contracts";
+import { configSchemaFor, isAlwaysOnJob, jobPresentation } from "@rube/contracts";
 
 /**
  * Everything the Jobs pages need to know about how to show a job, derived from

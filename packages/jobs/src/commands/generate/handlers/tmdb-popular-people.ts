@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import { minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
@@ -25,7 +25,7 @@ export function createTmdbPopularPeopleCommand(deps: Pick<Services, "config">) {
       const apiKey = getConfig("global_tmdb_api_key");
       if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
 
-      const { fetchPopularPeople, fetchPersonCredits } = await import("@tinkerbell/tmdb");
+      const { fetchPopularPeople, fetchPersonCredits } = await import("@rube/tmdb");
       // `limit` here is a TMDb fetch budget (how many popular people to pull),
       // not a collection cap — so it keeps its default rather than meaning
       // "unlimited" the way it does for library-grouped rules.

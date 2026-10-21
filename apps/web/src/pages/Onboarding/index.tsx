@@ -153,7 +153,7 @@ export default function Onboarding() {
   return (
     <div className={styles.page}>
       <header className={styles.header}>
-        <span className={styles.brand}>Tinkerbell setup</span>
+        <span className={styles.brand}>Rube setup</span>
         <span className={styles.headerRight}>
           <span className={styles.headerCount}>
             {status.completedCount} of {status.totalCount} done

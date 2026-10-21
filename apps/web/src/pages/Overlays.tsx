@@ -10,7 +10,7 @@ import { PageSkeleton } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";
 import Spinner from "#components/Spinner";
 import SettingsPageLink from "#components/SettingsPageLink";
-import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "@tinkerbell/contracts";
+import type { OverlayPosition, OverlayType, BadgeStyle, ConditionalRule } from "@rube/contracts";
 import shared from "#/styles/shared.module.css";
 import styles from "./Overlays.module.css";
 import { Inspector } from "./Overlays/Inspector";

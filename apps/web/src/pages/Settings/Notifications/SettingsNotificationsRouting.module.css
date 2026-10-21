@@ -39,7 +39,7 @@ thead .eventHead.eventHead {
 
 .cell {
   text-align: center;
-  /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the toggle inside fills the cell, so the target is the whole cell */
+  /* stylelint-disable-next-line rube/primitive-geometry -- the toggle inside fills the cell, so the target is the whole cell */
   padding: 0;
 }
 

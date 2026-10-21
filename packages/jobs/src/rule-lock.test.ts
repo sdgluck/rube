@@ -1,4 +1,4 @@
-import { RULE_LOCK_LEASE_MS, RuleLockedError } from "@tinkerbell/domain.rules";
+import { RULE_LOCK_LEASE_MS, RuleLockedError } from "@rube/domain.rules";
 /**
  * The rule lock exists for one failure: two runs of the same rule overlapping,
  * both passing the delete-old-collections step before either creates, and both
@@ -10,10 +10,10 @@ import { RULE_LOCK_LEASE_MS, RuleLockedError } from "@tinkerbell/domain.rules";
 import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { ruleLocks } from "@tinkerbell/db";
-import { RulesToken } from "@tinkerbell/domain.rules";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { ruleLocks } from "@rube/db";
+import { RulesToken } from "@rube/domain.rules";
 
 const c = createTestContainer();
 after(() => c.dispose());

@@ -9,7 +9,7 @@
  * ever reaches somebody's server.
  */
 import { z } from "zod";
-import type { SmartFilterGroup, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
+import type { SmartFilterGroup, SmartFilterNode } from "@rube/plex-smart-filter";
 import { describeCondition } from "./smart-filter-format.ts";
 import { narrateSmartFilter, type TagResolver } from "./smart-filter-narrate.ts";
 
@@ -55,7 +55,7 @@ export function resolvePosterTemplate(source: PosterSource, memberPosterCount: n
 /**
  * Hosts a `posterUrl` may point at.
  *
- * A registry pack is untrusted third-party content that Tinkerbell would
+ * A registry pack is untrusted third-party content that Rube would
  * otherwise fetch server-side, on a schedule, and hand to `sharp` — which is a
  * decoder with a real CVE history. Restricting the origin to image hosts we
  * already depend on keeps a published pack from turning every installed

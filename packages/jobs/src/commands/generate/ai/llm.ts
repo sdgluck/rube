@@ -1,8 +1,8 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
-import { createLlmClient } from "@tinkerbell/llm";
-import { errorMessage } from "@tinkerbell/core";
-import { LlmBudgetExceededError, type LlmFeature } from "@tinkerbell/domain.ai-usage";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
+import { createLlmClient } from "@rube/llm";
+import { errorMessage } from "@rube/core";
+import { LlmBudgetExceededError, type LlmFeature } from "@rube/domain.ai-usage";
 
 export interface LlmCallResult {
   text: string;
@@ -78,7 +78,7 @@ export const createLlmCommand = perDeps(function createLlmCommand(
   /**
    * Single chokepoint for the LLM call shared by run + preview. Owns
    * health reporting so we don't have to repeat the try/catch in every
-   * caller. Routes through `@tinkerbell/llm` so the active provider is
+   * caller. Routes through `@rube/llm` so the active provider is
    * whatever the user configured (Anthropic, OpenAI, Gemini, Ollama, …).
    *
    * `prompt` is the curator instruction (rule-author input). `itemList` is

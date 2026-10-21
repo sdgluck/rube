@@ -47,7 +47,7 @@ const MODE_PAST_LABELS: Record<string, string> = {
   delete: "Deleted",
 };
 
-/** Modes that remove or change something outside Tinkerbell's bookkeeping. */
+/** Modes that remove or change something outside Rube's bookkeeping. */
 const DESTRUCTIVE = new Set(["unmonitor", "delete"]);
 
 /**

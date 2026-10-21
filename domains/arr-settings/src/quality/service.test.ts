@@ -10,13 +10,13 @@
 import { afterEach, beforeEach, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { eq } from "drizzle-orm";
-import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
-import { arrManagedProfiles, arrQualityProfiles } from "@tinkerbell/db";
-import { qualityPreset } from "@tinkerbell/contracts";
-import type { ArrInstance, ArrInstances } from "@tinkerbell/core";
-import type { ChangeRecord } from "@tinkerbell/ports";
-import { createArrLibrary } from "@tinkerbell/domain.arr-library";
-import { startMockRadarr, startMockSonarr, type MockArr } from "@tinkerbell/test-support";
+import { createTestDb, type TestDb } from "@rube/db/test-db";
+import { arrManagedProfiles, arrQualityProfiles } from "@rube/db";
+import { qualityPreset } from "@rube/contracts";
+import type { ArrInstance, ArrInstances } from "@rube/core";
+import type { ChangeRecord } from "@rube/ports";
+import { createArrLibrary } from "@rube/domain.arr-library";
+import { startMockRadarr, startMockSonarr, type MockArr } from "@rube/test-support";
 import { createArrSettings, PlanConflictError, PlanError } from "../index.ts";
 
 const HD = qualityPreset("radarr-hd-bluray-web")!;
@@ -88,7 +88,7 @@ describe("quality presets against a live instance", () => {
     assert.equal(brDisk.format, formatIds.get("BR-DISK"));
     assert.equal(brDisk.score, -10000);
 
-    // Tinkerbell now owns it, the change log says so, and the mirror has it.
+    // Rube now owns it, the change log says so, and the mirror has it.
     const row = t.db.select().from(arrManagedProfiles).get()!;
     assert.equal(row.arrProfileId, profile.id);
     assert.equal(row.status, "in_sync");

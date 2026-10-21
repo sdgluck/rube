@@ -8,14 +8,14 @@
  * are data rather than behaviour.
  *
  * `registerCoreHooks` is gone. It existed to assign four mutable slots in
- * `@tinkerbell/core` that each defaulted to a no-op, and had to be called by
+ * `@rube/core` that each defaulted to a no-op, and had to be called by
  * every entrypoint; the Sidequest worker never called it, so every job ran
  * with health reporting, notification traces, migration rescans and collection
  * counts silently disabled. Building the container is the wiring now, and
- * `@tinkerbell/composition`'s resolve-all test fails if an edge is missing.
+ * `@rube/composition`'s resolve-all test fails if an edge is missing.
  */
-import { perDeps, token, type Registry } from "@tinkerbell/container";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { perDeps, token, type Registry } from "@rube/container";
+import { ServicesToken, type Services } from "@rube/composition";
 import { createRunner } from "./runner.ts";
 import { createQueries } from "./queries.ts";
 import { createSchedule } from "./schedule.ts";
@@ -35,7 +35,7 @@ import { createReconcile } from "./personalize/reconcile.ts";
 import { JobStarterToken } from "./starter.ts";
 import { createFieldOptions } from "./field-options.ts";
 import { createReadiness } from "./readiness.ts";
-import { JobConfigWriterToken } from "@tinkerbell/ports";
+import { JobConfigWriterToken } from "@rube/ports";
 
 // ─── Pure exports ────────────────────────────────────────────────────────────
 export { CHECKPOINT_TTL_MS } from "./limits.ts";
@@ -101,7 +101,7 @@ export type Jobs = ReturnType<typeof createJobs>;
 export const JobsToken = token<Jobs>("jobs");
 
 /**
- * Registered here rather than in `@tinkerbell/composition` because the job
+ * Registered here rather than in `@rube/composition` because the job
  * system sits *above* it — commands resolve `ServicesToken`, so composition
  * depending on jobs would be a real cycle. Entrypoints that run jobs pass this
  * to `buildContainer`; ones that don't (the migrator) simply don't.

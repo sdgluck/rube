@@ -61,7 +61,7 @@ if (files.length === 0) {
 const env = {
   ...process.env,
   NODE_COMPILE_CACHE: process.env.NODE_COMPILE_CACHE
-    ?? path.join(root, "node_modules", ".cache", "tinkerbell-v8"),
+    ?? path.join(root, "node_modules", ".cache", "rube-v8"),
 };
 
 // Node defaults to `availableParallelism() - 1`, which assumes each file keeps

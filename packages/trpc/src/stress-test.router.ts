@@ -1,6 +1,6 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
-import { stressTestConfigInputSchema } from "@tinkerbell/jobs";
+import { stressTestConfigInputSchema } from "@rube/jobs";
 import { TRPCError } from "@trpc/server";
 
 import { t, procedure } from "./_base.ts";

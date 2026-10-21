@@ -25,10 +25,10 @@ import { extname, join } from "node:path";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
-import { isAgentApiPath } from "@tinkerbell/agent-api";
-import { errorMessage } from "@tinkerbell/core";
-import type { Services } from "@tinkerbell/composition";
-import type { createTrpc } from "@tinkerbell/trpc";
+import { isAgentApiPath } from "@rube/agent-api";
+import { errorMessage } from "@rube/core";
+import type { Services } from "@rube/composition";
+import type { createTrpc } from "@rube/trpc";
 import { buildPlexImageUrl, isBuildAsset, resolveStaticPath } from "./security.ts";
 import { clientIp } from "./auth.ts";
 import { sendFetchResponse, toFetchRequest } from "./http.ts";
@@ -134,7 +134,7 @@ export interface AdminHandlerDeps {
   handleCollectionRoute: RouteHandler;
   appRouter: Trpc["appRouter"];
   createAdminContext: Trpc["createAdminContext"];
-  /** `/mcp` and `/api/v1` — see `@tinkerbell/agent-api`. Authenticates by API key, not cookie. */
+  /** `/mcp` and `/api/v1` — see `@rube/agent-api`. Authenticates by API key, not cookie. */
   handleAgentRequest: (req: Request) => Promise<Response>;
   distDir: string;
   /** Injectable for tests; defaults to the global. */
@@ -269,7 +269,7 @@ export interface PortalHandlerDeps {
   createPortalContext: Trpc["createPortalContext"];
   portalDistDir: string;
   getConfig: Services["config"]["getConfig"];
-  /** The Plex thumb behind a signed movie-match poster path, or null. See `@tinkerbell/domain.match`. */
+  /** The Plex thumb behind a signed movie-match poster path, or null. See `@rube/domain.match`. */
   posterThumb: Services["match"]["posterThumb"];
   /** Injectable for tests; defaults to the global. */
   fetchImpl?: typeof fetch;

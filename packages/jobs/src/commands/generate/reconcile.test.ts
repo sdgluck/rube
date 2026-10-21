@@ -11,16 +11,16 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext } from "@rube/core";
 import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken, displayTitle } from "@tinkerbell/core";
-import { collections, rules } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken, displayTitle } from "@rube/core";
+import { collections, rules } from "@rube/db";
 import { eq } from "drizzle-orm";
-import { noopCheckpoint } from "@tinkerbell/core";
+import { noopCheckpoint } from "@rube/core";
 import { createGenerateCommand } from "./index.ts";
 
 const c = createTestContainer();

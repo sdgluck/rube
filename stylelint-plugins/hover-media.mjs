@@ -15,7 +15,7 @@
 
 import stylelint from "stylelint";
 
-const ruleName = "tinkerbell/hover-media";
+const ruleName = "rube/hover-media";
 
 const messages = stylelint.utils.ruleMessages(ruleName, {
   bare: (selector) =>

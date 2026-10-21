@@ -7,9 +7,9 @@ import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { and, eq } from "drizzle-orm";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { changeLog, DbToken, rules } from "@tinkerbell/db";
-import { RulesToken } from "@tinkerbell/domain.rules";
+import { createTestContainer } from "@rube/composition/test-support";
+import { changeLog, DbToken, rules } from "@rube/db";
+import { RulesToken } from "@rube/domain.rules";
 
 const c = createTestContainer();
 after(() => c.dispose());

@@ -82,7 +82,7 @@ export default function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
   return (
     <div className={styles.page}>
       <div className={styles.loginCard}>
-        <h1 className={styles.title}>Tinkerbell</h1>
+        <h1 className={styles.title}>Rube</h1>
         <p className={styles.lede}>
           {finishing
             ? "Finishing sign-in with Plex…"
@@ -96,7 +96,7 @@ export default function SignIn({ onSignedIn }: { onSignedIn: () => void }) {
         </button>
 
         <p className={styles.hint}>
-          Locked out? Set <code>TINKERBELL_DISABLE_AUTH=1</code> on the server and restart to get back in.
+          Locked out? Set <code>RUBE_DISABLE_AUTH=1</code> on the server and restart to get back in.
         </p>
       </div>
     </div>

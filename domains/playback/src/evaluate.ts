@@ -13,7 +13,7 @@
  *  - **"Watched" means a completed play**, i.e. `completedPlays >= 1`. A
  *    started-and-abandoned session counts towards `plays` and nothing else.
  */
-import type { SmartFilterLeaf, SmartFilterOp } from "@tinkerbell/plex-smart-filter";
+import type { SmartFilterLeaf, SmartFilterOp } from "@rube/plex-smart-filter";
 import type { WatchStateRow } from "./store.ts";
 
 export interface LocalEvalContext {

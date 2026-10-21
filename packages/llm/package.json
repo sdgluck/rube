@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/llm",
+  "name": "@rube/llm",
   "version": "0.45.0",
   "private": true,
   "type": "module",

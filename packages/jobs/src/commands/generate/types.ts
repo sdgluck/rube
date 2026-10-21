@@ -1,6 +1,6 @@
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import type { JobContext, UserPreferences } from "@tinkerbell/core";
-import type { Rule } from "@tinkerbell/domain.rules";
+import type { PlexClient, PlexSection } from "@rube/plex";
+import type { JobContext, UserPreferences } from "@rube/core";
+import type { Rule } from "@rube/domain.rules";
 import type { RuleConfig } from "./config.ts";
 
 /**

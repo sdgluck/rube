@@ -10,10 +10,10 @@
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { collectionItems, collections } from "@tinkerbell/db";
-import { CollectionsToken } from "@tinkerbell/domain.collections";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { collectionItems, collections } from "@rube/db";
+import { CollectionsToken } from "@rube/domain.collections";
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -21,7 +21,7 @@ after(() => c.dispose());
 const db = c.resolve(DbToken);
 const { syncCollections } = c.resolve(CollectionsToken);
 
-const { createPlexClient } = await import("@tinkerbell/plex");
+const { createPlexClient } = await import("@rube/plex");
 
 type PlexClient = ReturnType<typeof createPlexClient>;
 

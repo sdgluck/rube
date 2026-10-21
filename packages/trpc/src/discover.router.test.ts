@@ -15,14 +15,14 @@
 import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 import { initTRPC, TRPCError } from "@trpc/server";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { DbToken, arrMovies } from "@tinkerbell/db";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
-import { startMockRadarr, startMockMdblist, startMockTrakt, type MockArr } from "@tinkerbell/test-support";
-import { createMdblistClient } from "@tinkerbell/mdblist";
-import { createTraktClient } from "@tinkerbell/trakt";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { ConfigStoreToken } from "@rube/core";
+import { DbToken, arrMovies } from "@rube/db";
+import { JobsToken, registerJobs } from "@rube/jobs";
+import { startMockRadarr, startMockMdblist, startMockTrakt, type MockArr } from "@rube/test-support";
+import { createMdblistClient } from "@rube/mdblist";
+import { createTraktClient } from "@rube/trakt";
 import { createTrpc } from "./index.ts";
 import type { AdminContext } from "./_base.ts";
 
@@ -66,7 +66,7 @@ function caller() {
     session: undefined,
     resHeaders: new Headers(),
     secure: false,
-    origin: "http://admin.tinkerbell.test",
+    origin: "http://admin.rube.test",
     ip: "test",
     authRequired: false,
   } as unknown as AdminContext;

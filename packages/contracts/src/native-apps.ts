@@ -10,12 +10,12 @@
  * it needs no CORS entry; that is why there is no hostname here.
  */
 export const NATIVE_APP = {
-  appId: "dev.tinkerbell.app",
-  scheme: "tinkerbell",
+  appId: "fyi.rube.app",
+  scheme: "rube",
 } as const;
 
 /**
- * `tinkerbell://connect?admin=…&portal=…` — what a Settings QR code holds.
+ * `rube://connect?admin=…&portal=…` — what a Settings QR code holds.
  *
  * The app treats it as a suggestion: it fills in the connect screen for the
  * person to confirm, and probes each address before trusting it with a

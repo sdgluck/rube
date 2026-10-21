@@ -4,18 +4,18 @@
  * the usage ledger the real wrapper writes.
  *
  * The model is faked at the `LlmClient` boundary rather than over HTTP: what
- * is under test is what Tinkerbell does with an answer, and the provider
+ * is under test is what Rube does with an answer, and the provider
  * clients have their own wire tests.
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
-import { llmUsage, plexUsers } from "@tinkerbell/db";
-import { createConfigStore } from "@tinkerbell/core";
-import { createAiUsage } from "@tinkerbell/domain.ai-usage";
-import { createPlexClient, type PlexClient } from "@tinkerbell/plex";
-import type { LlmClient, LlmRequest } from "@tinkerbell/llm";
-import { startMockPlex, type MockPlex } from "@tinkerbell/test-support";
+import { createTestDb, type TestDb } from "@rube/db/test-db";
+import { llmUsage, plexUsers } from "@rube/db";
+import { createConfigStore } from "@rube/core";
+import { createAiUsage } from "@rube/domain.ai-usage";
+import { createPlexClient, type PlexClient } from "@rube/plex";
+import type { LlmClient, LlmRequest } from "@rube/llm";
+import { startMockPlex, type MockPlex } from "@rube/test-support";
 import { createRuleDrafts, extractJson } from "./index.ts";
 
 describe("draftSmartFilter", () => {

@@ -6,16 +6,16 @@
  * is the point — a preview that renders through a different path is a preview
  * of something else.
  */
-import type { PlexClient } from "@tinkerbell/plex";
-import { artworkHash, type CollectionArtworkRow } from "@tinkerbell/domain.collections";
-import { resolvePosterTemplate, type CollectionPosterTemplateId, type PresentationConfig } from "@tinkerbell/contracts";
+import type { PlexClient } from "@rube/plex";
+import { artworkHash, type CollectionArtworkRow } from "@rube/domain.collections";
+import { resolvePosterTemplate, type CollectionPosterTemplateId, type PresentationConfig } from "@rube/contracts";
 import {
   derivePalette,
   fetchPosterUrl,
   normalizePosterUpload,
   renderCollectionPoster,
   type Palette,
-} from "@tinkerbell/posters";
+} from "@rube/posters";
 import { mapConcurrent } from "#jobs/concurrency.ts";
 
 /**

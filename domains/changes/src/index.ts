@@ -1,4 +1,4 @@
-/* ─── What Tinkerbell did to your library ───────────────────────────────────
+/* ─── What Rube did to your library ───────────────────────────────────
  *
  * Every kind of change this app makes was already recorded, and every one of
  * them was recorded somewhere else: collection membership in `rule_run_changes`,
@@ -24,8 +24,8 @@ import {
   ruleRunChanges,
   rules,
   type Db,
-} from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
+} from "@rube/db";
+import { token } from "@rube/container";
 
 export const CHANGE_KINDS = ["collection", "metadata", "cleanup", "rule", "overlay"] as const;
 export type ChangeKind = (typeof CHANGE_KINDS)[number];

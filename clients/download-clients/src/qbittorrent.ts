@@ -15,7 +15,7 @@
  * seeding ones included; that is what `pause()` does too, and the client
  * counts as paused when every torrent is.
  */
-import type { DownloadClientItem, DownloadItemState } from "@tinkerbell/contracts";
+import type { DownloadClientItem, DownloadItemState } from "@rube/contracts";
 import { createTransport, expectOk, fraction } from "./http.ts";
 import {
   DownloadClientError,

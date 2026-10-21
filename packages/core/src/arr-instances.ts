@@ -13,7 +13,7 @@
  * used. An install that never wants a second instance never sees one.
  */
 
-import { token } from "@tinkerbell/container";
+import { token } from "@rube/container";
 import type { ConfigStore } from "./config.ts";
 
 export type ArrServiceName = "radarr" | "sonarr";

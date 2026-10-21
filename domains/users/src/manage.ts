@@ -9,9 +9,9 @@
  */
 
 import { eq } from "drizzle-orm";
-import { plexUsers, plexUserShares, plexInvites, sharingRestrictionBackups, type Db } from "@tinkerbell/db";
-import { setFilterClause } from "@tinkerbell/plex";
-import type { PlexClient, PlexShareSettings } from "@tinkerbell/plex";
+import { plexUsers, plexUserShares, plexInvites, sharingRestrictionBackups, type Db } from "@rube/db";
+import { setFilterClause } from "@rube/plex";
+import type { PlexClient, PlexShareSettings } from "@rube/plex";
 import { createQuery } from "./query.ts";
 
 export class OwnerImmutableError extends Error {
@@ -124,7 +124,7 @@ export function createManage(deps: ManageDeps) {
   /**
    * Set the content-rating ceiling, preserving the `label=` clause.
    *
-   * Personalization writes `label=Tinkerbell,User:<name>` into the same string;
+   * Personalization writes `label=Rube,User:<name>` into the same string;
    * composing over the live value rather than replacing it is what stops a
    * rating change from erasing those labels and blanking the user's library.
    * The backup row is updated in step so a later personalization *disable*

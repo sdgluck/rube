@@ -1,4 +1,4 @@
-import { isSystemCollectionLabel } from "@tinkerbell/contracts";
+import { isSystemCollectionLabel } from "@rube/contracts";
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { ExternalLink, Trash2 } from "lucide-react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
@@ -28,7 +28,7 @@ import { ColumnsButton, reconcileColumns, visibleColumns, type TableColumn } fro
 import SavedViews from "#components/SavedViews";
 import { EMPTY } from "#/format";
 import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "@tinkerbell/trpc";
+import type { AppRouter } from "@rube/trpc";
 import styles from "#/styles/shared.module.css";
 import collectionStyles from "./Collections.module.css";
 import { plexImageUrl } from "#lib/media";
@@ -326,7 +326,7 @@ export default function Collections() {
             .map((label) => (
               <span
                 key={label}
-                className={`${styles.label} ${isSystemCollectionLabel(label) ? styles.labelTinkerbell : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
+                className={`${styles.label} ${isSystemCollectionLabel(label) ? styles.labelRube : label.toLowerCase().startsWith("user:") ? styles.labelUser : ""}`}
               >
                 {label}
               </span>
@@ -372,7 +372,7 @@ export default function Collections() {
         render: (col) => {
           const flags = artworkFlags[col.plexRatingKey];
           if (flags?.posterLocked) return <span className={styles.metaChip}>Set by hand</span>;
-          if (flags?.managed) return <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Managed</span>;
+          if (flags?.managed) return <span className={`${styles.metaChip} ${styles.labelRube}`}>Managed</span>;
           return <span className={styles.muted}>{EMPTY}</span>;
         },
       },

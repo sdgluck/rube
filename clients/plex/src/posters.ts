@@ -1,4 +1,4 @@
-import { httpRequest } from "@tinkerbell/http";
+import { httpRequest } from "@rube/http";
 import type { PlexHttp } from "./http.ts";
 import type { PlexPoster } from "./types.ts";
 
@@ -23,8 +23,8 @@ export function createPostersModule(http: PlexHttp) {
         signal: http.signal,
         headers: {
           "Content-Type": "image/jpeg",
-          "X-Plex-Client-Identifier": "tinkerbell",
-          "X-Plex-Product": "tinkerbell",
+          "X-Plex-Client-Identifier": "rube",
+          "X-Plex-Product": "rube",
           "X-Plex-Version": "1.0.0",
         },
         body: new Uint8Array(imageBuffer),

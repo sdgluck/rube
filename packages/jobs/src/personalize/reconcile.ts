@@ -1,18 +1,18 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
-import type { PlexClient } from "@tinkerbell/plex";
-import { getFilterClause } from "@tinkerbell/plex";
-import { errorMessage } from "@tinkerbell/core";
-import { sharingRestrictionBackups } from "@tinkerbell/db";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
+import type { PlexClient } from "@rube/plex";
+import { getFilterClause } from "@rube/plex";
+import { errorMessage } from "@rube/core";
+import { sharingRestrictionBackups } from "@rube/db";
 
-export const BASELINE_LABEL = "Tinkerbell";
+export const BASELINE_LABEL = "Rube";
 
 export const createReconcile = perDeps(function createReconcile(deps: Pick<Services, "config" | "db">) {
   const { config, db } = deps;
   const { getConfig, setConfig } = config;
 
   /**
-   * Ensure every current shared user is restricted to `[Tinkerbell, User:<self>]`,
+   * Ensure every current shared user is restricted to `[Rube, User:<self>]`,
    * snapshotting each user's prior filters (once) so disable can restore them.
    * Idempotent — used both by the enable job and by sync-users so newly-shared
    * users get restricted automatically.

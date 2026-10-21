@@ -55,7 +55,7 @@
   background: var(--fill-quiet);
 }
 
-/* Names like `qwen3-tinkerbell:latest` are the thing being chosen; don't let
+/* Names like `qwen3-rube:latest` are the thing being chosen; don't let
    a long one push its label off or wrap mid-tag. */
 .optionValue {
   overflow: hidden;

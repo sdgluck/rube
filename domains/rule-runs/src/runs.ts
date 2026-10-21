@@ -13,12 +13,12 @@
  * from a process that isn't running it.
  */
 
-import { stampLog } from "@tinkerbell/contracts";
-import { type Scope } from "@tinkerbell/container";
+import { stampLog } from "@rube/contracts";
+import { type Scope } from "@rube/container";
 import { randomUUID } from "node:crypto";
 import { and, desc, eq, inArray, isNull, lt, notInArray, sql } from "drizzle-orm";
-import { ruleRuns, rules, type Db } from "@tinkerbell/db";
-import { deriveJobContext, errorMessage, type JobContext } from "@tinkerbell/core";
+import { ruleRuns, rules, type Db } from "@rube/db";
+import { deriveJobContext, errorMessage, type JobContext } from "@rube/core";
 import { ACTIVE_RULE_RUN_STATUSES, isRuleRunTerminal, type RuleRunStatus } from "./statuses.ts";
 import type { TestFunnelSection } from "./test-results.ts";
 import {
@@ -624,7 +624,7 @@ export function createRuns(deps: RunsDeps) {
       .update(ruleRuns)
       .set({
         status: "error",
-        error: "Interrupted — Tinkerbell restarted while this run was in progress.",
+        error: "Interrupted — Rube restarted while this run was in progress.",
         finishedAt: now,
         updatedAt: now,
       })

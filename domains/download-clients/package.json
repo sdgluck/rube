@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.download-clients",
+  "name": "@rube/domain.download-clients",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,14 +15,14 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/download-clients": "workspace:*"
+    "@rube/container": "workspace:*",
+    "@rube/contracts": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/download-clients": "workspace:*"
   },
   "devDependencies": {
-    "@tinkerbell/composition": "workspace:*",
-    "@tinkerbell/test-support": "workspace:*",
+    "@rube/composition": "workspace:*",
+    "@rube/test-support": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"
   }

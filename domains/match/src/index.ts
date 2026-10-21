@@ -14,7 +14,7 @@
  *   sofa who already have the library — four characters can be guessed, so the
  *   code alone never shows a library to someone it isn't shared with.
  * - **Rooms are kept.** PlexMatch held them in memory, so a restart (which every
- *   Tinkerbell upgrade is) lost the evening. They are rows now, swept after
+ *   Rube upgrade is) lost the evening. They are rows now, swept after
  *   `MATCH_ROOM_RETENTION_MS` without a visit.
  * - **The films come from the mirror** (`media_items`), not from Plex. The sync
  *   job already keeps it current, and a portal that pages a library out of Plex
@@ -31,11 +31,11 @@
  */
 import { createHash, createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
-import { token } from "@tinkerbell/container";
-import { MATCH_CODE_ALPHABET, MATCH_CODE_LENGTH, type MatchFilters } from "@tinkerbell/contracts";
-import { DAY_MS, type Sharing } from "@tinkerbell/core";
-import { matchMembers, matchRooms, matchSwipes, mediaItems, plexSections, plexUsers, type Db } from "@tinkerbell/db";
-import type { Clock } from "@tinkerbell/ports";
+import { token } from "@rube/container";
+import { MATCH_CODE_ALPHABET, MATCH_CODE_LENGTH, type MatchFilters } from "@rube/contracts";
+import { DAY_MS, type Sharing } from "@rube/core";
+import { matchMembers, matchRooms, matchSwipes, mediaItems, plexSections, plexUsers, type Db } from "@rube/db";
+import type { Clock } from "@rube/ports";
 
 /** A room nobody has opened for this long is swept. Long enough to span a "let's finish this next weekend". */
 export const MATCH_ROOM_RETENTION_MS = 30 * DAY_MS;

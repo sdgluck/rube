@@ -1,6 +1,6 @@
 import type { TrpcDeps } from "./deps.ts";
 import { TRPCError } from "@trpc/server";
-import { isPortalComponentId, isUiScale, portalPrerollCardInput } from "@tinkerbell/contracts";
+import { isPortalComponentId, isUiScale, portalPrerollCardInput } from "@rube/contracts";
 import {
   isValidTimezone,
   configSchema,
@@ -9,9 +9,9 @@ import {
   REDACTED_SECRET,
   type ConfigKey,
   type ConfigValue,
-} from "@tinkerbell/core";
+} from "@rube/core";
 
-import { validateMqttUrl } from "@tinkerbell/mqtt";
+import { validateMqttUrl } from "@rube/mqtt";
 import { t, procedure } from "./_base.ts";
 import { createPortalComponents } from "./portal-components.ts";
 

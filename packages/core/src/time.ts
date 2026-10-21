@@ -27,8 +27,8 @@ export function formatDuration(ms: number): string {
 
 // `parseClock` and `minutesOfDay` live in contracts so the browser's schedule
 // editor and the scheduler read wall-clock time with one implementation.
-export { parseClock, minutesOfDay } from "@tinkerbell/contracts";
-import { minutesOfDay, parseClock } from "@tinkerbell/contracts";
+export { parseClock, minutesOfDay } from "@rube/contracts";
+import { minutesOfDay, parseClock } from "@rube/contracts";
 
 /**
  * Midnight at the start of `now`'s day, as a timestamp.

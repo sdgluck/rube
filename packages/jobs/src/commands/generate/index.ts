@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { ServicesToken, type Services } from "@rube/composition";
 import { createPreviewCommand } from "./preview.ts";
 import { createEventsCommand } from "./events.ts";
 import { createDiagnoseCommand } from "./diagnose.ts";
@@ -8,12 +8,12 @@ import { createCleanupCommand } from "./cleanup.ts";
 import { createMetadataCommand } from "./metadata.ts";
 import { createArrCommand } from "./arr.ts";
 import { createLlmCommand } from "./ai/llm.ts";
-import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
+import { createPlexClient, type PlexClient, type PlexSection } from "@rube/plex";
 
-import { type Rule, RuleLockedError } from "@tinkerbell/domain.rules";
+import { type Rule, RuleLockedError } from "@rube/domain.rules";
 
-import { deriveJobContext, errorMessage } from "@tinkerbell/core";
-import { createLogger, type JobContext, type GenerateJobConfig } from "@tinkerbell/core";
+import { deriveJobContext, errorMessage } from "@rube/core";
+import { createLogger, type JobContext, type GenerateJobConfig } from "@rube/core";
 
 import {
   describeRuleWindow,
@@ -23,12 +23,12 @@ import {
   ruleCoversSection,
   runsInNightlyBatch,
   type RuleSchedule,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { parseRuleConfig } from "./config.ts";
 
 import { withItemCache } from "./item-cache.ts";
 import { bufferLog } from "./log-buffer.ts";
-import { RULE_CONCURRENCY_DEFAULT } from "@tinkerbell/contracts";
+import { RULE_CONCURRENCY_DEFAULT } from "@rube/contracts";
 
 export type { TestRuleResult, TestCollectionPreview } from "./preview.ts";
 
@@ -296,7 +296,7 @@ export const createGenerateCommand = perDeps(function createGenerateCommand(deps
       const sections = ruleSectionsOrNull ?? jobSections;
       ruleCtx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
 
-      const labels = ["Tinkerbell", `Rule:${rule.id}`];
+      const labels = ["Rube", `Rule:${rule.id}`];
       const ruleStartedAt = Date.now();
       // Read before the run deletes them: every run recreates this rule's
       // collections from scratch, so "what's new" is only answerable against
@@ -592,7 +592,7 @@ export const createGenerateCommand = perDeps(function createGenerateCommand(deps
       `a manual run of "${rule.name}"`,
       async () => {
         ctx.progress(2, 4, `Generating collections for ${sections.length} section${sections.length !== 1 ? "s" : ""}…`);
-        const labels = ["Tinkerbell", `Rule:${rule.id}`];
+        const labels = ["Rube", `Rule:${rule.id}`];
         const result = await runHandler(
           { ctx, client, sections, rule, ruleConfig, ruleRunId },
           machineId,
@@ -647,7 +647,7 @@ export const createGenerateCommand = perDeps(function createGenerateCommand(deps
       }),
     );
 
-    ctx.log(`tinkerbell generate`);
+    ctx.log(`rube generate`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     const identity = await client.getIdentity();

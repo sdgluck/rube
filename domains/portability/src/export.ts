@@ -11,7 +11,7 @@
  *    the whole reason this is a format rather than a `SELECT *`.
  */
 import { eq } from "drizzle-orm";
-import { arrManagedProfiles, jobs, overlayConfigs, overlayPresets, rules, type Db } from "@tinkerbell/db";
+import { arrManagedProfiles, jobs, overlayConfigs, overlayPresets, rules, type Db } from "@rube/db";
 import {
   BUNDLE_FORMAT_VERSION,
   translateSmartFilterTags,
@@ -21,7 +21,7 @@ import {
   type ExportedRule,
   type TagLookup,
   type TagTranslationWarning,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import {
   createLogger,
   errorMessage,
@@ -30,7 +30,7 @@ import {
   UNLOGGED_CONFIG_KEYS,
   type ConfigKey,
   type ConfigStore,
-} from "@tinkerbell/core";
+} from "@rube/core";
 
 const log = createLogger("portability");
 
@@ -74,7 +74,7 @@ export interface ExportOptions {
    */
   includeSecrets?: boolean;
   server?: { machineId: string; friendlyName: string };
-  tinkerbellVersion: string;
+  rubeVersion: string;
 }
 
 export interface ExportResult {
@@ -141,7 +141,7 @@ export function createExport(deps: ExportDeps) {
     const bundle: Bundle = {
       formatVersion: BUNDLE_FORMAT_VERSION,
       exportedAt: Date.now(),
-      tinkerbellVersion: opts.tinkerbellVersion,
+      rubeVersion: opts.rubeVersion,
       server: opts.server,
       containsSecrets: false,
     };

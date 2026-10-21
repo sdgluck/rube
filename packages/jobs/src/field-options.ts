@@ -5,8 +5,8 @@
  * empty list means "sync users", which the form says.
  */
 import { asc } from "drizzle-orm";
-import { type Services } from "@tinkerbell/composition";
-import { plexUsers } from "@tinkerbell/db";
+import { type Services } from "@rube/composition";
+import { plexUsers } from "@rube/db";
 
 export type FieldOptions = {
   users: { username: string; label: string; optedIn: boolean }[];

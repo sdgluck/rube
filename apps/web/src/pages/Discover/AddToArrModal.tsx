@@ -5,7 +5,7 @@ import {
   formatBytes,
   type MinimumAvailability,
   type SeriesMonitorMode,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { trpc } from "#/trpc";
 import Modal from "#components/Modal";
 import Spinner from "#components/Spinner";
@@ -63,7 +63,7 @@ export default function AddToArrModal({
 }) {
   const { addToast } = useToast();
   const service = result.service;
-  const storageKey = `tinkerbell.discover.add.${service}`;
+  const storageKey = `rube.discover.add.${service}`;
   const remembered = readJsonStorage<RememberedChoice>(storageKey, {});
 
   const instancesQuery = trpc.arr.instances.useQuery();

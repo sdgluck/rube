@@ -20,8 +20,8 @@
 import assert from "node:assert/strict";
 import { after, afterEach, beforeEach, describe, test } from "node:test";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken, omdbCache } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken, omdbCache } from "@rube/db";
 
 import { createOmdbClient, extractImdbId } from "./index.ts";
 

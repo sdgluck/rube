@@ -9,7 +9,7 @@ export default function NotifyStep({ cfg }: { cfg: Record<string, unknown> }) {
 
   return (
     <div className={styles.stepBody}>
-      <h2 className={styles.stepTitle}>How should Tinkerbell reach you?</h2>
+      <h2 className={styles.stepTitle}>How should Rube reach you?</h2>
       <div className={styles.tileGrid}>
         {NOTIFY_SERVICES.map((service) => (
           <ServiceCard

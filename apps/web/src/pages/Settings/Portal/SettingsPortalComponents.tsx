@@ -10,7 +10,7 @@
  * Saves on toggle, like the Features panel's switches: there's nothing to
  * compose across rows, and a Save button would be one more thing to forget.
  */
-import { PORTAL_COMPONENTS, type PortalComponentGroup, type PortalPrerequisite } from "@tinkerbell/contracts";
+import { PORTAL_COMPONENTS, type PortalComponentGroup, type PortalPrerequisite } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import ErrorState from "#components/ErrorState";

@@ -12,10 +12,10 @@
  */
 
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { errorMessage } from "@tinkerbell/core";
-import type { Services } from "@tinkerbell/composition";
-import { POSTER_MAX_BYTES } from "@tinkerbell/contracts";
-import { normalizePosterUpload } from "@tinkerbell/posters";
+import { errorMessage } from "@rube/core";
+import type { Services } from "@rube/composition";
+import { POSTER_MAX_BYTES } from "@rube/contracts";
+import { normalizePosterUpload } from "@rube/posters";
 
 const POSTER_ROUTE_RE = /^\/api\/collections\/([^/]+)\/poster$/;
 

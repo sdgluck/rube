@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 import { createDeferral } from "./deferral.ts";
 import { JobStarterToken } from "./starter.ts";
 /**
@@ -18,8 +18,8 @@ import { JobStarterToken } from "./starter.ts";
  */
 import { and, desc, eq, ne } from "drizzle-orm";
 import { Cron } from "croner";
-import { jobRuns, jobs } from "@tinkerbell/db";
-import { createLogger, errorMessage, DAY_MS, HOUR_MS, MINUTE_MS } from "@tinkerbell/core";
+import { jobRuns, jobs } from "@rube/db";
+import { createLogger, errorMessage, DAY_MS, HOUR_MS, MINUTE_MS } from "@rube/core";
 
 const log = createLogger("jobs");
 

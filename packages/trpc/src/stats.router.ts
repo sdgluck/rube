@@ -1,12 +1,12 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 
-import { HISTORY_SORTS } from "@tinkerbell/domain.playback";
+import { HISTORY_SORTS } from "@rube/domain.playback";
 
-import { DAY_MS } from "@tinkerbell/core";
+import { DAY_MS } from "@rube/core";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
-import { realSessions } from "@tinkerbell/plex";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { realSessions } from "@rube/plex";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 /**
  * Periods offered by the history-backed panels. `0` means all time — the
@@ -45,7 +45,7 @@ export function createStatsRouter(deps: Pick<TrpcDeps, "clients" | "media" | "pl
 
   const statsRouter = t.router({
     /**
-     * What is playing, minus Tinkerbell's own simulated playback.
+     * What is playing, minus Rube's own simulated playback.
      *
      * A stress run's sessions are real ones as far as Plex is concerned, so
      * without the filter the dashboard reports twenty people watching and a

@@ -73,14 +73,14 @@ export default function SettingsApi() {
   const snippets = [
     {
       label: "Claude Code",
-      text: `claude mcp add --transport http tinkerbell ${origin}/mcp --header "Authorization: Bearer ${shownKey}"`,
+      text: `claude mcp add --transport http rube ${origin}/mcp --header "Authorization: Bearer ${shownKey}"`,
     },
     {
       label: "MCP client config (JSON)",
       text: JSON.stringify(
         {
           mcpServers: {
-            tinkerbell: { type: "http", url: `${origin}/mcp`, headers: { Authorization: `Bearer ${shownKey}` } },
+            rube: { type: "http", url: `${origin}/mcp`, headers: { Authorization: `Bearer ${shownKey}` } },
           },
         },
         null,

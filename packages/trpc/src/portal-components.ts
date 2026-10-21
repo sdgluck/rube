@@ -11,7 +11,7 @@
  * rearranges itself for reasons no user can see.
  */
 import { TRPCError } from "@trpc/server";
-import { resolvePortalComponents, type PortalComponentId } from "@tinkerbell/contracts";
+import { resolvePortalComponents, type PortalComponentId } from "@rube/contracts";
 import type { TrpcDeps } from "./deps.ts";
 
 export function createPortalComponents(deps: Pick<TrpcDeps, "config" | "notifications">) {

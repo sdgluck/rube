@@ -1,10 +1,10 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { errorMessage } from "@tinkerbell/core";
+import { errorMessage } from "@rube/core";
 
 import { t, procedure } from "./_base.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 /** A mute in the past has already lapsed and is reported as absent. */
 function mutedUntilFor(until: number | undefined): number | null {

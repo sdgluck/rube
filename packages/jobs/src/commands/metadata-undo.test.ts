@@ -6,14 +6,14 @@
  */
 import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext } from "@rube/core";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { config, metadataOriginals } from "@tinkerbell/db";
-import { noopCheckpoint } from "@tinkerbell/core";
-import { MetadataToken } from "@tinkerbell/domain.metadata";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { config, metadataOriginals } from "@rube/db";
+import { noopCheckpoint } from "@rube/core";
+import { MetadataToken } from "@rube/domain.metadata";
 
 const c = createTestContainer();
 after(() => c.dispose());

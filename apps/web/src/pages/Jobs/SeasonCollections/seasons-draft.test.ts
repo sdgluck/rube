@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SEASON_PRESETS } from "@tinkerbell/contracts";
+import { SEASON_PRESETS } from "@rube/contracts";
 import { customKey, draftDirty, draftFromConfig, patchFromDraft, presetFor } from "./seasons-draft.ts";
 
 test("an untouched draft saves nothing", () => {

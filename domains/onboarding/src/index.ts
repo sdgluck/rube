@@ -1,5 +1,5 @@
-import { type ConfigValue, type ConfigStore } from "@tinkerbell/core";
-import { isSeededRule, RECOMMENDED_SCHEDULE_SETTINGS } from "@tinkerbell/contracts";
+import { type ConfigValue, type ConfigStore } from "@rube/core";
+import { isSeededRule, RECOMMENDED_SCHEDULE_SETTINGS } from "@rube/contracts";
 
 import {
   countableSteps,
@@ -10,9 +10,9 @@ import {
   type OnboardingStepId,
   type OnboardingStepStatus,
 } from "./steps.ts";
-import { type Rules } from "@tinkerbell/domain.rules";
-import { type Migration } from "@tinkerbell/domain.migration";
-import { token } from "@tinkerbell/container";
+import { type Rules } from "@rube/domain.rules";
+import { type Migration } from "@rube/domain.migration";
+import { token } from "@rube/container";
 
 export {
   ONBOARDING_STEPS,
@@ -143,7 +143,7 @@ export function createOnboarding(deps: OnboardingDeps) {
   /**
    * Does this install look like nobody has ever configured it?
    *
-   * Deliberately narrow: a Plex URL and token is the one thing Tinkerbell cannot
+   * Deliberately narrow: a Plex URL and token is the one thing Rube cannot
    * do anything without, and a rule the user chose is proof they got past it. The
    * seeded rule doesn't count, for the same reason it doesn't count towards the
    * Rules step.
@@ -197,7 +197,7 @@ export function createOnboarding(deps: OnboardingDeps) {
    * The recommended scheduling setup, written in one call so the wizard's "Use
    * recommended" button is a single round trip rather than three.
    *
-   * The window is the small hours and deferral is on: Tinkerbell's jobs walk the
+   * The window is the small hours and deferral is on: Rube's jobs walk the
    * whole library and talk to Plex constantly, and the default a new admin wants
    * is "not while anyone is watching".
    */

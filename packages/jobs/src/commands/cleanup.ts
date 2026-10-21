@@ -8,8 +8,8 @@
  * The engine is a factory now, so this re-export became a one-line adapter:
  * same `default(ctx, config)` contract, dependencies from the run's scope.
  */
-import type { JobContext } from "@tinkerbell/core";
-import { ServicesToken } from "@tinkerbell/composition";
+import type { JobContext } from "@rube/core";
+import { ServicesToken } from "@rube/composition";
 import { createGenerateCommand } from "./generate/index.ts";
 
 export default function run(

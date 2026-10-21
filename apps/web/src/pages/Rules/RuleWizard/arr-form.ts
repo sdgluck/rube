@@ -7,7 +7,7 @@
  * Reading that shape back puts the target under the one service the wizard
  * showed at the time, and saving always writes one target per service.
  */
-import { arrTargetFor, type ArrService, type RuleConfig } from "@tinkerbell/contracts";
+import { arrTargetFor, type ArrService, type RuleConfig } from "@rube/contracts";
 import { arrServiceForType, arrTargetComplete } from "./rule-types.ts";
 import { DEFAULT_ARR_FORM, DEFAULT_ARR_TARGET, type ArrFormState, type ArrTargetForm } from "./types.ts";
 

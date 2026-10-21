@@ -12,10 +12,10 @@
  * We Think You'd Like keeps its own: its rows predate per-person titles and it
  * carries a migration path for them that the rest never needed.
  */
-import type { Services } from "@tinkerbell/composition";
-import { errorMessage, personalRowTitle, type JobContext } from "@tinkerbell/core";
-import { plexUsers, type Db } from "@tinkerbell/db";
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import type { Services } from "@rube/composition";
+import { errorMessage, personalRowTitle, type JobContext } from "@rube/core";
+import { plexUsers, type Db } from "@rube/db";
+import type { PlexClient, PlexSection } from "@rube/plex";
 import { asc } from "drizzle-orm";
 import { personalRowLabels, personalRowPin } from "./personal-row.ts";
 

@@ -17,8 +17,8 @@
  * data it reads.
  */
 
-import { token } from "@tinkerbell/container";
-import type { Db } from "@tinkerbell/db";
+import { token } from "@rube/container";
+import type { Db } from "@rube/db";
 import { createArrLibrarySync } from "./sync.ts";
 import { createArrQueries } from "./queries.ts";
 import { createArrReconcile } from "./reconcile.ts";

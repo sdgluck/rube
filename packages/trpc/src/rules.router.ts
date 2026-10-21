@@ -1,15 +1,15 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
-import { RuleLockedError } from "@tinkerbell/domain.rules";
-import { RuleDraftError } from "@tinkerbell/domain.rule-drafts";
-import { type PersistedTestResult, type RuleRunPhase } from "@tinkerbell/domain.rule-runs";
+import { RuleLockedError } from "@rube/domain.rules";
+import { RuleDraftError } from "@rube/domain.rule-drafts";
+import { type PersistedTestResult, type RuleRunPhase } from "@rube/domain.rule-runs";
 
 import { TRPCError } from "@trpc/server";
 
-import { errorMessage } from "@tinkerbell/core";
-import { PLAYLIST_CAPABLE_RULE_TYPES, ruleConfigSchema } from "@tinkerbell/contracts";
+import { errorMessage } from "@rube/core";
+import { PLAYLIST_CAPABLE_RULE_TYPES, ruleConfigSchema } from "@rube/contracts";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 /**
  * Reject a config the generate job couldn't parse, without rewriting it.
@@ -17,7 +17,7 @@ import { NativeAdmin } from "@tinkerbell/contracts/native-api";
  * Validation is deliberately a check rather than a transform: `ruleConfigSchema`
  * is a plain object schema, so parsing and storing its output would silently
  * drop any key it doesn't know about — including keys written by a newer
- * version of Tinkerbell that a rolled-back instance is now editing. Callers
+ * version of Rube that a rolled-back instance is now editing. Callers
  * keep storing exactly what they sent; they just can't store nonsense.
  */
 export function assertValidRuleConfig(config: Record<string, unknown>, ruleType?: string): Record<string, unknown> {
@@ -508,7 +508,7 @@ export function createRulesRouter(
       return { ok: true };
     }),
 
-    /** What Tinkerbell has written onto this rule's collections so far. */
+    /** What Rube has written onto this rule's collections so far. */
     artworkStatus: procedure.input(z.object({ id: z.string() })).query(({ input }) => {
       const rows = getCollectionArtworkForRule(input.id);
       return {

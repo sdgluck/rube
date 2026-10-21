@@ -3,7 +3,7 @@
  *
  * Here rather than in `domains/config-history` because the browser needs it —
  * a filter row and a badge want values, not types — and the web app cannot
- * import a domain. The matching *types* live in `@tinkerbell/ports`, which
+ * import a domain. The matching *types* live in `@rube/ports`, which
  * owns the recorder edge and may not depend on this package.
  *
  * That is two declarations of one fact, so `domains/config-history` asserts at

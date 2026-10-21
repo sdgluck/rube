@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { CleanupToken } from "@tinkerbell/domain.cleanup";
+import { createTestContainer } from "@rube/composition/test-support";
+import { CleanupToken } from "@rube/domain.cleanup";
 
 test("a domain test can build the real container", async () => {
   const c = createTestContainer();

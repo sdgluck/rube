@@ -26,8 +26,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { after, before, beforeEach, describe, test } from "node:test";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ConfigStoreToken } from "@tinkerbell/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ConfigStoreToken } from "@rube/core";
 import { BackupsToken, DEFAULT_KEEP_COUNT, backupDir, backupPath, defaultBackupDir, listBackups } from "./index.ts";
 
 const c = createTestContainer();
@@ -38,7 +38,7 @@ const { prune, backupsEnabled } = c.resolve(BackupsToken);
 let dir: string;
 
 before(async () => {
-  dir = await mkdtemp(join(tmpdir(), "tinkerbell-retention-"));
+  dir = await mkdtemp(join(tmpdir(), "rube-retention-"));
   setConfig("backup_dir", dir);
 });
 
@@ -63,7 +63,7 @@ async function seedBackup(name: string, ageMs: number): Promise<void> {
 async function seedNumbered(count: number): Promise<void> {
   for (let i = 0; i < count; i++) {
     // Older as i grows, so index 0 is the newest.
-    await seedBackup(`tinkerbell-2026010${i}T000000.db.gz`, i * 60_000);
+    await seedBackup(`rube-2026010${i}T000000.db.gz`, i * 60_000);
   }
 }
 
@@ -84,13 +84,13 @@ describe("prune", () => {
     // The failure mode with no symptom: every remaining file is a valid
     // backup, so nothing looks wrong until somebody needs a recent one.
     setConfig("backup_keep_count", 2);
-    await seedBackup("tinkerbell-20260101T000000.db.gz", 3 * 60_000);
-    await seedBackup("tinkerbell-20260102T000000.db.gz", 2 * 60_000);
-    await seedBackup("tinkerbell-20260103T000000.db.gz", 1 * 60_000);
+    await seedBackup("rube-20260101T000000.db.gz", 3 * 60_000);
+    await seedBackup("rube-20260102T000000.db.gz", 2 * 60_000);
+    await seedBackup("rube-20260103T000000.db.gz", 1 * 60_000);
 
     await prune();
 
-    assert.deepEqual(await onDisk(), ["tinkerbell-20260102T000000.db.gz", "tinkerbell-20260103T000000.db.gz"]);
+    assert.deepEqual(await onDisk(), ["rube-20260102T000000.db.gz", "rube-20260103T000000.db.gz"]);
   });
 
   test("keeps exactly the count, not one either side", async () => {
@@ -100,7 +100,7 @@ describe("prune", () => {
     assert.equal(await prune(), 0, "at the limit, nothing is removed");
     assert.equal((await onDisk()).length, 5);
 
-    await seedBackup("tinkerbell-20260199T000000.db.gz", 0);
+    await seedBackup("rube-20260199T000000.db.gz", 0);
     assert.equal(await prune(), 1, "one over the limit removes exactly one");
     assert.equal((await onDisk()).length, 5);
   });
@@ -145,10 +145,10 @@ describe("prune", () => {
     // things in it.
     setConfig("backup_keep_count", 1);
     await writeFile(join(dir, "notes.txt"), "keep me");
-    await writeFile(join(dir, "tinkerbell-config.json"), "wrong suffix");
+    await writeFile(join(dir, "rube-config.json"), "wrong suffix");
     await writeFile(join(dir, "other-20260101T000000.db.gz"), "wrong prefix");
-    await seedBackup("tinkerbell-20260101T000000.db.gz", 60_000);
-    await seedBackup("tinkerbell-20260102T000000.db.gz", 0);
+    await seedBackup("rube-20260101T000000.db.gz", 60_000);
+    await seedBackup("rube-20260102T000000.db.gz", 0);
 
     const removed = await prune();
 
@@ -156,8 +156,8 @@ describe("prune", () => {
     assert.deepEqual(await onDisk(), [
       "notes.txt",
       "other-20260101T000000.db.gz",
-      "tinkerbell-20260102T000000.db.gz",
-      "tinkerbell-config.json",
+      "rube-20260102T000000.db.gz",
+      "rube-config.json",
     ]);
   });
 
@@ -165,14 +165,14 @@ describe("prune", () => {
     // `.partial` is written mid-backup. It is neither a backup to keep nor one
     // to count towards the limit; the next run overwrites it.
     setConfig("backup_keep_count", 1);
-    await seedBackup("tinkerbell-20260101T000000.db.gz", 0);
-    await writeFile(join(dir, "tinkerbell-20260102T000000.db.gz.partial"), "half");
-    await writeFile(join(dir, "tinkerbell-20260102T000000.db.gz.raw.partial"), "half");
+    await seedBackup("rube-20260101T000000.db.gz", 0);
+    await writeFile(join(dir, "rube-20260102T000000.db.gz.partial"), "half");
+    await writeFile(join(dir, "rube-20260102T000000.db.gz.raw.partial"), "half");
 
     await prune();
 
-    assert.ok((await onDisk()).includes("tinkerbell-20260101T000000.db.gz"));
-    assert.ok((await onDisk()).includes("tinkerbell-20260102T000000.db.gz.partial"), "left for the next run");
+    assert.ok((await onDisk()).includes("rube-20260101T000000.db.gz"));
+    assert.ok((await onDisk()).includes("rube-20260102T000000.db.gz.partial"), "left for the next run");
   });
 
   test("a file that vanishes mid-prune does not abort the sweep", async () => {
@@ -219,6 +219,6 @@ describe("configuration", () => {
 
   test("backupPath joins onto the configured directory", () => {
     setConfig("backup_dir", dir);
-    assert.equal(backupPath(config, "tinkerbell-x.db.gz"), join(dir, "tinkerbell-x.db.gz"));
+    assert.equal(backupPath(config, "rube-x.db.gz"), join(dir, "rube-x.db.gz"));
   });
 });

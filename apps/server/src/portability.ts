@@ -16,10 +16,10 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { pipeline } from "node:stream/promises";
-import { createLogger, errorMessage } from "@tinkerbell/core";
-import type { Services } from "@tinkerbell/composition";
-import { BUNDLE_PARTS, IMPORT_RESOLUTIONS, type BundlePart, type ImportResolution } from "@tinkerbell/contracts";
-import { backupPath, listBackups, type BackupFile } from "@tinkerbell/domain.backups";
+import { createLogger, errorMessage } from "@rube/core";
+import type { Services } from "@rube/composition";
+import { BUNDLE_PARTS, IMPORT_RESOLUTIONS, type BundlePart, type ImportResolution } from "@rube/contracts";
+import { backupPath, listBackups, type BackupFile } from "@rube/domain.backups";
 
 const log = createLogger("portability");
 
@@ -49,7 +49,7 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   let size = 0;
   for await (const chunk of req) {
     size += (chunk as Buffer).length;
-    if (size > MAX_BUNDLE_BYTES) throw new Error("That file is too large to be a Tinkerbell bundle.");
+    if (size > MAX_BUNDLE_BYTES) throw new Error("That file is too large to be a Rube bundle.");
     chunks.push(chunk as Buffer);
   }
   const text = Buffer.concat(chunks).toString("utf8");
@@ -112,7 +112,7 @@ export function createPortabilityRoutes(deps: Services & { version: string }) {
       parts: partsFrom(url),
       includeSecrets,
       server: await serverIdentity(),
-      tinkerbellVersion: deps.version,
+      rubeVersion: deps.version,
     });
 
     if (warnings.length > 0) {
@@ -122,7 +122,7 @@ export function createPortabilityRoutes(deps: Services & { version: string }) {
     // The date is in the filename because the first thing anybody does with
     // these is accumulate several in a downloads folder.
     const stamp = new Date(bundle.exportedAt).toISOString().slice(0, 10);
-    const name = `tinkerbell-${stamp}${includeSecrets ? "-with-secrets" : ""}.json`;
+    const name = `rube-${stamp}${includeSecrets ? "-with-secrets" : ""}.json`;
     const payload = JSON.stringify(bundle, null, 2);
     res.writeHead(200, {
       "Content-Type": "application/json",

@@ -20,18 +20,18 @@
 import { randomUUID } from "node:crypto";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { token } from "@tinkerbell/container";
-import { DOWNLOAD_CLIENT_KINDS, portalPrerollCardSchema } from "@tinkerbell/contracts";
-import { config, type Db } from "@tinkerbell/db";
-import type { ChangeRecorder } from "@tinkerbell/ports";
+import { token } from "@rube/container";
+import { DOWNLOAD_CLIENT_KINDS, portalPrerollCardSchema } from "@rube/contracts";
+import { config, type Db } from "@rube/db";
+import type { ChangeRecorder } from "@rube/ports";
 import { createLogger } from "./logger.ts";
 import { errorMessage } from "./util.ts";
 
 const timezoneLog = createLogger("timezone");
 
 // Shared with the browser's schedule editor; see contracts' clock.ts.
-export { isValidTimezone } from "@tinkerbell/contracts";
-import { isValidTimezone } from "@tinkerbell/contracts";
+export { isValidTimezone } from "@rube/contracts";
+import { isValidTimezone } from "@rube/contracts";
 
 /**
  * Where one service's watchlist adds land.
@@ -74,8 +74,8 @@ export const configSchema = z.object({
   global_timezone: z.string(),
   /**
    * Master switch for per-user personalization. When `enabled`, every Plex
-   * item carries the `Tinkerbell` label and every shared user is restricted
-   * to `[Tinkerbell, User:<self>]`, which is what makes per-user collections
+   * item carries the `Rube` label and every shared user is restricted
+   * to `[Rube, User:<self>]`, which is what makes per-user collections
    * (BYW, the portal) visible only to their owner. `enabling`/`disabling`
    * are transient states while the long-running jobs run.
    */
@@ -221,7 +221,7 @@ export const configSchema = z.object({
    * SABnzbd, NZBGet, qBittorrent, Transmission and Deluge, for the Downloads
    * page's status and pause controls.
    *
-   * Tinkerbell's own connection rather than one borrowed from Radarr or
+   * Rube's own connection rather than one borrowed from Radarr or
    * Sonarr: the *Arrs mask every download client credential in their API, so
    * there is nothing to borrow. A list with stable ids, like
    * `global_arr_instances`, because two of the same client — a SABnzbd per
@@ -341,12 +341,12 @@ export const configSchema = z.object({
     to: z.string().optional(),
   }),
   /**
-   * Home Assistant over MQTT: Tinkerbell publishes its state (streams, jobs,
+   * Home Assistant over MQTT: Rube publishes its state (streams, jobs,
    * failing rules, problems, health) with discovery, so the entities appear in
-   * HA by themselves. Publish-only — see `@tinkerbell/home-assistant`.
+   * HA by themselves. Publish-only — see `@rube/home-assistant`.
    *
    * `password` is a nested secret. The prefixes are optional so a save of the
-   * form with them blank means "the defaults" (`tinkerbell`, `homeassistant`)
+   * form with them blank means "the defaults" (`rube`, `homeassistant`)
    * rather than publishing to the root topic.
    */
   global_mqtt: z.object({
@@ -650,7 +650,7 @@ export const configSchema = z.object({
    */
   seerr_polled: z.boolean(),
   /**
-   * Where Plex sees Tinkerbell's prerolls directory. Tinkerbell writes files
+   * Where Plex sees Rube's prerolls directory. Rube writes files
    * under `PREROLLS_DIR`; Plex resolves `CinemaTrailersPrerollID` against its
    * own filesystem, so the same directory usually has a different mount point
    * in each container. This is that prefix — the Sonarr/Radarr "remote path
@@ -810,12 +810,12 @@ export const configSchema = z.object({
   }),
   /**
    * Last successful fetch of the public rule registry, cached so browsing the
-   * catalogue doesn't hit tinkerbell.dev on every render. Stored loosely
+   * catalogue doesn't hit rube.fyi on every render. Stored loosely
    * (`z.unknown()` for the payload) because the authority on the registry's
-   * shape is `registryIndexSchema` in `@tinkerbell/contracts`, which
+   * shape is `registryIndexSchema` in `@rube/contracts`, which
    * `domains/registry` re-validates on read — duplicating it here would mean
    * two schemas to keep in step, and a format bump would fail as an opaque
-   * config-parse error rather than the actionable "update Tinkerbell" message.
+   * config-parse error rather than the actionable "update Rube" message.
    * `url` is recorded so a changed `REGISTRY_URL` invalidates the cache.
    */
   registry_cache: z.object({
@@ -866,7 +866,7 @@ export const configSchema = z.object({
   /**
    * Where backups are written. Defaults to `<DATA_DIR>/backups`.
    *
-   * `DATA_DIR` is the volume people already mount for `tinkerbell.db`, so the
+   * `DATA_DIR` is the volume people already mount for `rube.db`, so the
    * default lands on durable storage. A path *outside* it inside a container
    * is on the ephemeral layer and vanishes with the container — which is
    * theatre, not a backup — so the Settings page says so next to this field.

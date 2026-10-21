@@ -7,8 +7,8 @@
 
 import test, { after } from "node:test";
 import assert from "node:assert/strict";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
 import { createDeferral, isDeferrable, parseClock } from "./deferral.ts";
 
 const c = createTestContainer();

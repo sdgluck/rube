@@ -1,5 +1,5 @@
 import type { TrpcDeps } from "./deps.ts";
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 /**
  * The Sign-in-with-Plex handshake store, and the rate limit that guards it.
  *
@@ -24,7 +24,7 @@ import { perDeps } from "@tinkerbell/container";
  */
 import { randomBytes } from "node:crypto";
 import { TRPCError } from "@trpc/server";
-import type { SessionScope } from "@tinkerbell/core";
+import type { SessionScope } from "@rube/core";
 import { HANDSHAKE_MAX_AGE } from "./cookies.ts";
 
 const HANDSHAKE_TTL_MS = HANDSHAKE_MAX_AGE * 1000;

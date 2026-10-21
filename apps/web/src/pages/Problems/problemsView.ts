@@ -1,4 +1,4 @@
-import { PROBLEM_KINDS, PROBLEM_META, type ProblemKind, type ProblemSeverity } from "@tinkerbell/contracts";
+import { PROBLEM_KINDS, PROBLEM_META, type ProblemKind, type ProblemSeverity } from "@rube/contracts";
 
 /**
  * The Problems pages' arithmetic, kept out of the components so it can be

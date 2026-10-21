@@ -1,9 +1,9 @@
 import { randomUUID } from "node:crypto";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient, isMetadataTagField, type PlexClient } from "@tinkerbell/plex";
-import { normaliseTitle, resolveOverride, type ResolverIndex } from "@tinkerbell/domain.metadata-overrides";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient, isMetadataTagField, type PlexClient } from "@rube/plex";
+import { normaliseTitle, resolveOverride, type ResolverIndex } from "@rube/domain.metadata-overrides";
 
-import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
+import type { CommonJobConfig, JobContext } from "@rube/core";
 
 /**
  * Write per-item metadata overrides to Plex.
@@ -54,7 +54,7 @@ export function createMetadataOverridesCommand(
   }
 
   async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-    ctx.log("tinkerbell metadata-overrides");
+    ctx.log("rube metadata-overrides");
 
     // The same kill switch every other metadata write respects. An import that
     // stored four hundred overrides must not start writing to somebody's

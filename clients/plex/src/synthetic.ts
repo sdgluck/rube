@@ -1,5 +1,5 @@
 /**
- * Tinkerbell's own simulated playback, and how everything else knows to ignore it.
+ * Rube's own simulated playback, and how everything else knows to ignore it.
  *
  * The stress harness starts *real* Plex sessions — a real transcode, real
  * segment fetches, real timeline reports — because anything less would measure
@@ -26,13 +26,13 @@
 import type { PlexSession } from "./types.ts";
 
 /**
- * The client-identifier prefix Tinkerbell stamps on every session it fabricates.
+ * The client-identifier prefix Rube stamps on every session it fabricates.
  *
  * A reserved namespace, not a guess: a real Plex client's identifier is a UUID
  * or a vendor string, so nothing a person is actually watching on can collide
  * with it.
  */
-export const SYNTHETIC_CLIENT_PREFIX = "tinkerbell-stress-";
+export const SYNTHETIC_CLIENT_PREFIX = "rube-stress-";
 
 /** Deliberately structural, so a caller with a narrower row can still ask. */
 export interface HasPlayerMachineId {

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
-import { formatBytes, seriesProgress, type ArrService } from "@tinkerbell/contracts";
+import { formatBytes, seriesProgress, type ArrService } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import PageShell, { StatusChip } from "#components/PageShell";
 import Pagination from "#components/Pagination";

@@ -14,8 +14,8 @@
  * owner is the one person for whom server-wide is correct.
  */
 import { eq } from "drizzle-orm";
-import { token } from "@tinkerbell/container";
-import { plexUserShares, type Db } from "@tinkerbell/db";
+import { token } from "@rube/container";
+import { plexUserShares, type Db } from "@rube/db";
 
 export interface SharingDeps {
   db: Db;

@@ -1,7 +1,7 @@
 /**
  * The round trip the hardening plan asked for.
  *
- * `formatDuration` (in `@tinkerbell/core`) writes a duration into the tail of a
+ * `formatDuration` (in `@rube/core`) writes a duration into the tail of a
  * `job.completed` event message; `parseDurationMs` (here) reads it back out so
  * `rollupConsecutiveEvents` can average durations across collapsed rows. The
  * two are a serialisation pair that live in different packages with nothing but
@@ -14,7 +14,7 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { formatDuration, MINUTE_MS, SECOND_MS } from "@tinkerbell/core";
+import { formatDuration, MINUTE_MS, SECOND_MS } from "@rube/core";
 import { parseDurationMs } from "./index.ts";
 
 /** Whole seconds only — `formatDuration` truncates sub-second precision. */

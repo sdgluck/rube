@@ -1,4 +1,4 @@
-import { MINUTE_MS, WEEK_MS } from "@tinkerbell/core";
+import { MINUTE_MS, WEEK_MS } from "@rube/core";
 
 /**
  * Tunables for rule runs. Named separately from the job runner's `limits.ts`

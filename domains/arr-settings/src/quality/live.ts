@@ -6,9 +6,9 @@
  * tests swap the instance for a mock server without stubbing `fetch`.
  */
 
-import type { ArrInstance } from "@tinkerbell/core";
-import { capabilitiesFor as radarrCapabilities, createRadarrClient, type RadarrClient } from "@tinkerbell/radarr";
-import { capabilitiesFor as sonarrCapabilities, createSonarrClient, type SonarrClient } from "@tinkerbell/sonarr";
+import type { ArrInstance } from "@rube/core";
+import { capabilitiesFor as radarrCapabilities, createRadarrClient, type RadarrClient } from "@rube/radarr";
+import { capabilitiesFor as sonarrCapabilities, createSonarrClient, type SonarrClient } from "@rube/sonarr";
 import type { LiveQuality, QualityApi, WireCustomFormat, WireDefinition, WireProfile, WireSpec } from "./wire.ts";
 
 export type ArrClient = RadarrClient | SonarrClient;

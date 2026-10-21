@@ -27,9 +27,9 @@
  * old job did) bought nothing. `ai_prompt` rules are asked again per person.
  */
 import { like } from "drizzle-orm";
-import { displayTitle, personalRowTitle, type JobContext, type UserPreferences } from "@tinkerbell/core";
-import { collections as collectionsTable, plexUsers } from "@tinkerbell/db";
-import type { Services } from "@tinkerbell/composition";
+import { displayTitle, personalRowTitle, type JobContext, type UserPreferences } from "@rube/core";
+import { collections as collectionsTable, plexUsers } from "@rube/db";
+import type { Services } from "@rube/composition";
 import { keepOffRecommended, personalRowLabels, personalRowPin } from "../../personalize/personal-row.ts";
 import { createFinalizeCommand } from "./finalize.ts";
 import { createReconcileCommand, type PersonalCopy } from "./reconcile.ts";

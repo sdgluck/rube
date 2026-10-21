@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.events",
+  "name": "@rube/domain.events",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,11 +15,11 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/domain.notifications": "workspace:*",
-    "@tinkerbell/ports": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
+    "@rube/domain.notifications": "workspace:*",
+    "@rube/ports": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {

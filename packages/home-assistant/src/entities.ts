@@ -8,7 +8,7 @@
  * chances for a reader to see half of one snapshot and half of the next.
  *
  * `unique_id` is derived from the topic prefix, not hard-coded, so two
- * Tinkerbells on one broker (a test install beside the real one) are two
+ * Rubes on one broker (a test install beside the real one) are two
  * devices instead of one device whose entities flip between them.
  */
 
@@ -184,7 +184,7 @@ export interface Topics {
   discoveryPrefix: string;
 }
 
-export const DEFAULT_TOPIC_PREFIX = "tinkerbell";
+export const DEFAULT_TOPIC_PREFIX = "rube";
 export const DEFAULT_DISCOVERY_PREFIX = "homeassistant";
 
 export function topicsFor(cfg: { topicPrefix?: string; discoveryPrefix?: string }): Topics {
@@ -226,8 +226,8 @@ export function discoveryPayload(topics: Topics, entity: EntityDef, version: str
     ...(entity.entity_category && { entity_category: entity.entity_category }),
     device: {
       identifiers: [topics.node],
-      name: "Tinkerbell",
-      manufacturer: "Tinkerbell",
+      name: "Rube",
+      manufacturer: "Rube",
       model: "Plex companion",
       sw_version: version,
     },

@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { t, procedure } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 export function createEventsRouter(deps: Pick<TrpcDeps, "events">) {
   const { events } = deps;

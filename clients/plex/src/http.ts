@@ -1,4 +1,4 @@
-import { httpRequest, HttpError } from "@tinkerbell/http";
+import { httpRequest, HttpError } from "@rube/http";
 import type { PlexClientOptions, PlexHealthCallback, RequestOptions } from "./types.ts";
 
 function errorMessage(err: unknown): string {
@@ -38,8 +38,8 @@ export interface PlexHttp {
 }
 
 const PLEX_HEADERS = {
-  "X-Plex-Client-Identifier": "tinkerbell",
-  "X-Plex-Product": "tinkerbell",
+  "X-Plex-Client-Identifier": "rube",
+  "X-Plex-Product": "rube",
   "X-Plex-Version": "1.0.0",
 };
 

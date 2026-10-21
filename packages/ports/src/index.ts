@@ -10,20 +10,20 @@
  * nothing, silently, for every job.
  *
  * Here each of them is an interface with a token. A domain declares what it
- * needs; `@tinkerbell/composition` is the one place that says who provides it;
+ * needs; `@rube/composition` is the one place that says who provides it;
  * and the resolve-all test fails the build if nobody does.
  *
  * **Scope rule:** this package holds only the edges that have no natural owner
  * — the ones that would be an import cycle if either side owned them. A token
  * for a thing that *does* have an owner lives beside that thing (`DbToken` in
- * `@tinkerbell/db`, `ConfigStoreToken` in `@tinkerbell/core`), because putting
+ * `@rube/db`, `ConfigStoreToken` in `@rube/core`), because putting
  * it here would mean this package importing half the workspace and the wave-0
  * packages could no longer depend on it.
  *
  * Consequently: no runtime imports, and no dependencies beyond the container.
  */
 
-import { token } from "@tinkerbell/container";
+import { token } from "@rube/container";
 
 // ─── Health ───────────────────────────────────────────────────────────────────
 
@@ -33,7 +33,7 @@ export type HealthStatus = "ok" | "error";
  * Where a client reports that an upstream answered, or didn't.
  *
  * Provided by `domains/health`, consumed by every client factory in
- * `@tinkerbell/core`. The dependency runs the wrong way round for an import —
+ * `@rube/core`. The dependency runs the wrong way round for an import —
  * health sits above core — which is why it was a mutable setter.
  */
 export type HealthReporter = (service: string, status: HealthStatus, message: string) => void;
@@ -142,9 +142,9 @@ export interface ChangeRecord {
 }
 
 /**
- * Where an edit to Tinkerbell's own configuration is recorded.
+ * Where an edit to Rube's own configuration is recorded.
  *
- * Provided by `domains/config-history`, consumed by `@tinkerbell/core`'s config
+ * Provided by `domains/config-history`, consumed by `@rube/core`'s config
  * store and by four domains that sit below it. The direction is the same one
  * that made `HealthReporter` a port: the recorder needs the database and a
  * redaction pass, and the things being recorded sit underneath it.
@@ -193,7 +193,7 @@ export const JobConfigWriterToken = token<JobConfigWriter>("jobs.configWriter");
  *
  * Not an inverted edge like the rest of this file — nothing above provides it —
  * but it belongs here for the same reason they do: it has no natural owner, and
- * every layer needs it. Putting it in `@tinkerbell/core` would mean the wave-0
+ * every layer needs it. Putting it in `@rube/core` would mean the wave-0
  * packages could no longer read the clock without depending on core.
  *
  * The point is testability. Retention windows, cleanup grace periods, quiet

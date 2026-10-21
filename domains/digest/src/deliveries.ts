@@ -14,7 +14,7 @@
  * digest is a strictly better failure than mailing it twice.
  */
 import { and, desc, eq, gte } from "drizzle-orm";
-import { digestDeliveries, type Db } from "@tinkerbell/db";
+import { digestDeliveries, type Db } from "@rube/db";
 
 export type DeliveryStatus = "sent" | "failed" | "skipped_empty";
 

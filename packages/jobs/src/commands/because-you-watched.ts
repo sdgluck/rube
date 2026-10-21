@@ -1,19 +1,19 @@
-import { BYW_DEFAULTS } from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createLlmClient, type LlmConfig } from "@tinkerbell/llm";
-import { displayTitle, errorMessage, personalRowTitle } from "@tinkerbell/core";
-import { describeSkip, type RankResult } from "@tinkerbell/domain.recommendations";
+import { BYW_DEFAULTS } from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createLlmClient, type LlmConfig } from "@rube/llm";
+import { displayTitle, errorMessage, personalRowTitle } from "@rube/core";
+import { describeSkip, type RankResult } from "@rube/domain.recommendations";
 import { createRecommenderLog } from "./recommender-log.ts";
-import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
-import { createPlexClient, type PlexClient, type PlexItem } from "@tinkerbell/plex";
+import { LlmBudgetExceededError } from "@rube/domain.ai-usage";
+import { createPlexClient, type PlexClient, type PlexItem } from "@rube/plex";
 
-import { preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
+import { preferencesPromptBlock, type UserPreferences } from "@rube/core";
 
 import { z } from "zod";
 import { asc, eq } from "drizzle-orm";
-import { jobs, plexUsers } from "@tinkerbell/db";
-import type { JobContext, BywJobConfig } from "@tinkerbell/core";
-import type { PlexAccount } from "@tinkerbell/plex";
+import { jobs, plexUsers } from "@rube/db";
+import type { JobContext, BywJobConfig } from "@rube/core";
+import type { PlexAccount } from "@rube/plex";
 import { extractJSON, libraryTitleMap, plexConnection, resolveTargetSections } from "./ai-collection-shared.ts";
 import {
   keepOffRecommended,
@@ -23,7 +23,7 @@ import {
 } from "../personalize/personal-row.ts";
 
 const BYW_LABEL = "BecauseYouWatched";
-const BYW_LABELS = ["Tinkerbell", BYW_LABEL];
+const BYW_LABELS = ["Rube", BYW_LABEL];
 
 const aiCollectionSchema = z.object({
   name: z.string(),
@@ -167,7 +167,7 @@ export function orphanedBywRows<T extends { labels: string[] }>(
 }
 
 /**
- * Pair each user Tinkerbell knows with their server account. The users are
+ * Pair each user Rube knows with their server account. The users are
  * the Users page's list, not the server's `/accounts`: Plex keeps an account
  * there for anyone who ever played anything, so someone unshared months ago
  * still got a personal row built from their old history. `/accounts` only
@@ -208,7 +208,7 @@ export function createBecauseYouWatchedCommand(
   const { upsertCollectionByKey, forgetCollections } = collections;
 
   /**
-   * The users Tinkerbell knows — the Users page's `plex_users` — each matched
+   * The users Rube knows — the Users page's `plex_users` — each matched
    * to the server-local account its watch history is filed under.
    */
   async function resolveUsers(client: PlexClient): Promise<ResolvedUser[]> {
@@ -348,7 +348,7 @@ export function createBecauseYouWatchedCommand(
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell because-you-watched`);
+    ctx.log(`rube because-you-watched`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     const identity = await client.getIdentity();

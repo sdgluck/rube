@@ -1,4 +1,4 @@
-import { formatBytes, formatCustomFormatScore, type ArrService } from "@tinkerbell/contracts";
+import { formatBytes, formatCustomFormatScore, type ArrService } from "@rube/contracts";
 import { Link } from "react-router-dom";
 import { trpc } from "#/trpc";
 import Spinner from "#components/Spinner";

@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 /**
  * `job_checkpoints`-backed implementation of `JobContext.checkpoint`.
  *
@@ -13,8 +13,8 @@ import { type Services } from "@tinkerbell/composition";
  *   2. commands clear their checkpoint on successful completion.
  */
 import { eq } from "drizzle-orm";
-import { jobCheckpoints } from "@tinkerbell/db";
-import { createLogger, errorMessage, type JobCheckpoint } from "@tinkerbell/core";
+import { jobCheckpoints } from "@rube/db";
+import { createLogger, errorMessage, type JobCheckpoint } from "@rube/core";
 import { CHECKPOINT_TTL_MS } from "./limits.ts";
 
 const log = createLogger("jobs");

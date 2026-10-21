@@ -12,15 +12,15 @@
  * per call would log in to each of them twelve times a minute. A changed entry
  * (new password, new URL) gets a fresh client, because the key changes with it.
  */
-import { token } from "@tinkerbell/container";
+import { token } from "@rube/container";
 import {
   DOWNLOAD_CLIENT_META,
   type DownloadClientKind,
   type DownloadClientOverview,
   type DownloadClientSummary,
-} from "@tinkerbell/contracts";
-import { errorMessage, REDACTED_SECRET, type ConfigStore, type ConfigValue } from "@tinkerbell/core";
-import { createDownloadClient, type DownloadClient } from "@tinkerbell/download-clients";
+} from "@rube/contracts";
+import { errorMessage, REDACTED_SECRET, type ConfigStore, type ConfigValue } from "@rube/core";
+import { createDownloadClient, type DownloadClient } from "@rube/download-clients";
 
 type StoredClient = NonNullable<ConfigValue<"global_download_clients">>[number];
 

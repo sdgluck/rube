@@ -7,11 +7,11 @@
  * configured. The settings stay on their own Settings pages (one editor per
  * value); this only says whether they're in place and links there.
  *
- * Every check reads state Tinkerbell already holds. None calls Plex: this runs
+ * Every check reads state Rube already holds. None calls Plex: this runs
  * on every job page view, and an unreachable server is the health page's
  * business.
  */
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import { isCommandName } from "./commands/catalog.ts";
 
 export type ReadinessItem = {
@@ -66,7 +66,7 @@ export function createReadiness(
   }
 
   /**
-   * The personal rows read Tinkerbell's own playback log, not Plex's history,
+   * The personal rows read Rube's own playback log, not Plex's history,
    * so a fresh install has nothing to read until the poller has seen some
    * viewing or the one-off import has run.
    */
@@ -113,8 +113,7 @@ export function createReadiness(
       case "watch-it-again":
         items.push(personalization(), {
           ...watchHistory(),
-          detail:
-            "Its films were mostly watched before Tinkerbell was installed, so run Import Plex Watch History once.",
+          detail: "Its films were mostly watched before Rube was installed, so run Import Plex Watch History once.",
         });
         break;
       case "new-for-you": {

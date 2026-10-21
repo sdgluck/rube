@@ -13,12 +13,12 @@ import type {
   RegistryImportOverrides,
   RegistryRequirement,
   RegistryRule,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 
 import { applyImportOverrides } from "./overrides.ts";
 import { resolveRuleForImport, type ResolveTarget, type TagLookup } from "./resolve.ts";
-import { type ConfigStore } from "@tinkerbell/core";
-import { type Rules } from "@tinkerbell/domain.rules";
+import { type ConfigStore } from "@rube/core";
+import { type Rules } from "@rube/domain.rules";
 import { type RegistryFetch } from "./fetch.ts";
 
 /**

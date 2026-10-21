@@ -1,5 +1,5 @@
-import { fieldKind, fieldLabel, SMART_FILTER_FIELD_DEFS } from "@tinkerbell/contracts";
-import { hasLocalLeaves, isLocalField } from "@tinkerbell/plex-smart-filter";
+import { fieldKind, fieldLabel, SMART_FILTER_FIELD_DEFS } from "@rube/contracts";
+import { hasLocalLeaves, isLocalField } from "@rube/plex-smart-filter";
 import controls from "#/styles/controls.module.css";
 import shared from "#/styles/shared.module.css";
 import { useState } from "react";
@@ -13,7 +13,7 @@ import {
   LOCAL_FIELD_GROUP_NOTE,
   LOCAL_FIELD_HINTS,
 } from "#components/smart-filter/UserValueSelect.tsx";
-import { opsFor, withFallbackOp } from "@tinkerbell/contracts";
+import { opsFor, withFallbackOp } from "@rube/contracts";
 import {
   buildPresetFilter,
   cleanupPreset,
@@ -260,7 +260,7 @@ const MIN_DAYS = 7;
  * The single most likely support question about this feature.
  *
  * A user adds "watched by nobody", gets their entire library back, and
- * concludes the filter is broken — when in fact Tinkerbell has been recording
+ * concludes the filter is broken — when in fact Rube has been recording
  * plays for two days. Saying so up front costs one line.
  */
 function WatchHistoryWarning() {

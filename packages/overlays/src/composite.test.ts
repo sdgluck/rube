@@ -4,7 +4,7 @@
 // golden in __fixtures__/golden/. To bless new or updated goldens after an
 // intentional rendering change:
 //
-//   UPDATE_GOLDENS=1 pnpm --filter @tinkerbell/overlays test
+//   UPDATE_GOLDENS=1 pnpm --filter @rube/overlays test
 //
 // Determinism strategy: text is rasterized as SVG paths (see badge.ts) so
 // librsvg never performs a font lookup. Output should be byte-identical

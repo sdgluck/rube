@@ -1,10 +1,10 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 import PQueue from "p-queue";
-import { tmdbCache, type TmdbCachedDetails } from "@tinkerbell/db";
+import { tmdbCache, type TmdbCachedDetails } from "@rube/db";
 import { eq, inArray, sql } from "drizzle-orm";
-import { fetchItemDetails, type TmdbConfig, type TmdbItemDetails } from "@tinkerbell/tmdb";
-import { MONTH_MS, type JobContext } from "@tinkerbell/core";
+import { fetchItemDetails, type TmdbConfig, type TmdbItemDetails } from "@rube/tmdb";
+import { MONTH_MS, type JobContext } from "@rube/core";
 
 /** TTL for cached entries: 30 days. Beyond this, we re-fetch on demand. */
 const CACHE_TTL_MS = MONTH_MS;

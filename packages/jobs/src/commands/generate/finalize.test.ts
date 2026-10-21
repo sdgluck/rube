@@ -10,16 +10,16 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext } from "@rube/core";
 import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { collectionArtwork, rules } from "@tinkerbell/db";
-import { noopCheckpoint } from "@tinkerbell/core";
-import { CollectionsToken } from "@tinkerbell/domain.collections";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { collectionArtwork, rules } from "@rube/db";
+import { noopCheckpoint } from "@rube/core";
+import { CollectionsToken } from "@rube/domain.collections";
 import { createFinalizeCommand } from "./finalize.ts";
 
 const c = createTestContainer();
@@ -31,7 +31,7 @@ const { setConfig } = c.resolve(ConfigStoreToken);
 const { getCollectionArtwork, recordCollectionArtwork } = c.resolve(CollectionsToken);
 const { commitCollection } = createFinalizeCommand(services);
 
-const { createPlexClient } = await import("@tinkerbell/plex");
+const { createPlexClient } = await import("@rube/plex");
 const { startMockPlex, MACHINE_ID } = await import("../../test-support/mock-plex-server.ts");
 
 const RULE_ID = "finalize-rule";
@@ -76,7 +76,7 @@ async function commit(
     machineId: MACHINE_ID,
     name: opts.name ?? "Christopher Nolan",
     ratingKeys: ITEMS.map((i) => i.ratingKey),
-    labels: ["Tinkerbell", `Rule:${RULE_ID}`],
+    labels: ["Rube", `Rule:${RULE_ID}`],
     ruleType: opts.ruleType ?? "directors",
     ruleId: "ruleId" in opts ? opts.ruleId : RULE_ID,
     ruleConfig: opts.ruleConfig,
@@ -187,7 +187,7 @@ describe("commitCollection — summaries", () => {
         machineId: MACHINE_ID,
         name: "Christopher Nolan",
         ratingKeys: ITEMS.map((i) => i.ratingKey),
-        labels: ["Tinkerbell", `Rule:${RULE_ID}`],
+        labels: ["Rube", `Rule:${RULE_ID}`],
         ruleType: "directors",
         ruleId: RULE_ID,
       });

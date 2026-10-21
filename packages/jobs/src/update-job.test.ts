@@ -9,10 +9,10 @@ import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { desc, eq } from "drizzle-orm";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, changeLog, jobs } from "@tinkerbell/db";
-import { JobConfigError } from "@tinkerbell/contracts";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, changeLog, jobs } from "@rube/db";
+import { JobConfigError } from "@rube/contracts";
 import { createRunner, JobUpdateError } from "./runner.ts";
 
 const c = createTestContainer();
@@ -142,14 +142,14 @@ describe("installing a feature", async () => {
 
 describe("shared defaults", () => {
   it("the digest domain's per-user cap is the one the form shows", async () => {
-    const { DEFAULT_USER_ITEM_CAP } = await import("@tinkerbell/domain.digest");
-    const { DIGEST_DEFAULTS } = await import("@tinkerbell/contracts");
+    const { DEFAULT_USER_ITEM_CAP } = await import("@rube/domain.digest");
+    const { DIGEST_DEFAULTS } = await import("@rube/contracts");
     assert.equal(DEFAULT_USER_ITEM_CAP, DIGEST_DEFAULTS.userItemCap);
   });
 });
 
 describe("adopting the old Settings → Backup schedule", async () => {
-  const { ConfigStoreToken } = await import("@tinkerbell/core");
+  const { ConfigStoreToken } = await import("@rube/core");
   const { getConfig, setConfig } = c.resolve(ConfigStoreToken);
   const { adoptLegacyBackupSchedule } = createRunner(c.resolve(ServicesToken));
   // Adopting schedules a real cron, whose timer would hold the test process

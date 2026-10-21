@@ -22,9 +22,9 @@ import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
 import { eq } from "drizzle-orm";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken, ruleHistory, rules } from "@tinkerbell/db";
-import { RuleHistoryToken } from "@tinkerbell/domain.rule-history";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken, ruleHistory, rules } from "@rube/db";
+import { RuleHistoryToken } from "@rube/domain.rule-history";
 
 const c = createTestContainer();
 after(() => c.dispose());

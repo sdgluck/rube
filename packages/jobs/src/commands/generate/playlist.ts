@@ -1,7 +1,7 @@
-import { type Services } from "@tinkerbell/composition";
-import type { PlexClient } from "@tinkerbell/plex";
-import type { JobContext } from "@tinkerbell/core";
-import type { PlaylistActionConfig } from "@tinkerbell/contracts";
+import { type Services } from "@rube/composition";
+import type { PlexClient } from "@rube/plex";
+import type { JobContext } from "@rube/core";
+import type { PlaylistActionConfig } from "@rube/contracts";
 
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
@@ -19,13 +19,13 @@ import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts
  * **The playlist is updated, never replaced.** Its rating key is the only
  * durable handle anyone has on it — Plex clients hold it in continue-watching
  * rows, and users pin it — so a rebuild clears and refills in place. Delete and
- * recreate would work identically from Tinkerbell's side and be quietly
+ * recreate would work identically from Rube's side and be quietly
  * destructive from everywhere else's.
  */
 
 /** Marker written into the summary, so ownership survives losing the table. */
 export function playlistMarker(ruleId: string): string {
-  return `[tinkerbell:${ruleId}]`;
+  return `[rube:${ruleId}]`;
 }
 
 interface OrderableItem {
@@ -183,9 +183,7 @@ export function createPlaylistCommand(deps: Pick<Services, "playlists">) {
     // The marker is the fallback for a lost database: playlists can't carry
     // labels, so the summary is the only place ownership can be written where
     // Plex itself will keep it.
-    await client
-      .updatePlaylist(created, { summary: `Built by Tinkerbell.\n\n${playlistMarker(ruleId)}` })
-      .catch(() => {});
+    await client.updatePlaylist(created, { summary: `Built by Rube.\n\n${playlistMarker(ruleId)}` }).catch(() => {});
 
     rememberPlaylist({ ratingKey: created, ruleId, title, itemCount: ratingKeys.length });
     ctx.log(`Created playlist "${title}" (${ratingKeys.length} items).`);

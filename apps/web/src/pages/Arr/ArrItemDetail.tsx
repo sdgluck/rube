@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { formatBytes, seriesProgress, type ArrService } from "@tinkerbell/contracts";
+import { formatBytes, seriesProgress, type ArrService } from "@rube/contracts";
 import { PageCrumbs } from "#layout/AppBar";
 import { trpc } from "#/trpc";
 import PageShell, { StatusChip } from "#components/PageShell";

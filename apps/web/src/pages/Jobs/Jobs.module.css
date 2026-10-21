@@ -587,14 +587,14 @@
   border-collapse: collapse;
 }
 
-/* stylelint-disable tinkerbell/primitive-geometry -- a form laid out in a table, not a list: rows are as tall as their controls */
+/* stylelint-disable rube/primitive-geometry -- a form laid out in a table, not a list: rows are as tall as their controls */
 .configTable td {
   padding: 1rem 1.2rem;
   border-bottom: 1px solid var(--line-soft);
   vertical-align: top;
   font-size: 1.25rem;
 }
-/* stylelint-enable tinkerbell/primitive-geometry */
+/* stylelint-enable rube/primitive-geometry */
 
 .configTable td:first-child {
   width: 1%;
@@ -604,7 +604,7 @@
 /* Phones: each setting stacks — its label over its control — the way a native
    form row does when the control is wider than a switch. A label column took
    a third of a 390px screen and pushed the schedule picker off the edge. */
-/* stylelint-disable tinkerbell/primitive-geometry -- the same form-in-a-table, restacked for a phone; rows stay as tall as their controls */
+/* stylelint-disable rube/primitive-geometry -- the same form-in-a-table, restacked for a phone; rows stay as tall as their controls */
 @media (max-width: 768px) {
   .configTable,
   .configTable tbody,
@@ -633,7 +633,7 @@
     padding-top: 0 !important;
   }
 }
-/* stylelint-enable tinkerbell/primitive-geometry */
+/* stylelint-enable rube/primitive-geometry */
 
 .fieldLabel {
   font-weight: 600;

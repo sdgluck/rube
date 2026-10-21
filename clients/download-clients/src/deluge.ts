@@ -12,7 +12,7 @@
  * `pause_torrents(ids)`; 1.3 only has the list-taking `pause_torrent`. The
  * plural is tried first and the 1.3 spelling is the fallback.
  */
-import type { DownloadClientItem, DownloadItemState } from "@tinkerbell/contracts";
+import type { DownloadClientItem, DownloadItemState } from "@rube/contracts";
 import { createTransport, expectOk, fraction } from "./http.ts";
 import {
   DownloadClientError,

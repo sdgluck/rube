@@ -1,4 +1,4 @@
-import type { BadgeStyle, OverlayPosition, OverlayType } from "@tinkerbell/contracts";
+import type { BadgeStyle, OverlayPosition, OverlayType } from "@rube/contracts";
 
 export type ColorPreset = NonNullable<BadgeStyle["colorPreset"]>;
 

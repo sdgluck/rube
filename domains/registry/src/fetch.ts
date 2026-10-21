@@ -6,10 +6,10 @@
  * `formatVersion` is refused outright instead of being read with today's
  * assumptions.
  */
-import { httpRequestJson } from "@tinkerbell/http";
+import { httpRequestJson } from "@rube/http";
 
-import { DEFAULT_REGISTRY_URL, registryIndexSchema, type RegistryIndex } from "@tinkerbell/contracts";
-import { type ConfigStore } from "@tinkerbell/core";
+import { DEFAULT_REGISTRY_URL, registryIndexSchema, type RegistryIndex } from "@rube/contracts";
+import { type ConfigStore } from "@rube/core";
 
 /**
  * Short, because somebody is watching a skeleton while this runs. 15s with two
@@ -59,7 +59,7 @@ export function createFetch(deps: FetchDeps) {
     try {
       payload = await httpRequestJson<unknown>({ url, timeoutMs: FETCH_TIMEOUT_MS, retries: FETCH_RETRIES });
     } catch (err) {
-      // Plenty of Tinkerbell installs have no outbound internet at all. Say so
+      // Plenty of Rube installs have no outbound internet at all. Say so
       // plainly rather than surfacing a bare fetch error.
       throw new Error(
         `Could not reach the rule registry at ${url}. Check this server's internet access, then try again. (${
@@ -73,10 +73,10 @@ export function createFetch(deps: FetchDeps) {
       const version = (payload as { formatVersion?: unknown })?.formatVersion;
       if (typeof version === "number" && version > registryIndexSchema.shape.formatVersion.value) {
         throw new Error(
-          `The rule registry uses format version ${version}, which this version of Tinkerbell doesn't understand. Update Tinkerbell to import from it.`,
+          `The rule registry uses format version ${version}, which this version of Rube doesn't understand. Update Rube to import from it.`,
         );
       }
-      throw new Error(`The rule registry returned data Tinkerbell couldn't read: ${parsed.error.message}`);
+      throw new Error(`The rule registry returned data Rube couldn't read: ${parsed.error.message}`);
     }
 
     setConfig("registry_cache", { fetchedAt: Date.now(), url, index: parsed.data });

@@ -1,4 +1,4 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { ServicesToken, type Services } from "@rube/composition";
 /**
  * Seed watch history from Plex's own view log.
  *
@@ -6,9 +6,9 @@ import { ServicesToken, type Services } from "@tinkerbell/composition";
  * the newest entry it already imported and dedupes against plays the poller
  * observed live.
  */
-import { createPlexClient } from "@tinkerbell/plex";
+import { createPlexClient } from "@rube/plex";
 
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
 export function createPlaybackBackfillCommand(deps: Pick<Services, "clients" | "config" | "playback">) {
   const { clients, config, playback } = deps;
@@ -23,7 +23,7 @@ export function createPlaybackBackfillCommand(deps: Pick<Services, "clients" | "
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
 
-    ctx.log(`tinkerbell playback-backfill`);
+    ctx.log(`rube playback-backfill`);
     const resumeFrom = lastBackfilledAt();
     ctx.log(
       resumeFrom > 0

@@ -19,7 +19,7 @@ import {
   ruleAction,
   type RegistryImportOverrides,
   type RuleAction,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 
 export function applyImportOverrides(
   ruleType: string,

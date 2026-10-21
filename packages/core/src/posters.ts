@@ -7,9 +7,9 @@ import {
   type PosterCache,
   type RefreshAllOptions,
   type RefreshSummary,
-} from "@tinkerbell/posters";
+} from "@rube/posters";
 
-import { token } from "@tinkerbell/container";
+import { token } from "@rube/container";
 import type { ConfigStore } from "./config.ts";
 import { dataDir } from "./paths.ts";
 

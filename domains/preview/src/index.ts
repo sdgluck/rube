@@ -9,7 +9,7 @@
  * remains only for a user with no token, and says it is approximate.
  */
 
-import type { PlexClient, PlexHubItem, PlexHomeHub } from "@tinkerbell/plex";
+import type { PlexClient, PlexHubItem, PlexHomeHub } from "@rube/plex";
 
 export interface PreviewHubItem {
   ratingKey: string;
@@ -51,11 +51,11 @@ export interface PreviewResult {
 
 /**
  * The `label=` clauses of a plex.tv share filter, e.g.
- * `contentRating=PG|label=Tinkerbell,User:sam`. `|` separates clauses, which
+ * `contentRating=PG|label=Rube,User:sam`. `|` separates clauses, which
  * must all match; `,` separates a clause's values, any of which may. A bare
  * token after a `|` is ignored, as Plex ignores it — this used to read `|` as
- * OR, so the preview showed the old `label=Tinkerbell|User:sam` restriction
- * admitting the user's own rows when Plex admitted only `Tinkerbell`.
+ * OR, so the preview showed the old `label=Rube|User:sam` restriction
+ * admitting the user's own rows when Plex admitted only `Rube`.
  *
  * Returns a list of clauses; each clause is a list of accepted label tags
  * (OR within); an item matches if it satisfies ALL clauses (AND across).

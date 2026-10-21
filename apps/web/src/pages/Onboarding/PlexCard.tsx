@@ -16,7 +16,7 @@ interface Props {
 /**
  * The one card that has to work before anything else does, so it gets the
  * whole width and both halves of the job: credentials, then which libraries
- * Tinkerbell is allowed to touch.
+ * Rube is allowed to touch.
  *
  * Keeps `SettingsPlex`'s stricter rule — the connection test must pass before
  * the URL and token are stored. Every other integration saves regardless,
@@ -206,7 +206,7 @@ export default function PlexCard({ cfg, connected }: Props) {
         </span>
         <span className={styles.tileState}>{connected ? "Connected" : "Required"}</span>
       </div>
-      <p className={styles.tileBlurb}>Where Tinkerbell reads your library and writes collections.</p>
+      <p className={styles.tileBlurb}>Where Rube reads your library and writes collections.</p>
 
       <div className={styles.tileBody}>
         <label className={styles.field}>
@@ -285,7 +285,7 @@ export default function PlexCard({ cfg, connected }: Props) {
             <p className={styles.fieldHint}>No libraries found. Check the connection above.</p>
           ) : (
             <>
-              <p className={styles.fieldHint}>Tinkerbell leaves unticked libraries alone.</p>
+              <p className={styles.fieldHint}>Rube leaves unticked libraries alone.</p>
               <div className={styles.libraryList}>
                 {sections.map((s) => (
                   <label key={s.key} className={styles.libraryItem}>

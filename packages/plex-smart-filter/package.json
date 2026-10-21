@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/plex-smart-filter",
+  "name": "@rube/plex-smart-filter",
   "version": "0.45.0",
   "private": true,
   "type": "module",

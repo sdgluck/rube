@@ -7,22 +7,22 @@
  * Flow: createPlexPin → redirect the user to buildPlexAuthUrl → poll
  * checkPlexPin until it returns a token → getPlexAccount to identify them.
  */
-import { httpRequestJson } from "@tinkerbell/http";
+import { httpRequestJson } from "@rube/http";
 
 /**
  * plex.tv, unless a development build points it at the mock in
- * `@tinkerbell/test-support/plex-tv` — the native apps' sign-in can't be
+ * `@rube/test-support/plex-tv` — the native apps' sign-in can't be
  * exercised end to end against the real one without a real account approving
  * every run. Ignored in production, where an env var redirecting the identity
  * provider would be a way to mint any session at all.
  */
 function plexTv(): string {
-  const override = process.env.TINKERBELL_PLEX_TV_URL;
+  const override = process.env.RUBE_PLEX_TV_URL;
   if (override && process.env.NODE_ENV !== "production") return `${override.replace(/\/+$/, "")}/api/v2`;
   return "https://plex.tv/api/v2";
 }
 
-function baseHeaders(clientId: string, product = "Tinkerbell"): Record<string, string> {
+function baseHeaders(clientId: string, product = "Rube"): Record<string, string> {
   return {
     "X-Plex-Client-Identifier": clientId,
     "X-Plex-Product": product,
@@ -35,7 +35,7 @@ export interface PlexPin {
   code: string;
 }
 
-export async function createPlexPin(clientId: string, product = "Tinkerbell"): Promise<PlexPin> {
+export async function createPlexPin(clientId: string, product = "Rube"): Promise<PlexPin> {
   const data = await httpRequestJson<{ id: number; code: string }>({
     url: `${plexTv()}/pins?strong=true`,
     init: { method: "POST", headers: baseHeaders(clientId, product) },
@@ -59,7 +59,7 @@ export function buildPlexAuthUrl(opts: {
   const params = new URLSearchParams({
     clientID: opts.clientId,
     code: opts.code,
-    "context[device][product]": opts.product ?? "Tinkerbell",
+    "context[device][product]": opts.product ?? "Rube",
   });
   if (opts.forwardUrl) params.set("forwardUrl", opts.forwardUrl);
   return `https://app.plex.tv/auth#?${params.toString()}`;

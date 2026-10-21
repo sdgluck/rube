@@ -26,9 +26,9 @@ import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
 import { and, eq } from "drizzle-orm";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken, overlayConfigs, overlayPresets } from "@tinkerbell/db";
-import { evaluateRule, OverlaysToken, type OverlayPosition } from "@tinkerbell/domain.overlays";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken, overlayConfigs, overlayPresets } from "@rube/db";
+import { evaluateRule, OverlaysToken, type OverlayPosition } from "@rube/domain.overlays";
 
 const c = createTestContainer();
 after(() => c.dispose());

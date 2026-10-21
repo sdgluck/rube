@@ -7,7 +7,7 @@ import CardSection from "#components/CardSection";
 import CronPreview from "#components/CronPreview";
 import SettingsPageLink from "#components/SettingsPageLink";
 import { useToast } from "#components/Toast";
-import { DIGEST_DEFAULTS } from "@tinkerbell/contracts";
+import { DIGEST_DEFAULTS } from "@rube/contracts";
 import SettingsPageHeader from "./SettingsPageHeader";
 import settings from "./Settings.module.css";
 import styles from "./SettingsDigest.module.css";

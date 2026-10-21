@@ -10,11 +10,11 @@
  */
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { arrMovies, DbToken, mediaItems, playbackSessions, qualitySwaps, watchState } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { startMockRadarr, type MockArr } from "@tinkerbell/test-support";
-import type { RadarrRelease } from "@tinkerbell/radarr";
+import { createTestContainer } from "@rube/composition/test-support";
+import { arrMovies, DbToken, mediaItems, playbackSessions, qualitySwaps, watchState } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { startMockRadarr, type MockArr } from "@rube/test-support";
+import type { RadarrRelease } from "@rube/radarr";
 import { chooseRelease, QualitySwapsToken } from "./index.ts";
 
 const DAY = 86_400_000;

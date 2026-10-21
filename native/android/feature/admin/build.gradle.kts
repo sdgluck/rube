@@ -7,7 +7,7 @@ plugins {
 }
 
 android {
-    namespace = "dev.tinkerbell.admin"
+    namespace = "fyi.rube.admin"
     compileSdk = 35
     defaultConfig {
         minSdk = 35

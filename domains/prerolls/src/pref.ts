@@ -25,7 +25,7 @@ export const MODE_SEPARATORS: Record<PrerollMode, string> = {
  * Join a Plex-side directory and a filename with forward slashes.
  *
  * Deliberately not `path.join` — the path being built belongs to the *Plex*
- * server, which may be Linux while Tinkerbell runs on Windows, or vice versa.
+ * server, which may be Linux while Rube runs on Windows, or vice versa.
  * Windows Plex accepts forward slashes, so they're the safe common form.
  */
 export function joinPlexPath(plexDir: string, filename: string): string {

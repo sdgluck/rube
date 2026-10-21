@@ -23,12 +23,12 @@
  *  - **A title of its own** (`jobRowTitle`), so it never pools its items with
  *    a "Leaving Soon" collection someone made by hand.
  */
-import { LEAVING_DEFAULTS } from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { displayTitle, errorMessage, jobRowTitle } from "@tinkerbell/core";
-import type { JobContext, LeavingSoonJobConfig } from "@tinkerbell/core";
-import { createPlexClient, type PinOptions, type PlexSection } from "@tinkerbell/plex";
-import { ClockToken } from "@tinkerbell/ports";
+import { LEAVING_DEFAULTS } from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { displayTitle, errorMessage, jobRowTitle } from "@rube/core";
+import type { JobContext, LeavingSoonJobConfig } from "@rube/core";
+import { createPlexClient, type PinOptions, type PlexSection } from "@rube/plex";
+import { ClockToken } from "@rube/ports";
 import { plexConnection, resolveTargetSections } from "../ai-collection-shared.ts";
 import { hasLabel } from "../../personalize/personal-row-writer.ts";
 import { BASELINE_LABEL } from "../../personalize/reconcile.ts";
@@ -63,7 +63,7 @@ export function createLeavingSoonCommand(
     if (!token) throw new Error("Plex token is required. Configure it in Settings.");
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell leaving-soon`);
+    ctx.log(`rube leaving-soon`);
     ctx.log(`Server: ${url}`);
 
     const refusal = cleanup.standingRefusal(now());

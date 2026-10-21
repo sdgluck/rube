@@ -1,6 +1,6 @@
 import { and, desc, eq, lt } from "drizzle-orm";
-import { ruleHistory, type Db } from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
+import { ruleHistory, type Db } from "@rube/db";
+import { token } from "@rube/container";
 
 export interface HistoricalCollection {
   name: string;

@@ -1,4 +1,4 @@
-import { isSystemCollectionLabel } from "@tinkerbell/contracts";
+import { isSystemCollectionLabel } from "@rube/contracts";
 import { useState } from "react";
 import Modal from "./Modal";
 import styles from "./BulkLabelsModal.module.css";
@@ -46,7 +46,7 @@ export default function BulkLabelsModal({
 
   const labelClass = (lbl: string) => {
     const lower = lbl.toLowerCase();
-    if (isSystemCollectionLabel(lower)) return shared.labelTinkerbell;
+    if (isSystemCollectionLabel(lower)) return shared.labelRube;
     if (lower.startsWith("user:")) return shared.labelUser;
     return "";
   };

@@ -9,16 +9,16 @@
       not to copy it at all than to restore a store that reads as signed out.
     -->
     <application
-        android:name=".TinkerbellApplication"
+        android:name=".RubeApplication"
         android:allowBackup="false"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:enableOnBackInvokedCallback="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher"
-        android:label="Tinkerbell"
+        android:label="Rube"
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
-        android:theme="@style/Theme.Tinkerbell">
+        android:theme="@style/Theme.Rube">
 
         <!--
           singleTask so a link, a QR scan or the end of sign-in always lands in
@@ -38,7 +38,7 @@
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-                <data android:scheme="tinkerbell" />
+                <data android:scheme="rube" />
             </intent-filter>
         </activity>
 

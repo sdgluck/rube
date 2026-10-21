@@ -1,5 +1,5 @@
 /**
- * Reading a Kometa config and turning it into a Tinkerbell migration plan.
+ * Reading a Kometa config and turning it into a Rube migration plan.
  *
  * Pure: no `fs`, no `fetch`, no database. Files arrive as `{path, text}` and
  * anything that has to be *fetched* goes through an injected `FileLoader`.

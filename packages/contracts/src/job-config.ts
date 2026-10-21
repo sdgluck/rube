@@ -1,7 +1,7 @@
 /**
  * Job config: what each command accepts, and how a stored config is changed.
  *
- * Here rather than in `@tinkerbell/core` because the admin UI renders forms
+ * Here rather than in `@rube/core` because the admin UI renders forms
  * from the same schemas the server validates with, and web may only import
  * contracts. `core` re-exports everything, so command code is unchanged.
  *
@@ -218,7 +218,7 @@ export const collectionArtJobConfigSchema = commonJobConfigSchema.extend({
   /**
    * Re-render and re-upload even where the input hash says nothing changed.
    * For the case the ledger can't see: someone replaced the poster in Plex by
-   * hand and wants Tinkerbell's back.
+   * hand and wants Rube's back.
    */
   force: z.boolean().optional(),
 });

@@ -15,12 +15,12 @@
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ruleRuns, rules } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ruleRuns, rules } from "@rube/db";
 import { createRuleQueue } from "./rule-queue.ts";
-import { RuleRunsToken } from "@tinkerbell/domain.rule-runs";
+import { RuleRunsToken } from "@rube/domain.rule-runs";
 
 const c = createTestContainer();
 after(() => c.dispose());

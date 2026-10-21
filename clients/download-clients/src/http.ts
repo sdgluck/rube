@@ -2,7 +2,7 @@
  * The little every client shares: a base URL that keeps its path, a deadline
  * on every request, and errors that say which host failed.
  *
- * Raw `fetch` rather than `@tinkerbell/http`, because two of these protocols
+ * Raw `fetch` rather than `@rube/http`, because two of these protocols
  * live in the failure responses that helper turns into exceptions:
  * Transmission's 409 carries the session id the retry needs, and qBittorrent's
  * 403 is the signal to log in again.

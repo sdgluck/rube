@@ -20,7 +20,7 @@
  * And no series may hold more than `MAX_PER_SERIES` places in a theme — see
  * `series.ts` for the eight Harry Potter films that made that necessary.
  */
-import type { RankResult } from "@tinkerbell/domain.recommendations";
+import type { RankResult } from "@rube/domain.recommendations";
 import type { Candidate, MatchedItem } from "./select.ts";
 import { MAX_PER_SERIES, seriesKey } from "./series.ts";
 

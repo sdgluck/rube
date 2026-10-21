@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/agent-api",
+  "name": "@rube/agent-api",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,20 +15,20 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/domain.api-keys": "workspace:*",
-    "@tinkerbell/domain.changes": "workspace:*",
-    "@tinkerbell/domain.search": "workspace:*",
-    "@tinkerbell/trpc": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/contracts": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/domain.api-keys": "workspace:*",
+    "@rube/domain.changes": "workspace:*",
+    "@rube/domain.search": "workspace:*",
+    "@rube/trpc": "workspace:*",
     "@trpc/server": "^11.10.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@tinkerbell/composition": "workspace:*",
-    "@tinkerbell/jobs": "workspace:*",
-    "@tinkerbell/test-support": "workspace:*",
+    "@rube/composition": "workspace:*",
+    "@rube/jobs": "workspace:*",
+    "@rube/test-support": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"
   }

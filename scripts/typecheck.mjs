@@ -22,7 +22,7 @@ const PROGRAMS = [
   { name: "node", cwd: ".", args: ["-p", "tsconfig.node.json"] },
   { name: "web", cwd: "apps/web", args: [] },
   { name: "portal", cwd: "apps/portal", args: [] },
-  { name: "tinkerbell.dev", cwd: "apps/tinkerbell.dev", args: [] },
+  { name: "rube.fyi", cwd: "apps/rube.fyi", args: [] },
 ];
 
 const only = process.argv.slice(2).filter((a) => !a.startsWith("--"));

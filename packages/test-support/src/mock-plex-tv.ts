@@ -7,12 +7,12 @@
  * something that answers like plex.tv rather than a stub that agrees with the
  * caller about URLs and headers.
  *
- * Point a server at it with `TINKERBELL_PLEX_TV_URL` (honoured outside
+ * Point a server at it with `RUBE_PLEX_TV_URL` (honoured outside
  * production only, see `clients/plex/src/auth.ts`). `/auth?code=…` stands in
  * for app.plex.tv: opening it approves the PIN as `defaultAccount`, which is
  * what lets a simulator complete sign-in with nobody tapping through plex.tv.
  *
- * A model, not the real service: it records the shapes Tinkerbell reads and
+ * A model, not the real service: it records the shapes Rube reads and
  * nothing else.
  */
 import { createServer, type Server } from "node:http";

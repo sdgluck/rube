@@ -3,7 +3,7 @@
  *
  * The bug it replaces is documented at the top of the old
  * `packages/jobs/src/hooks.ts`: four cross-domain edges were module-level
- * `let`s in `@tinkerbell/core` defaulting to no-ops, assigned by a
+ * `let`s in `@rube/core` defaulting to no-ops, assigned by a
  * `registerCoreHooks()` call that each entrypoint had to remember to make. The
  * Sidequest worker thread has its own module graph and never made it, so health
  * reports, notification traces, provider rescans and per-user collection counts
@@ -15,7 +15,7 @@
  */
 import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
-import { ScopeRequiredError } from "@tinkerbell/container";
+import { ScopeRequiredError } from "@rube/container";
 import { createTestContainer } from "./test-support.ts";
 
 const container = createTestContainer();

@@ -3,8 +3,8 @@
  *
  * Three lifetimes, one resolution path stack, and disposal that actually runs.
  * Everything else — what a `Db` is, where config comes from — lives in
- * `@tinkerbell/ports` and `@tinkerbell/composition`. This file knows nothing
- * about Tinkerbell and has no dependencies.
+ * `@rube/ports` and `@rube/composition`. This file knows nothing
+ * about Rube and has no dependencies.
  */
 
 import type { AnyToken, Token } from "./token.ts";
@@ -74,7 +74,7 @@ export interface Registry {
 }
 
 export interface RootContainer extends Scope {
-  /** Every registered token. The resolve-all test in `@tinkerbell/composition`
+  /** Every registered token. The resolve-all test in `@rube/composition`
    * walks this, which is what turns a missing wiring edge into a red build
    * instead of a silent no-op at runtime. */
   tokens(): readonly AnyToken[];

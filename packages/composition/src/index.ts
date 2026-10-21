@@ -9,7 +9,7 @@
  * no-op. Here, building the container *is* the wiring, and a registration
  * nobody provides fails to resolve.
  */
-import { createContainer, type RootContainer } from "@tinkerbell/container";
+import { createContainer, type RootContainer } from "@rube/container";
 import { registerCore, type CoreEnv } from "./core.module.ts";
 import { registerDomains } from "./domains.module.ts";
 import { registerServices } from "./services.ts";
@@ -35,6 +35,6 @@ export function buildContainer(env: Env = {}, modules: Module[] = []): RootConta
       registerServices(r);
       for (const module of modules) module(r);
     },
-    { name: "tinkerbell" },
+    { name: "rube" },
   );
 }

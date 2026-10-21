@@ -14,7 +14,7 @@ import { eq } from "drizzle-orm";
 describe("createTestDb", () => {
   test("comes back migrated and writable, without touching DATA_DIR", () => {
     const before = process.env.DATA_DIR;
-    const { db, dispose } = createTestDb("tinkerbell-db-support-test-");
+    const { db, dispose } = createTestDb("rube-db-support-test-");
     try {
       db.insert(config).values({ key: "global_plex_url", value: "http://plex:32400" }).run();
       const row = db.select().from(config).where(eq(config.key, "global_plex_url")).get();
@@ -31,8 +31,8 @@ describe("createTestDb", () => {
    * comparison) had no way to ask for one.
    */
   test("two databases are independent", () => {
-    const a = createTestDb("tinkerbell-db-a-");
-    const b = createTestDb("tinkerbell-db-b-");
+    const a = createTestDb("rube-db-a-");
+    const b = createTestDb("rube-db-b-");
     try {
       a.db.insert(config).values({ key: "global_plex_url", value: "a" }).run();
       assert.equal(a.db.select().from(config).all().length, 1);
@@ -44,7 +44,7 @@ describe("createTestDb", () => {
   });
 
   test("dispose closes the connection and removes the directory", () => {
-    const { db, dataDir, dispose } = createTestDb("tinkerbell-db-dispose-");
+    const { db, dataDir, dispose } = createTestDb("rube-db-dispose-");
     dispose();
     assert.equal(existsSync(dataDir), false);
     assert.throws(() => db.select().from(config).all());

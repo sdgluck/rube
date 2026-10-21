@@ -1,16 +1,16 @@
 /**
  * plex.tv share filters are a single string per media type holding several
- * independent clauses — `contentRating=PG,PG-13|label=Kids`. Tinkerbell owns
- * the `label=` clause (personalization writes `label=Tinkerbell,User:<name>`
+ * independent clauses — `contentRating=PG,PG-13|label=Kids`. Rube owns
+ * the `label=` clause (personalization writes `label=Rube,User:<name>`
  * into it) while an admin owns `contentRating=`, so every write has to edit
  * one clause and leave the other exactly as it found it.
  *
  * `|` separates clauses and `,` separates a clause's values, which Plex ORs.
- * This repo used to write `label=Tinkerbell|User:<name>`, reading `|` as
- * the value separator too. Plex reads that as `label=Tinkerbell` plus a stray
+ * This repo used to write `label=Rube|User:<name>`, reading `|` as
+ * the value separator too. Plex reads that as `label=Rube` plus a stray
  * token it ignores (verified on a real server, 2026-10-12: rewriting the same
  * labels with a comma made the user's own rows appear at once). So from the start
- * every restricted user saw everything labelled `Tinkerbell` and nothing
+ * every restricted user saw everything labelled `Rube` and nothing
  * labelled for them. A bare token is therefore dropped when parsing, as Plex
  * drops it: reading the old form as what Plex enforces is what lets
  * reconcile see the drift and rewrite it.

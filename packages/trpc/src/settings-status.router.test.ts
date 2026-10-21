@@ -11,12 +11,12 @@
 import assert from "node:assert/strict";
 import { after, before, describe, test } from "node:test";
 import { initTRPC } from "@trpc/server";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { ConfigStoreToken, DAY_MS } from "@tinkerbell/core";
-import { DbToken, rules } from "@tinkerbell/db";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
-import { startMockPlex, type MockPlex } from "@tinkerbell/test-support";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { ConfigStoreToken, DAY_MS } from "@rube/core";
+import { DbToken, rules } from "@rube/db";
+import { JobsToken, registerJobs } from "@rube/jobs";
+import { startMockPlex, type MockPlex } from "@rube/test-support";
 import { createTrpc } from "./index.ts";
 import type { AdminContext } from "./_base.ts";
 
@@ -35,7 +35,7 @@ function caller() {
     session: undefined,
     resHeaders: new Headers(),
     secure: false,
-    origin: "http://admin.tinkerbell.test",
+    origin: "http://admin.rube.test",
     ip: "test",
     authRequired: false,
   } as unknown as AdminContext;
@@ -102,7 +102,7 @@ describe("against a mock Plex", () => {
         { key: "3", title: "Kids", type: "movie" },
       ],
       items: [
-        { ratingKey: "10", title: "Labelled", sectionId: "1", guids: [], labels: ["Tinkerbell"] },
+        { ratingKey: "10", title: "Labelled", sectionId: "1", guids: [], labels: ["Rube"] },
         // A new arrival the label job hasn't reached: not an unlabelled library.
         { ratingKey: "11", title: "New", sectionId: "1", guids: [], labels: [] },
         { ratingKey: "20", title: "Added later", sectionId: "2", guids: [], labels: [] },

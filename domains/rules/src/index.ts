@@ -1,14 +1,14 @@
 import { randomUUID } from "node:crypto";
 import { desc, eq, type InferSelectModel } from "drizzle-orm";
-import { rules, type Db } from "@tinkerbell/db";
-import type { ChangeRecorder } from "@tinkerbell/ports";
+import { rules, type Db } from "@rube/db";
+import type { ChangeRecorder } from "@rube/ports";
 import { createConflicts } from "./conflicts.ts";
 import { createExplain } from "./explain.ts";
-import type { Playback } from "@tinkerbell/domain.playback";
+import type { Playback } from "@rube/domain.playback";
 import { createLock } from "./lock.ts";
 import { createRecycle } from "./recycle.ts";
-import { isPersonalizableAction, SEEDED_RULE, type RuleAction } from "@tinkerbell/contracts";
-import { token } from "@tinkerbell/container";
+import { isPersonalizableAction, SEEDED_RULE, type RuleAction } from "@rube/contracts";
+import { token } from "@rube/container";
 
 export { RuleLockedError, RULE_LOCK_LEASE_MS, type RuleLockHandle, type RuleLockInfo } from "./lock.ts";
 

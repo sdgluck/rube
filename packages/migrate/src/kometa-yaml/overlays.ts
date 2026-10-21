@@ -3,27 +3,27 @@ import type { ImportFile } from "./types.ts";
 import type { PlanDiagnostic, PlanWarning } from "../types.ts";
 
 /**
- * Kometa overlay files → Tinkerbell overlay configs.
+ * Kometa overlay files → Rube overlay configs.
  *
  * The two systems disagree about what an overlay *is*, and the mapping is only
  * honest if that's said plainly.
  *
  * Kometa composites arbitrary images at arbitrary pixel coordinates, scoped by
- * builder — "this ribbon, on these forty films, 30px from the left". Tinkerbell
+ * builder — "this ribbon, on these forty films, 30px from the left". Rube
  * draws text badges from a fixed set of twelve facts, at one of nine anchors,
  * scoped to a whole library. So this mapper does not translate a layout; it
  * recognises the *intent* behind Kometa's own overlay defaults — "show me
- * resolution", "show me ratings" — and rebuilds that intent in Tinkerbell's
+ * resolution", "show me ratings" — and rebuilds that intent in Rube's
  * vocabulary.
  *
  * That's a real migration for the common case (almost everybody runs the
  * defaults) and an honest failure for the rest. What it must never do is
  * produce something that looks like a faithful copy of a hand-made layout,
  * because a user would then compare it against their posters and conclude
- * Tinkerbell's overlay system is broken rather than different.
+ * Rube's overlay system is broken rather than different.
  */
 
-/** Tinkerbell's nine anchors. */
+/** Rube's nine anchors. */
 export type OverlayPosition =
   | "top-left"
   | "top-center"
@@ -52,7 +52,7 @@ export interface OverlayMapping {
 }
 
 /**
- * Kometa overlay default → the Tinkerbell badge it means, and where it usually
+ * Kometa overlay default → the Rube badge it means, and where it usually
  * sits. Positions follow Kometa's own default placements so a migrated library
  * looks broadly like the one it came from.
  */
@@ -83,15 +83,15 @@ const DEFAULT_OVERLAYS: Record<string, { type: string; position: OverlayPosition
  * and filing a bug.
  */
 const UNSUPPORTED_OVERLAYS: Record<string, string> = {
-  ribbon: "award ribbons are images, and Tinkerbell's overlays are text badges",
-  streaming: "streaming-service logos are images, and Tinkerbell's overlays are text badges",
-  network: "network logos are images, and Tinkerbell's overlays are text badges",
-  mediastinger: "the post-credits marker has no Tinkerbell equivalent",
-  versions: "the multiple-versions marker has no Tinkerbell equivalent",
-  direct_play: "the direct-play marker has no Tinkerbell equivalent",
+  ribbon: "award ribbons are images, and Rube's overlays are text badges",
+  streaming: "streaming-service logos are images, and Rube's overlays are text badges",
+  network: "network logos are images, and Rube's overlays are text badges",
+  mediastinger: "the post-credits marker has no Rube equivalent",
+  versions: "the multiple-versions marker has no Rube equivalent",
+  direct_play: "the direct-play marker has no Rube equivalent",
   episode_info: "episode numbering overlays aren't supported",
-  languages: "language flags are images, and Tinkerbell's overlays are text badges",
-  audio_language: "language flags are images, and Tinkerbell's overlays are text badges",
+  languages: "language flags are images, and Rube's overlays are text badges",
+  audio_language: "language flags are images, and Rube's overlays are text badges",
   aspect: "aspect-ratio overlays aren't supported",
 };
 
@@ -222,7 +222,7 @@ export function mapOverlayRef(opts: CollectOptions): {
   if (unmapped > 0) {
     diagnostics.push({
       severity: "warn",
-      message: `${opts.file.path}: ${unmapped} overlay definition(s) had no Tinkerbell equivalent — Tinkerbell draws text badges from a fixed set of facts, not arbitrary images.`,
+      message: `${opts.file.path}: ${unmapped} overlay definition(s) had no Rube equivalent — Rube draws text badges from a fixed set of facts, not arbitrary images.`,
     });
   }
 

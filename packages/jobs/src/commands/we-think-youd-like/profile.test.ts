@@ -1,7 +1,7 @@
 import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
-import { createTestDb } from "@tinkerbell/db/test-db";
-import { mediaItems, playbackSessions, watchState } from "@tinkerbell/db";
+import { createTestDb } from "@rube/db/test-db";
+import { mediaItems, playbackSessions, watchState } from "@rube/db";
 import {
   buildTasteProfile,
   everWatchedKeys,

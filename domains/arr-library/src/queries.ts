@@ -9,8 +9,8 @@
  */
 
 import { and, asc, count, desc, eq, gt, inArray, isNotNull, isNull, like, or, sql, type SQL } from "drizzle-orm";
-import { arrMovies, arrSeries, arrSyncState, type Db } from "@tinkerbell/db";
-import type { ArrService } from "@tinkerbell/contracts";
+import { arrMovies, arrSeries, arrSyncState, type Db } from "@rube/db";
+import type { ArrService } from "@rube/contracts";
 
 /** Hard ceiling on a page, matching the rest of the app's list procedures. */
 const MAX_PAGE_SIZE = 500;

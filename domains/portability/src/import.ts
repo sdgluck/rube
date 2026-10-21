@@ -11,7 +11,7 @@
  * without touching anything; `applyImport` takes that classification plus one
  * decision per differing item and writes.
  */
-import { arrManagedProfiles, jobs, overlayConfigs, overlayPresets, rules, type Db } from "@tinkerbell/db";
+import { arrManagedProfiles, jobs, overlayConfigs, overlayPresets, rules, type Db } from "@rube/db";
 import {
   type Bundle,
   type ExportedManagedProfile,
@@ -23,15 +23,8 @@ import {
   ruleConfigSchema,
   type TagLookup,
   translateSmartFilterTags,
-} from "@tinkerbell/contracts";
-import {
-  configSchema,
-  createLogger,
-  errorMessage,
-  runAsActor,
-  type ConfigKey,
-  type ConfigStore,
-} from "@tinkerbell/core";
+} from "@rube/contracts";
+import { configSchema, createLogger, errorMessage, runAsActor, type ConfigKey, type ConfigStore } from "@rube/core";
 
 const log = createLogger("portability");
 
@@ -51,7 +44,7 @@ export interface ImportItem {
 
 export interface ImportPreview {
   items: ImportItem[];
-  tinkerbellVersion: string;
+  rubeVersion: string;
   exportedAt: number;
   /** True when the bundle came from this very server — i.e. a self-restore. */
   sameServer: boolean;
@@ -179,12 +172,12 @@ export function createImport(deps: ImportDeps) {
   function parseBundle(raw: unknown): Bundle {
     const parsed = bundleSchema.safeParse(raw);
     if (!parsed.success) {
-      throw new Error(`This isn't a Tinkerbell bundle, or it is damaged: ${parsed.error.issues[0]?.message}`);
+      throw new Error(`This isn't a Rube bundle, or it is damaged: ${parsed.error.issues[0]?.message}`);
     }
     if (parsed.data.formatVersion > BUNDLE_FORMAT_VERSION) {
       throw new Error(
-        `This bundle is format version ${parsed.data.formatVersion}, and this Tinkerbell reads version ` +
-          `${BUNDLE_FORMAT_VERSION}. It was exported by a newer version — update Tinkerbell and try again.`,
+        `This bundle is format version ${parsed.data.formatVersion}, and this Rube reads version ` +
+          `${BUNDLE_FORMAT_VERSION}. It was exported by a newer version — update Rube and try again.`,
       );
     }
     return parsed.data;
@@ -378,7 +371,7 @@ export function createImport(deps: ImportDeps) {
           key: `config:${key}`,
           label: key,
           verdict: "new",
-          blocked: "This version of Tinkerbell has no such setting.",
+          blocked: "This version of Rube has no such setting.",
         });
         continue;
       }
@@ -420,7 +413,7 @@ export function createImport(deps: ImportDeps) {
       localisedRules,
       preview: {
         items,
-        tinkerbellVersion: bundle.tinkerbellVersion,
+        rubeVersion: bundle.rubeVersion,
         exportedAt: bundle.exportedAt,
         sameServer: !!bundle.server && !!localMachineId && bundle.server.machineId === localMachineId,
         containsSecrets: bundle.containsSecrets,

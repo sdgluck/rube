@@ -1,13 +1,13 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { rules } from "@tinkerbell/db";
+import { rules } from "@rube/db";
 
-import { narrateSmartFilter, ruleConfigSchema } from "@tinkerbell/contracts";
+import { narrateSmartFilter, ruleConfigSchema } from "@rube/contracts";
 
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 export function createMediaRouter(deps: Pick<TrpcDeps, "clients" | "collections" | "config" | "db" | "media">) {
   const { clients } = deps;

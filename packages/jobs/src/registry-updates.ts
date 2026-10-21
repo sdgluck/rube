@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 /**
  * The scheduled half of the registry update check.
  *
@@ -11,7 +11,7 @@ import { type Services } from "@tinkerbell/composition";
  * derived: without it every daily run would re-announce the same pending
  * update forever, which is how a useful event becomes one people filter out.
  */
-import { errorMessage } from "@tinkerbell/core";
+import { errorMessage } from "@rube/core";
 
 export function createRegistryUpdates(deps: Pick<Services, "config" | "events" | "registry">) {
   const { config, events, registry } = deps;

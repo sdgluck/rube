@@ -17,14 +17,14 @@
  */
 
 import { eq, max } from "drizzle-orm";
-import { token } from "@tinkerbell/container";
-import { mediaItems, problemDismissals, showChecks, type Db } from "@tinkerbell/db";
-import { PROBLEM_META, type ProblemKind } from "@tinkerbell/contracts";
-import type { ArrInstance, ConfigStore } from "@tinkerbell/core";
-import type { ChangeRecorder, EventBus } from "@tinkerbell/ports";
-import type { RuleConflict } from "@tinkerbell/domain.rules";
-import { isTvdbOrdering, type PlexClient } from "@tinkerbell/plex";
-import type { SonarrClient } from "@tinkerbell/sonarr";
+import { token } from "@rube/container";
+import { mediaItems, problemDismissals, showChecks, type Db } from "@rube/db";
+import { PROBLEM_META, type ProblemKind } from "@rube/contracts";
+import type { ArrInstance, ConfigStore } from "@rube/core";
+import type { ChangeRecorder, EventBus } from "@rube/ports";
+import type { RuleConflict } from "@rube/domain.rules";
+import { isTvdbOrdering, type PlexClient } from "@rube/plex";
+import type { SonarrClient } from "@rube/sonarr";
 import { arrSubject, createProviders, type ArrReconcile, type Problem } from "./providers.ts";
 import { ArrFixError, createArrFixes, type MarkGrabFailed } from "./arr-fixes.ts";
 import { createShowScan } from "./scan.ts";

@@ -24,7 +24,7 @@ export default function SettingsPrerolls() {
   const [saving, setSaving] = useState(false);
   const [verifying, setVerifying] = useState(false);
   // Null until the user touches the checkbox: before that it follows whether
-  // the saved path already equals Tinkerbell's own, which is the common setup.
+  // the saved path already equals Rube's own, which is the common setup.
   const [samePathChoice, setSamePathChoice] = useState<boolean | null>(null);
 
   const { addToast } = useToast();
@@ -111,21 +111,21 @@ export default function SettingsPrerolls() {
         <Banner variant="error">
           ffmpeg isn't installed or isn't on PATH, so uploaded prerolls can't be processed. The Docker image ships with
           it; on a bare install, add it with your package manager (<code>brew install ffmpeg</code>,{" "}
-          <code>apt install ffmpeg</code>) and restart Tinkerbell.
+          <code>apt install ffmpeg</code>) and restart Rube.
         </Banner>
       )}
 
       {env && !env.dirWritable && (
         <Banner variant="error">
-          Tinkerbell can't write to <code>{env.dir}</code>. Check the volume mount and its ownership.
+          Rube can't write to <code>{env.dir}</code>. Check the volume mount and its ownership.
         </Banner>
       )}
 
       <CardSection className={styles.group} titleClassName={styles.groupTitle} title="Storage">
-        <p className={styles.hint}>Mount one directory into both Tinkerbell and Plex.</p>
+        <p className={styles.hint}>Mount one directory into both Rube and Plex.</p>
 
         <div className={styles.field}>
-          <span className={styles.label}>Tinkerbell's directory</span>
+          <span className={styles.label}>Rube's directory</span>
           <code className={styles.hint}>{env?.dir ?? "—"}</code>
           <p className={styles.hint}>
             Set by <code>PREROLLS_DIR</code>.

@@ -10,7 +10,7 @@ import {
   parseSchedule,
   type IntervalUnit,
   type JobSchedule,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import controls from "#/styles/controls.module.css";
 import ScheduleBuilder from "./ScheduleBuilder";
 import styles from "./SchedulePicker.module.css";

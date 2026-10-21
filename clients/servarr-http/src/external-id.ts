@@ -1,5 +1,5 @@
 /**
- * `tmdb:603` / `imdb:tt0133093` / `tvdb:1234` — the vocabulary Tinkerbell uses
+ * `tmdb:603` / `imdb:tt0133093` / `tvdb:1234` — the vocabulary Rube uses
  * to name a title across services.
  *
  * The same strings `packages/core/src/guids.ts` produces from Plex GUIDs and

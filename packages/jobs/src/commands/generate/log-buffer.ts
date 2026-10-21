@@ -1,5 +1,5 @@
-import { stampLog } from "@tinkerbell/contracts";
-import type { JobContext } from "@tinkerbell/core";
+import { stampLog } from "@rube/contracts";
+import type { JobContext } from "@rube/core";
 
 /**
  * A context whose log is collected rather than emitted, so a unit of work's

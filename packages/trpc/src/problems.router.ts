@@ -1,17 +1,17 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { ProblemFixError } from "@tinkerbell/domain.problems";
+import { ProblemFixError } from "@rube/domain.problems";
 
 import { t, procedure } from "./_base.ts";
-import { NativeAdmin, ProblemKind } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin, ProblemKind } from "@rube/contracts/native-api";
 
 const target = z.object({ kind: ProblemKind, subject: z.string().min(1) });
 
 /**
  * A fix that can't be attempted is the caller's problem (412); one that
  * reached Plex and failed is upstream's (502). Lumping both into a 500 sent
- * people looking at Tinkerbell's logs for what Plex had said.
+ * people looking at Rube's logs for what Plex had said.
  */
 async function mapFixErrors<T>(fn: () => Promise<T>): Promise<T> {
   try {

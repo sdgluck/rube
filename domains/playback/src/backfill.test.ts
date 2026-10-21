@@ -8,7 +8,7 @@
  */
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import type { PlexHistoryItem } from "@tinkerbell/plex";
+import type { PlexHistoryItem } from "@rube/plex";
 import { historyPages, type HistoryPager } from "./backfill.ts";
 
 function entry(over: Partial<PlexHistoryItem> = {}): PlexHistoryItem {

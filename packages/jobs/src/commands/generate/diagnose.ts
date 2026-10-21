@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import { createFunnelCommand } from "./funnel.ts";
 /**
  * Explaining a real run that produced nothing.
@@ -16,10 +16,10 @@ import { createFunnelCommand } from "./funnel.ts";
  * minutes of counting a night when it explains that a rule worked.
  */
 
-import { errorMessage, type JobContext } from "@tinkerbell/core";
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import { errorMessage, type JobContext } from "@rube/core";
+import type { PlexClient, PlexSection } from "@rube/plex";
 
-import type { RuleConfig } from "@tinkerbell/contracts";
+import type { RuleConfig } from "@rube/contracts";
 
 export interface DiagnoseOptions {
   ctx: JobContext;

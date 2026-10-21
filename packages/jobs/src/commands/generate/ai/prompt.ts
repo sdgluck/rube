@@ -1,5 +1,5 @@
-import type { HistoricalCollection } from "@tinkerbell/domain.rule-history";
-import { preferencesPromptBlock, type UserPreferences } from "@tinkerbell/core";
+import type { HistoricalCollection } from "@rube/domain.rule-history";
+import { preferencesPromptBlock, type UserPreferences } from "@rube/core";
 import { VIBE_HINTS, NAME_STYLE_HINTS, type RuleConfig } from "#commands/generate/config.ts";
 
 export function buildAiPrompt(args: {

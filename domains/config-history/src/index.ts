@@ -1,7 +1,7 @@
-/* ─── What you did to Tinkerbell ────────────────────────────────────────────
+/* ─── What you did to Rube ────────────────────────────────────────────
  *
  * `domains/changes` is the read-model over the five ledgers that record what
- * Tinkerbell did to *Plex*. This is the other direction, and it is the one
+ * Rube did to *Plex*. This is the other direction, and it is the one
  * nothing recorded: a rule edited at 2am, a cleanup budget someone raised, a
  * job whose schedule moved.
  *
@@ -16,13 +16,13 @@
  * here, once, so a new call site cannot skip them.
  */
 import { and, desc, eq, lt, sql } from "drizzle-orm";
-import { changeLog, type Db } from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
-import { createLogger, currentActor, errorMessage, redactConfigValue, type ConfigKey } from "@tinkerbell/core";
-import { CHANGE_LOG_ACTIONS, CHANGE_LOG_ENTITIES } from "@tinkerbell/contracts";
-import type { ChangeAction, ChangeEntity, ChangeRecord } from "@tinkerbell/ports";
+import { changeLog, type Db } from "@rube/db";
+import { token } from "@rube/container";
+import { createLogger, currentActor, errorMessage, redactConfigValue, type ConfigKey } from "@rube/core";
+import { CHANGE_LOG_ACTIONS, CHANGE_LOG_ENTITIES } from "@rube/contracts";
+import type { ChangeAction, ChangeEntity, ChangeRecord } from "@rube/ports";
 
-export { CHANGE_LOG_ACTIONS, CHANGE_LOG_ENTITIES } from "@tinkerbell/contracts";
+export { CHANGE_LOG_ACTIONS, CHANGE_LOG_ENTITIES } from "@rube/contracts";
 
 import { diffSnapshots, type FieldChange } from "./diff.ts";
 
@@ -31,7 +31,7 @@ export { diffSnapshots, deepEqual, type FieldChange } from "./diff.ts";
 const log = createLogger("history");
 
 /**
- * The lists in `@tinkerbell/contracts` and the unions in `@tinkerbell/ports`
+ * The lists in `@rube/contracts` and the unions in `@rube/ports`
  * must not drift.
  *
  * Ports owns the types because it owns the recorder edge and may depend on

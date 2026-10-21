@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { describeMatchFilters, MATCH_CODE_ALPHABET, MATCH_CODE_LENGTH, type MatchFilters } from "@tinkerbell/contracts";
+import { describeMatchFilters, MATCH_CODE_ALPHABET, MATCH_CODE_LENGTH, type MatchFilters } from "@rube/contracts";
 import { portalTrpc } from "../trpc.ts";
 import { useDebounced } from "../useDebounced.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";

@@ -2,8 +2,8 @@
  * The movie library: reading it, adding to it, changing it, removing from it.
  */
 
-import type { ServarrHttp } from "@tinkerbell/servarr-http";
-import { parseExternalId } from "@tinkerbell/servarr-http";
+import type { ServarrHttp } from "@rube/servarr-http";
+import { parseExternalId } from "@rube/servarr-http";
 import type { RadarrMovie, RadarrMovieFile, RadarrRaw } from "./types.ts";
 
 /**

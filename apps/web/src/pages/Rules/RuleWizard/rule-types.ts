@@ -10,13 +10,13 @@ import {
   ruleCollectionCount,
   templateError,
   type RuleTypeValue,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { cleanupPreset } from "./cleanup-presets.ts";
 import { IMDB_CHART_LABELS, IMDB_CHART_SECTION_TYPE, LIST_PROVIDER_LABELS, SEERR_FILTER_LABELS } from "./constants.ts";
 // The type list, not the map of components — this module is imported by
 // tests, and the components bring React with them.
 import { hasSourceStep } from "./sources/step-types.ts";
-import type { ArrService } from "@tinkerbell/contracts";
+import type { ArrService } from "@rube/contracts";
 import type { RuleFormState, SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "./types.ts";
 
 /** First leaf in document order, or null if the tree is empty. Used by the
@@ -44,7 +44,7 @@ function smartFilterIsComplete(group: SmartFilterGroup): boolean {
 }
 
 export interface RuleType {
-  /** Constrained to the canonical list in `@tinkerbell/contracts` so a type
+  /** Constrained to the canonical list in `@rube/contracts` so a type
    *  the generate job can't dispatch can't be offered in the wizard. */
   value: RuleTypeValue;
   label: string;

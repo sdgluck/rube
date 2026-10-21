@@ -14,14 +14,14 @@
  * and the Problems page is where someone decides to make that change.
  */
 
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import type { CommonJobConfig, JobContext } from "@rube/core";
 
 export function createScanProblemsCommand(deps: Services) {
   const { problems } = deps;
 
   async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-    ctx.log("tinkerbell scan-problems");
+    ctx.log("rube scan-problems");
 
     const sonarrs = deps.arr.arrInstances("sonarr");
     if (sonarrs.length === 0) {

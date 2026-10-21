@@ -1,4 +1,4 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { ServicesToken, type Services } from "@rube/composition";
 /**
  * Hand one batch of metadata writes back.
  *
@@ -16,13 +16,13 @@ import { ServicesToken, type Services } from "@tinkerbell/composition";
  * A field that was previously unset is a case with no exact inverse: Plex has
  * no "forget this value" verb. The closest honest thing is to clear it and
  * unlock it, so the next agent refresh refills it from the source it would
- * have used before Tinkerbell ever wrote. That is what happens, and the log
+ * have used before Rube ever wrote. That is what happens, and the log
  * says so.
  */
-import { createPlexClient } from "@tinkerbell/plex";
-import { errorMessage } from "@tinkerbell/core";
-import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
-import { decodeTags, type MetadataOriginal } from "@tinkerbell/domain.metadata";
+import { createPlexClient } from "@rube/plex";
+import { errorMessage } from "@rube/core";
+import type { CommonJobConfig, JobContext } from "@rube/core";
+import { decodeTags, type MetadataOriginal } from "@rube/domain.metadata";
 
 /** One PUT's worth of restoration: same item, same intended lock state. */
 interface RevertGroup {
@@ -153,7 +153,7 @@ export function createMetadataUndoCommand(deps: Pick<Services, "clients" | "conf
   const { batchRows, markReverted } = metadata;
 
   async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-    ctx.log("tinkerbell metadata-undo");
+    ctx.log("rube metadata-undo");
 
     const batchId = getConfig("metadata_undo_pending_batch");
     if (!batchId) {

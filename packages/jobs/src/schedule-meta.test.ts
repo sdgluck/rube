@@ -16,7 +16,7 @@ import {
   planFromContext,
   validateSchedulePlan,
   type ScheduleContext,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { DEFAULT_JOBS } from "./runner.ts";
 import { FEATURE_TEMPLATES } from "./features.ts";
 import { COMMANDS, isCommandName } from "./commands/catalog.ts";

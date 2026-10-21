@@ -23,10 +23,10 @@ import {
   arrTags,
   mediaItems,
   type Db,
-} from "@tinkerbell/db";
-import { createLogger, errorMessage, type ArrInstance } from "@tinkerbell/core";
-import { createRadarrClient, capabilitiesFor as radarrCapabilities, type RadarrMovie } from "@tinkerbell/radarr";
-import { createSonarrClient, capabilitiesFor as sonarrCapabilities, type SonarrSeries } from "@tinkerbell/sonarr";
+} from "@rube/db";
+import { createLogger, errorMessage, type ArrInstance } from "@rube/core";
+import { createRadarrClient, capabilitiesFor as radarrCapabilities, type RadarrMovie } from "@rube/radarr";
+import { createSonarrClient, capabilitiesFor as sonarrCapabilities, type SonarrSeries } from "@rube/sonarr";
 
 const log = createLogger("arr-sync");
 
@@ -474,7 +474,7 @@ export function createArrLibrarySync(deps: ArrLibrarySyncDeps) {
    * change did — and a full re-sync for one toggle would be absurd.
    *
    * Deliberately an upsert rather than an update: a record added through
-   * Tinkerbell has no mirror row yet, and it should appear in the library
+   * Rube has no mirror row yet, and it should appear in the library
    * immediately rather than at the next scheduled sync.
    */
   function writeThroughMovie(instanceId: string, movie: RadarrMovie): void {

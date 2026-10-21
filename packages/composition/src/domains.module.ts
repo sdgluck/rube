@@ -7,9 +7,9 @@
  * satisfies them; a dependency nobody registers is a resolve-time error, and
  * `container.test.ts` turns that into a build failure.
  */
-import type { Registry } from "@tinkerbell/container";
-import { DbToken } from "@tinkerbell/db";
-import { ArrInstancesToken, ClientsToken, ConfigStoreToken, SharingToken } from "@tinkerbell/core";
+import type { Registry } from "@rube/container";
+import { DbToken } from "@rube/db";
+import { ArrInstancesToken, ClientsToken, ConfigStoreToken, SharingToken } from "@rube/core";
 import {
   ChangeRecorderToken,
   ClockToken,
@@ -19,47 +19,47 @@ import {
   HealthReporterToken,
   NotifierToken,
   PostCollectionSyncToken,
-} from "@tinkerbell/ports";
-import { AiUsageToken, createAiUsage } from "@tinkerbell/domain.ai-usage";
-import { ApiKeysToken, createApiKeys } from "@tinkerbell/domain.api-keys";
-import { BackupsToken, createBackups } from "@tinkerbell/domain.backups";
-import { BandwidthToken, createBandwidth } from "@tinkerbell/domain.bandwidth";
-import { ChangesToken, createChanges } from "@tinkerbell/domain.changes";
-import { ArrActivityToken, createArrActivity } from "@tinkerbell/domain.arr-activity";
-import { ArrLibraryToken, createArrLibrary } from "@tinkerbell/domain.arr-library";
-import { ArrSettingsToken, createArrSettings } from "@tinkerbell/domain.arr-settings";
-import { ConfigHistoryToken, createConfigHistory } from "@tinkerbell/domain.config-history";
-import { CleanupToken, createCleanup } from "@tinkerbell/domain.cleanup";
-import { CollectionsToken, createCollections } from "@tinkerbell/domain.collections";
-import { createDigest, DigestToken } from "@tinkerbell/domain.digest";
-import { DownloadClientsToken, createDownloadClients } from "@tinkerbell/domain.download-clients";
-import { createEvents, EventsToken } from "@tinkerbell/domain.events";
-import { createHealth, HealthToken } from "@tinkerbell/domain.health";
-import { createMatch, MatchToken } from "@tinkerbell/domain.match";
-import { createMedia, MediaToken } from "@tinkerbell/domain.media";
-import { createMetadata, MetadataToken } from "@tinkerbell/domain.metadata";
-import { createMetadataOverrides, MetadataOverridesToken } from "@tinkerbell/domain.metadata-overrides";
-import { createPlaylists, PlaylistsToken } from "@tinkerbell/domain.playlists";
-import { createPortability, PortabilityToken } from "@tinkerbell/domain.portability";
-import { createMigration, MigrationToken } from "@tinkerbell/domain.migration";
-import { createNotifications, NotificationsToken } from "@tinkerbell/domain.notifications";
-import { createOnboarding, OnboardingToken } from "@tinkerbell/domain.onboarding";
-import { createOverlays, OverlaysToken } from "@tinkerbell/domain.overlays";
-import { createPlayback, PlaybackToken } from "@tinkerbell/domain.playback";
-import { createPrerolls, PrerollsToken } from "@tinkerbell/domain.prerolls";
-import { createProblems, ProblemsToken } from "@tinkerbell/domain.problems";
-import { createQualitySwaps, QualitySwapsToken } from "@tinkerbell/domain.quality-swaps";
-import { createRecommendations, RecommendationsToken } from "@tinkerbell/domain.recommendations";
-import { createRegistry, RegistryToken } from "@tinkerbell/domain.registry";
-import { createRuleHistory, RuleHistoryToken } from "@tinkerbell/domain.rule-history";
-import { createRuleDrafts, RuleDraftsToken } from "@tinkerbell/domain.rule-drafts";
-import { createRuleRuns, RuleRunsToken } from "@tinkerbell/domain.rule-runs";
-import { createRules, RulesToken } from "@tinkerbell/domain.rules";
-import { createSearch, SearchToken } from "@tinkerbell/domain.search";
-import { createSections, SectionsToken } from "@tinkerbell/domain.sections";
-import { createStats, StatsToken } from "@tinkerbell/domain.stats";
-import { createUsers, UsersToken } from "@tinkerbell/domain.users";
-import { createWatchlist, WatchlistToken } from "@tinkerbell/domain.watchlist";
+} from "@rube/ports";
+import { AiUsageToken, createAiUsage } from "@rube/domain.ai-usage";
+import { ApiKeysToken, createApiKeys } from "@rube/domain.api-keys";
+import { BackupsToken, createBackups } from "@rube/domain.backups";
+import { BandwidthToken, createBandwidth } from "@rube/domain.bandwidth";
+import { ChangesToken, createChanges } from "@rube/domain.changes";
+import { ArrActivityToken, createArrActivity } from "@rube/domain.arr-activity";
+import { ArrLibraryToken, createArrLibrary } from "@rube/domain.arr-library";
+import { ArrSettingsToken, createArrSettings } from "@rube/domain.arr-settings";
+import { ConfigHistoryToken, createConfigHistory } from "@rube/domain.config-history";
+import { CleanupToken, createCleanup } from "@rube/domain.cleanup";
+import { CollectionsToken, createCollections } from "@rube/domain.collections";
+import { createDigest, DigestToken } from "@rube/domain.digest";
+import { DownloadClientsToken, createDownloadClients } from "@rube/domain.download-clients";
+import { createEvents, EventsToken } from "@rube/domain.events";
+import { createHealth, HealthToken } from "@rube/domain.health";
+import { createMatch, MatchToken } from "@rube/domain.match";
+import { createMedia, MediaToken } from "@rube/domain.media";
+import { createMetadata, MetadataToken } from "@rube/domain.metadata";
+import { createMetadataOverrides, MetadataOverridesToken } from "@rube/domain.metadata-overrides";
+import { createPlaylists, PlaylistsToken } from "@rube/domain.playlists";
+import { createPortability, PortabilityToken } from "@rube/domain.portability";
+import { createMigration, MigrationToken } from "@rube/domain.migration";
+import { createNotifications, NotificationsToken } from "@rube/domain.notifications";
+import { createOnboarding, OnboardingToken } from "@rube/domain.onboarding";
+import { createOverlays, OverlaysToken } from "@rube/domain.overlays";
+import { createPlayback, PlaybackToken } from "@rube/domain.playback";
+import { createPrerolls, PrerollsToken } from "@rube/domain.prerolls";
+import { createProblems, ProblemsToken } from "@rube/domain.problems";
+import { createQualitySwaps, QualitySwapsToken } from "@rube/domain.quality-swaps";
+import { createRecommendations, RecommendationsToken } from "@rube/domain.recommendations";
+import { createRegistry, RegistryToken } from "@rube/domain.registry";
+import { createRuleHistory, RuleHistoryToken } from "@rube/domain.rule-history";
+import { createRuleDrafts, RuleDraftsToken } from "@rube/domain.rule-drafts";
+import { createRuleRuns, RuleRunsToken } from "@rube/domain.rule-runs";
+import { createRules, RulesToken } from "@rube/domain.rules";
+import { createSearch, SearchToken } from "@rube/domain.search";
+import { createSections, SectionsToken } from "@rube/domain.sections";
+import { createStats, StatsToken } from "@rube/domain.stats";
+import { createUsers, UsersToken } from "@rube/domain.users";
+import { createWatchlist, WatchlistToken } from "@rube/domain.watchlist";
 
 export function registerDomains(r: Registry): void {
   // ── The inverted edges ────────────────────────────────────────────────────

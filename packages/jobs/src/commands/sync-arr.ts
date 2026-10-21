@@ -11,8 +11,8 @@
  * seam inside one to resume from.
  */
 
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
 interface SyncArrCheckpoint {
   /** The instance list at the time — a different one invalidates the checkpoint. */
@@ -37,7 +37,7 @@ export function createSyncArrCommand(deps: Services) {
       return;
     }
 
-    ctx.log(`tinkerbell sync-arr`);
+    ctx.log(`rube sync-arr`);
     ctx.log(`${instances.length} instance(s) configured.`);
 
     const saved = ctx.checkpoint.read<SyncArrCheckpoint>();

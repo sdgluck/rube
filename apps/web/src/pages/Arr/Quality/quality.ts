@@ -3,7 +3,7 @@
  * it can be tested without a DOM.
  */
 
-import { defaultCeiling, gbForRuntime, mbPerMinute, type SizeLimit } from "@tinkerbell/contracts";
+import { defaultCeiling, gbForRuntime, mbPerMinute, type SizeLimit } from "@rube/contracts";
 import type { StatusChipTone } from "#components/PageShell";
 
 export type ManagedStatus = "unknown" | "in_sync" | "drifted" | "missing" | "update_available";
@@ -11,7 +11,7 @@ export type ManagedStatus = "unknown" | "in_sync" | "drifted" | "missing" | "upd
 export const STATUS_LABEL: Record<ManagedStatus, string> = {
   unknown: "Not checked",
   in_sync: "In sync",
-  drifted: "Changed outside Tinkerbell",
+  drifted: "Changed outside Rube",
   missing: "Missing",
   update_available: "Preset updated",
 };

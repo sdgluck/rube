@@ -15,7 +15,7 @@ import {
   type ScheduleLane,
   type SchedulePlan,
   type ScheduleSeverity,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import {
   axisTicks,
   blockSegments,
@@ -32,7 +32,7 @@ import {
 import styles from "./Schedule.module.css";
 
 /** Drag-and-drop payload type for a manual job dragged onto the timeline. */
-export const MANUAL_JOB_MIME = "application/x-tinkerbell-job";
+export const MANUAL_JOB_MIME = "application/x-rube-job";
 
 const LANES: Array<{ lane: ScheduleLane; title: string; hint: string }> = [
   {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { fieldLabel, producesManyCollections } from "@tinkerbell/contracts";
+import { fieldLabel, producesManyCollections } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import Modal from "#components/Modal";
 import ToggleSwitch from "#components/ToggleSwitch";

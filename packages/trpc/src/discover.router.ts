@@ -16,9 +16,9 @@
 
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { searchMulti, fetchTvExternalIds, type TmdbSearchHit } from "@tinkerbell/tmdb";
-import { MINIMUM_AVAILABILITY, SERIES_MONITOR_MODES, type ArrService } from "@tinkerbell/contracts";
-import { discoverKey, type DiscoverHolding, type ExternalKey } from "@tinkerbell/domain.arr-library";
+import { searchMulti, fetchTvExternalIds, type TmdbSearchHit } from "@rube/tmdb";
+import { MINIMUM_AVAILABILITY, SERIES_MONITOR_MODES, type ArrService } from "@rube/contracts";
+import { discoverKey, type DiscoverHolding, type ExternalKey } from "@rube/domain.arr-library";
 import type { TrpcDeps } from "./deps.ts";
 import { t, procedure } from "./_base.ts";
 import { createArrClients, upstream } from "./arr/_shared.ts";

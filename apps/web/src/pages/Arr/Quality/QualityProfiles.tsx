@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { sizeLimitSchema } from "@tinkerbell/contracts";
+import { sizeLimitSchema } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { StatusChip } from "#components/PageShell";
 import ConfirmModal from "#components/ConfirmModal";
@@ -20,7 +20,7 @@ interface Opening {
 }
 
 /**
- * An instance's quality profiles, and which of them Tinkerbell manages.
+ * An instance's quality profiles, and which of them Rube manages.
  *
  * Every profile on the instance is listed, not only the managed ones. Taking
  * over an existing profile is the commonest way in, because almost every
@@ -258,7 +258,7 @@ export default function QualityProfiles({ instanceId }: { instanceId: string }) 
       {detaching && (
         <ConfirmModal
           title={`Stop managing “${detaching.name}”?`}
-          message="The profile stays in the instance exactly as it is. Tinkerbell stops checking it against the preset."
+          message="The profile stays in the instance exactly as it is. Rube stops checking it against the preset."
           confirmLabel="Stop managing"
           onConfirm={() => {
             detach.mutate({ managedId: detaching.id });

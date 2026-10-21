@@ -68,6 +68,6 @@ describe("ownership marker", () => {
   test("carries the rule id, so ownership survives losing the table", () => {
     // Playlists can't be labelled, so the summary is the only place in Plex
     // where ownership can be written down at all.
-    assert.equal(playlistMarker("abc-123"), "[tinkerbell:abc-123]");
+    assert.equal(playlistMarker("abc-123"), "[rube:abc-123]");
   });
 });

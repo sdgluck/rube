@@ -33,10 +33,10 @@ export default defineConfig({
     __GIT_SHA__: JSON.stringify(gitSha()),
   },
   server: {
-    // Fixed port so localias can map web.tinkerbell.localhost to it (.localias.yaml).
+    // Fixed port so localias can map web.rube.localhost to it (.localias.yaml).
     port: 5173,
     strictPort: true,
-    allowedHosts: [".tinkerbell.localhost"],
+    allowedHosts: [".rube.localhost"],
     proxy: {
       // The screenshot harness runs its own server on a high port so a capture
       // doesn't collide with a running dev stack.

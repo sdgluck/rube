@@ -15,7 +15,7 @@
  *     device's pixels, not the design's — a 1px border scaled to 0.85px is a
  *     blur, not a smaller border.
  *   - At-rule params. Breakpoints describe the viewport, which the setting
- *     doesn't change (see tinkerbell/breakpoint-scale).
+ *     doesn't change (see rube/breakpoint-scale).
  *   - `--bp-*`, the breakpoint scale's own declaration.
  *
  * Write the rem at 1rem = 10px: 13px is `1.3rem`.
@@ -23,7 +23,7 @@
 
 import stylelint from "stylelint";
 
-const ruleName = "tinkerbell/no-px";
+const ruleName = "rube/no-px";
 
 const messages = stylelint.utils.ruleMessages(ruleName, {
   px: (value) =>

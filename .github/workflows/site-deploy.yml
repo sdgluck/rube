@@ -1,12 +1,12 @@
 name: Deploy site
 
-# tinkerbell.dev is more than a brochure now: it also serves the rule registry
+# rube.fyi is more than a brochure now: it also serves the rule registry
 # that instances fetch at `/registry/index.json`. So the site needs a real
 # deploy target, which it previously didn't have — the Docker image explicitly
 # excludes it.
 #
 # GitHub Pages serves `Access-Control-Allow-Origin: *`, which is what lets a
-# self-hosted Tinkerbell fetch the index cross-origin without any extra config.
+# self-hosted Rube fetch the index cross-origin without any extra config.
 on:
   push:
     branches: [master]
@@ -43,14 +43,14 @@ jobs:
       # The gate between an authored pack and somebody's Plex server: every
       # rule config is parsed against the real ruleConfigSchema here.
       - name: Validate the registry
-        run: pnpm --filter @tinkerbell/tinkerbell.dev test
+        run: pnpm --filter @rube/rube.fyi test
 
       # `prebuild` regenerates public/registry/ before vite copies it to dist/.
-      - run: pnpm --filter @tinkerbell/tinkerbell.dev build
+      - run: pnpm --filter @rube/rube.fyi build
 
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: apps/tinkerbell.dev/dist
+          path: apps/rube.fyi/dist
 
   deploy:
     needs: build

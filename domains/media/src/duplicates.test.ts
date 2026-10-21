@@ -1,4 +1,4 @@
-import { recommendKeeper } from "@tinkerbell/domain.media";
+import { recommendKeeper } from "@rube/domain.media";
 /**
  * A duplicate finder is asking someone to delete a file on its say-so, so the
  * two things that matter are that it never groups things that aren't the same
@@ -8,10 +8,10 @@ import { recommendKeeper } from "@tinkerbell/domain.media";
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { mediaItems } from "@tinkerbell/db";
-import { MediaToken } from "@tinkerbell/domain.media";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { mediaItems } from "@rube/db";
+import { MediaToken } from "@rube/domain.media";
 
 const c = createTestContainer();
 after(() => c.dispose());

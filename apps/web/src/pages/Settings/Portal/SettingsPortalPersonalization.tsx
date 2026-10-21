@@ -178,11 +178,11 @@ export default function SettingsPersonalization() {
               Saves each shared user's current library restrictions, so they can be put back exactly as they were.
             </li>
             <li>
-              Adds the <code className={styles.code}>Tinkerbell</code> label to every item in your configured libraries.
-              This is what keeps restricted users seeing the whole library.
+              Adds the <code className={styles.code}>Rube</code> label to every item in your configured libraries. This
+              is what keeps restricted users seeing the whole library.
             </li>
             <li>
-              Restricts every shared user to <code className={styles.code}>Tinkerbell</code> plus their own{" "}
+              Restricts every shared user to <code className={styles.code}>Rube</code> plus their own{" "}
               <code className={styles.code}>User:name</code> label — so a personalized collection only shows up for its
               owner.
             </li>
@@ -202,7 +202,7 @@ export default function SettingsPersonalization() {
             </li>
             <li>Restores each user's original sharing restrictions from the saved snapshot.</li>
             <li>
-              Removes the <code className={styles.code}>Tinkerbell</code> label from every item.
+              Removes the <code className={styles.code}>Rube</code> label from every item.
             </li>
           </ol>
           <p className={styles.consequenceNote}>

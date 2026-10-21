@@ -47,6 +47,6 @@ export default function useDocumentTitle() {
     const page = titleForPath(pathname);
     // Active-stream count leads so it stays readable in a narrow tab.
     const prefix = count > 0 ? `(${count}) ` : "";
-    document.title = page ? `${prefix}${page} · Tinkerbell` : `${prefix}Tinkerbell`;
+    document.title = page ? `${prefix}${page} · Rube` : `${prefix}Rube`;
   }, [count, pathname]);
 }

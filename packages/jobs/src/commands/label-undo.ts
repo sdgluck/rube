@@ -1,7 +1,7 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
 
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
 export function createLabelUndoCommand(deps: Pick<Services, "clients" | "config">) {
   const { clients, config } = deps;
@@ -9,7 +9,7 @@ export function createLabelUndoCommand(deps: Pick<Services, "clients" | "config"
   const { getConfig } = config;
 
   /**
-   * Pure label hygiene: removes the `Tinkerbell` label from every item in the
+   * Pure label hygiene: removes the `Rube` label from every item in the
    * configured sections and strips `User:*` labels from any collection.
    *
    * Does NOT touch sharing restrictions — those are managed by the BYW
@@ -30,7 +30,7 @@ export function createLabelUndoCommand(deps: Pick<Services, "clients" | "config"
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell label-undo`);
+    ctx.log(`rube label-undo`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     const identity = await client.getIdentity();
@@ -45,19 +45,14 @@ export function createLabelUndoCommand(deps: Pick<Services, "clients" | "config"
       sections = sections.filter((s) => config.sections!.includes(s.title));
     }
 
-    // Phase 1: remove "Tinkerbell" label from all media items.
-    ctx.log(`Removing "Tinkerbell" label from all media items...`);
+    // Phase 1: remove "Rube" label from all media items.
+    ctx.log(`Removing "Rube" label from all media items...`);
     let totalUpdated = 0;
     for (const section of sections) {
       ctx.log(`Section: ${section.title} (${section.type})`);
-      const updated = await client.removeLabelFromAllItems(
-        section.key,
-        section.type,
-        "Tinkerbell",
-        (current, total) => {
-          ctx.progress(current, total, `Removing labels in "${section.title}"...`);
-        },
-      );
+      const updated = await client.removeLabelFromAllItems(section.key, section.type, "Rube", (current, total) => {
+        ctx.progress(current, total, `Removing labels in "${section.title}"...`);
+      });
       ctx.log(`Removed label from ${updated} item(s) in "${section.title}"`);
       totalUpdated += updated;
     }

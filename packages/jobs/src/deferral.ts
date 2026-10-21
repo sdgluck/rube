@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 /**
  * Holding heavy work back while the server is doing the thing it exists for.
  *
@@ -19,9 +19,9 @@ import { type Services } from "@tinkerbell/composition";
  */
 
 import { and, isNull, sql } from "drizzle-orm";
-import { playbackSessions } from "@tinkerbell/db";
-import { minutesOfDay, parseClock, MINUTE_MS } from "@tinkerbell/core";
-import { HEAVY_JOB_IDS } from "@tinkerbell/contracts";
+import { playbackSessions } from "@rube/db";
+import { minutesOfDay, parseClock, MINUTE_MS } from "@rube/core";
+import { HEAVY_JOB_IDS } from "@rube/contracts";
 
 /**
  * The jobs worth deferring: the ones that render, transcode or walk the whole

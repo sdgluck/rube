@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { POSTER_URL_ALLOWED_HOSTS } from "@tinkerbell/contracts";
+import { POSTER_URL_ALLOWED_HOSTS } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import ColorField from "#components/ColorField";
 import Modal from "#components/Modal";

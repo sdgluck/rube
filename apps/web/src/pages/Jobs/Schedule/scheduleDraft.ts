@@ -16,7 +16,7 @@ import {
   type JobPlanEntry,
   type SchedulePlan,
   type ScheduleSettings,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 
 const HISTORY_LIMIT = 100;
 

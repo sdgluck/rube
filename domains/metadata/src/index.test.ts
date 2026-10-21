@@ -8,10 +8,10 @@ import { decodeTags } from "./index.ts";
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { metadataOriginals } from "@tinkerbell/db";
-import { MetadataToken } from "@tinkerbell/domain.metadata";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { metadataOriginals } from "@rube/db";
+import { MetadataToken } from "@rube/domain.metadata";
 
 const c = createTestContainer();
 after(() => c.dispose());

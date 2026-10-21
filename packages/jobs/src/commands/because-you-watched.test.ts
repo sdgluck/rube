@@ -24,10 +24,10 @@ const row = (title: string, ...labels: string[]) => ({ title, labels });
 
 describe("ownBywRows", () => {
   const rows = [
-    row("Because you watched Alien (1979)", "Tinkerbell", "BecauseYouWatched", "User:ripley"),
-    row("Because you watched Alien (1979)", "Tinkerbell", "BecauseYouWatched", "User:dallas"),
-    row("Because you watched Heat (1995)", "Tinkerbell", "becauseyouwatched"),
-    row("Directors' Cut", "Tinkerbell"),
+    row("Because you watched Alien (1979)", "Rube", "BecauseYouWatched", "User:ripley"),
+    row("Because you watched Alien (1979)", "Rube", "BecauseYouWatched", "User:dallas"),
+    row("Because you watched Heat (1995)", "Rube", "becauseyouwatched"),
+    row("Directors' Cut", "Rube"),
   ];
 
   test("per-user, a row belongs only to the person it is labelled for", () => {
@@ -91,7 +91,7 @@ describe("orphanedBywRows", () => {
   test("a row labelled with a display name, or for someone unshared, belongs to no one", () => {
     const rows = [
       row("Because you watched Heat (1995)", "BecauseYouWatched", "User:hughblackwood288"),
-      row("Because you watched Heat (1995)", "Tinkerbell", "BecauseYouWatched", "User:Hugh Blackwood"),
+      row("Because you watched Heat (1995)", "Rube", "BecauseYouWatched", "User:Hugh Blackwood"),
       row("Because you watched Up (2009)", "BecauseYouWatched", "User:paige.j6"),
       row("Because you watched Up (2009)", "BecauseYouWatched"),
       row("Hand made", "User:paige.j6"),

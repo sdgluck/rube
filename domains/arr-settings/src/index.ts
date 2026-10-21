@@ -1,4 +1,4 @@
-/* ─── The *Arrs' own settings, written by Tinkerbell ───────────────────────
+/* ─── The *Arrs' own settings, written by Rube ───────────────────────
  *
  * The first area is quality profiles, driven by curated presets with user-set
  * size limits.
@@ -9,10 +9,10 @@
  * behind.
  */
 
-import { token } from "@tinkerbell/container";
-import type { Db } from "@tinkerbell/db";
-import type { ArrInstance, ArrInstances } from "@tinkerbell/core";
-import type { ChangeRecorder, Clock, EventBus } from "@tinkerbell/ports";
+import { token } from "@rube/container";
+import type { Db } from "@rube/db";
+import type { ArrInstance, ArrInstances } from "@rube/core";
+import type { ChangeRecorder, Clock, EventBus } from "@rube/ports";
 import { createQualityService } from "./quality/service.ts";
 import type { ArrClient } from "./quality/live.ts";
 import type { QualityApi } from "./quality/wire.ts";

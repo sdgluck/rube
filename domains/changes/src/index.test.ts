@@ -18,7 +18,7 @@
 import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { createTestContainer } from "@rube/composition/test-support";
 import {
   cleanupCandidates,
   DbToken,
@@ -27,8 +27,8 @@ import {
   overlayOriginals,
   ruleRunChanges,
   rules,
-} from "@tinkerbell/db";
-import { ChangesToken, type ChangeKind } from "@tinkerbell/domain.changes";
+} from "@rube/db";
+import { ChangesToken, type ChangeKind } from "@rube/domain.changes";
 
 const c = createTestContainer();
 after(() => c.dispose());

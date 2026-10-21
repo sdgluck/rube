@@ -20,7 +20,7 @@ function setup(preview: Preview) {
   const ctx = {
     resHeaders: new Headers(),
     secure: false,
-    origin: "http://admin.tinkerbell.test",
+    origin: "http://admin.rube.test",
     ip: "test",
     authRequired: false,
   } as unknown as AdminContext;

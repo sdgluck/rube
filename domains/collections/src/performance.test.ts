@@ -7,9 +7,9 @@
 import assert from "node:assert/strict";
 import { after, beforeEach, test } from "node:test";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { collectionItems, collections, DbToken, playbackSessions, ruleRunChanges, rules } from "@tinkerbell/db";
-import { CollectionsToken } from "@tinkerbell/domain.collections";
+import { createTestContainer } from "@rube/composition/test-support";
+import { collectionItems, collections, DbToken, playbackSessions, ruleRunChanges, rules } from "@rube/db";
+import { CollectionsToken } from "@rube/domain.collections";
 
 const c = createTestContainer();
 after(() => c.dispose());

@@ -1,20 +1,20 @@
-import { type Services } from "@tinkerbell/composition";
-import { SECTION_TYPE_MAP } from "@tinkerbell/plex";
+import { type Services } from "@rube/composition";
+import { SECTION_TYPE_MAP } from "@rube/plex";
 import {
   emitSmartFilterTree,
   splitLocalLeaves,
   type SmartFilterGroup,
   type SmartFilterLeaf,
   type SmartFilterNode,
-} from "@tinkerbell/plex-smart-filter";
-import { evaluateLocal, type LocalEvalContext } from "@tinkerbell/domain.playback";
+} from "@rube/plex-smart-filter";
+import { evaluateLocal, type LocalEvalContext } from "@rube/domain.playback";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
 /**
  * Convert the filter tree + section context into a Plex query string.
  * Plex requires the `type` parameter (movie=1, show=2, …) on filtered
  * `/library/sections/N/all` queries; section type drives that. The
- * tree-to-fragments work lives in `@tinkerbell/migrate` so the parser
+ * tree-to-fragments work lives in `@rube/migrate` so the parser
  * and emitter stay together for round-trip testing.
  */
 export function filterTreeToPlexParams(filter: SmartFilterGroup, sectionType: string): string {

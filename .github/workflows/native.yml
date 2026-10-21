@@ -35,16 +35,16 @@ jobs:
 
       - run: xcodebuild -version
 
-      # TinkerbellKit's API, models and core build for macOS as well, so the
+      # RubeKit's API, models and core build for macOS as well, so the
       # client, envelope and sign-in tests run without a simulator.
       - name: Package tests
-        run: swift test --package-path native/ios/Packages/TinkerbellKit
+        run: swift test --package-path native/ios/Packages/RubeKit
 
       - name: App builds
         run: >-
           xcodebuild build
-          -project native/ios/Tinkerbell.xcodeproj
-          -scheme Tinkerbell
+          -project native/ios/Rube.xcodeproj
+          -scheme Rube
           -destination 'generic/platform=iOS Simulator'
           CODE_SIGNING_ALLOWED=NO
 

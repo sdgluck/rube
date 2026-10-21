@@ -2,10 +2,10 @@ import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { randomUUID } from "node:crypto";
-import { createLogger, errorMessage } from "@tinkerbell/core";
+import { createLogger, errorMessage } from "@rube/core";
 
-import { UnsafeUrlError } from "@tinkerbell/http";
-import { portalPrerollCardInput, portalPrerollCardSchema, resolvePortalPrerollCard } from "@tinkerbell/contracts";
+import { UnsafeUrlError } from "@rube/http";
+import { portalPrerollCardInput, portalPrerollCardSchema, resolvePortalPrerollCard } from "@rube/contracts";
 import {
   buildPortalCardSvg,
   PortalUrlMissingError,
@@ -16,7 +16,7 @@ import {
   downloadIncoming,
   ensurePrerollDirs,
   filenameFromUrl,
-} from "@tinkerbell/domain.prerolls";
+} from "@rube/domain.prerolls";
 import { procedure, t, mapNotConfiguredClient } from "./_base.ts";
 
 /**
@@ -146,7 +146,7 @@ export function createPrerollsRouter(deps: TrpcDeps) {
         } catch (err) {
           await deletePreroll(row.id);
           if (err instanceof UnsafeUrlError) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: "That address isn't reachable from Tinkerbell" });
+            throw new TRPCError({ code: "BAD_REQUEST", message: "That address isn't reachable from Rube" });
           }
           if (err instanceof UploadTooLargeError) {
             throw new TRPCError({ code: "PAYLOAD_TOO_LARGE", message: err.message });
@@ -301,7 +301,7 @@ export function createPrerollsRouter(deps: TrpcDeps) {
      */
     verifyPlexPath: procedure.mutation(async () => {
       const client = getPlexClient();
-      const probeValue = `/__tinkerbell_probe_${randomUUID()}.mp4`;
+      const probeValue = `/__rube_probe_${randomUUID()}.mp4`;
       try {
         const before = await client.getPrerollPref();
         await client.setPrerollPref(probeValue);

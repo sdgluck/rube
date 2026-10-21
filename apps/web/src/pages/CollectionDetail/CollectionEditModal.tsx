@@ -1,4 +1,4 @@
-import { isSystemCollectionLabel } from "@tinkerbell/contracts";
+import { isSystemCollectionLabel } from "@rube/contracts";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { trpc } from "#/trpc";
 import Modal from "#components/Modal";
@@ -143,11 +143,7 @@ export default function CollectionEditModal({ ratingKey, title, summary, labels,
   }, [goNext]);
 
   const labelClass = (label: string) =>
-    isSystemCollectionLabel(label)
-      ? shared.labelTinkerbell
-      : label.toLowerCase().startsWith("user:")
-        ? shared.labelUser
-        : "";
+    isSystemCollectionLabel(label) ? shared.labelRube : label.toLowerCase().startsWith("user:") ? shared.labelUser : "";
 
   const jumpTo = (id: StepId) => setStepIdx(STEPS.findIndex((s) => s.id === id));
 

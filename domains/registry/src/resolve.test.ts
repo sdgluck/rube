@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { RegistryRule } from "@tinkerbell/contracts";
-import type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
+import type { RegistryRule } from "@rube/contracts";
+import type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "@rube/plex-smart-filter";
 import { resolveRuleForImport, type TagLookup } from "./resolve.ts";
 
 const MOVIES = { sectionId: "1", sectionTitle: "Movies" };

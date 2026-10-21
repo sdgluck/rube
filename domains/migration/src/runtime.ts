@@ -1,4 +1,4 @@
-import type { CollectionInput, MigrationPlan } from "@tinkerbell/migrate";
+import type { CollectionInput, MigrationPlan } from "@rube/migrate";
 
 /**
  * Server-side wrapper around a migration source. Each provider owns its
@@ -86,7 +86,7 @@ export interface MigrationStatus {
 }
 
 /**
- * True if this collection is Tinkerbell's own output.
+ * True if this collection is Rube's own output.
  *
  * Migration exists to adopt collections *somebody else* built. A collection
  * this server generated is already described by the rule that generated it, so
@@ -95,13 +95,13 @@ export interface MigrationStatus {
  * in the rules list except that the copy is disabled and has never run.
  *
  * `Rule:<id>` is the load-bearing half: every generate run stamps it, and it is
- * what the sweep and delete paths key on. The bare `Tinkerbell` label is
+ * what the sweep and delete paths key on. The bare `Rube` label is
  * checked too, but it is a weaker signal on its own — the label job puts it on
  * media items, so a user's hand-made smart collection *of* labelled items could
  * carry it without being ours.
  */
-export function isTinkerbellOwned(input: CollectionInput): boolean {
-  return input.labels.some((l) => l === "Tinkerbell" || l.startsWith("Rule:"));
+export function isRubeOwned(input: CollectionInput): boolean {
+  return input.labels.some((l) => l === "Rube" || l.startsWith("Rule:"));
 }
 
 /**

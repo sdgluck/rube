@@ -45,7 +45,7 @@ export const AuthStatusOutput = z.object({
 
 /** `auth.server` */
 export const AuthServerOutput = z.object({
-  product: z.enum(["tinkerbell-admin", "tinkerbell-portal"]),
+  product: z.enum(["rube-admin", "rube-portal"]),
   version: z.string(),
   capabilities: z.array(z.literal("exchange")),
   authRequired: z.boolean(),

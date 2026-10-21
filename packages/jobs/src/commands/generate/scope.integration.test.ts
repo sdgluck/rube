@@ -12,10 +12,10 @@ import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { ConfigStoreToken, noopCheckpoint } from "@tinkerbell/core";
-import { DbToken, rules } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { ConfigStoreToken, noopCheckpoint } from "@rube/core";
+import { DbToken, rules } from "@rube/db";
 import { createGenerateCommand } from "./index.ts";
 
 const c = createTestContainer();
@@ -62,7 +62,7 @@ beforeEach(() => {
     ratingKey: "9001",
     title: "Britcom Chaos Energy",
     sectionId: "2",
-    labels: ["Tinkerbell", LABEL],
+    labels: ["Rube", LABEL],
     memberKeys: [],
   });
   plex.collections.set("9002", {

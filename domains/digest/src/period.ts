@@ -7,7 +7,7 @@
  * on the same Monday must produce the same `periodStart`, or the second one
  * claims a new row and sends a second digest.
  */
-import { DAY_MS, type ConfigStore } from "@tinkerbell/core";
+import { DAY_MS, type ConfigStore } from "@rube/core";
 
 export type DigestFrequency = "weekly" | "monthly";
 

@@ -1,12 +1,12 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { ServicesToken, type Services } from "@rube/composition";
 import PQueue from "p-queue";
-import { errorMessage } from "@tinkerbell/core";
-import { createPlexClient } from "@tinkerbell/plex";
+import { errorMessage } from "@rube/core";
+import { createPlexClient } from "@rube/plex";
 
-import { resolveOverlayValue, evaluateRule, compositeOverlays, type Badge } from "@tinkerbell/domain.overlays";
-import { extractImdbId } from "@tinkerbell/omdb";
+import { resolveOverlayValue, evaluateRule, compositeOverlays, type Badge } from "@rube/domain.overlays";
+import { extractImdbId } from "@rube/omdb";
 
-import type { JobContext, OverlaysJobConfig } from "@tinkerbell/core";
+import type { JobContext, OverlaysJobConfig } from "@rube/core";
 
 export function createOverlaysCommand(deps: Pick<Services, "clients" | "config" | "overlays">) {
   const { clients, config, overlays } = deps;
@@ -31,7 +31,7 @@ export function createOverlaysCommand(deps: Pick<Services, "clients" | "config" 
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell overlays (${mode})`);
+    ctx.log(`rube overlays (${mode})`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     let sections = await client.getSections();

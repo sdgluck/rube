@@ -1,12 +1,12 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import type { CommonJobConfig, JobContext } from "@rube/core";
 
 export function createPostersRefreshCommand(deps: Pick<Services, "posters">) {
   const { posters } = deps;
   const { refreshPosterCache } = posters;
 
   async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-    ctx.log("tinkerbell posters-refresh");
+    ctx.log("rube posters-refresh");
 
     const summary = await refreshPosterCache({
       signal: ctx.signal,

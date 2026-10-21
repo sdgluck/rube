@@ -15,10 +15,10 @@
  * else's credentials; that, rather than an Origin check, is the DNS-rebinding
  * defence the MCP spec asks for.
  */
-import type { Scope } from "@tinkerbell/container";
-import { createLogger } from "@tinkerbell/core";
-import type { ApiKeyIdentity } from "@tinkerbell/domain.api-keys";
-import type { AdminContext, Trpc } from "@tinkerbell/trpc";
+import type { Scope } from "@rube/container";
+import { createLogger } from "@rube/core";
+import type { ApiKeyIdentity } from "@rube/domain.api-keys";
+import type { AdminContext, Trpc } from "@rube/trpc";
 import { handleRpcMessage, rpcError, RPC_PARSE_ERROR, type JsonRpcResponse } from "./mcp.ts";
 import { argsFromQuery, openApiDocument } from "./rest.ts";
 import { inputSchemaOf } from "./json-schema.ts";
@@ -127,7 +127,7 @@ export function createAgentApi(deps: AgentApiDeps) {
   async function handleRest(req: Request, ctx: ToolContext, path: string, keyName: string): Promise<Response> {
     if (path === REST_PREFIX || path === `${REST_PREFIX}/`) {
       return json(200, {
-        name: "tinkerbell",
+        name: "rube",
         version,
         readOnly: true,
         mcp: MCP_PATH,
@@ -170,7 +170,7 @@ export function createAgentApi(deps: AgentApiDeps) {
       headers: {
         "Content-Type": "application/json",
         "Cache-Control": "no-store",
-        ...(outcome.truncated ? { "X-Tinkerbell-Truncated": "true" } : {}),
+        ...(outcome.truncated ? { "X-Rube-Truncated": "true" } : {}),
       },
     });
   }
@@ -182,8 +182,8 @@ export function createAgentApi(deps: AgentApiDeps) {
     if (!key) {
       return json(
         401,
-        { error: "An API key is required. Create one in Tinkerbell under Settings → API & MCP." },
-        { "WWW-Authenticate": 'Bearer realm="tinkerbell"' },
+        { error: "An API key is required. Create one in Rube under Settings → API & MCP." },
+        { "WWW-Authenticate": 'Bearer realm="rube"' },
       );
     }
 

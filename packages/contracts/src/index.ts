@@ -1,6 +1,6 @@
 // Re-exports of types that cross the apps boundary (web ↔ server).
 // Web should never import directly from server-side packages — only from here
-// or from @tinkerbell/trpc (for AppRouter).
+// or from @rube/trpc (for AppRouter).
 
 export {
   arrTargetFor,
@@ -221,7 +221,7 @@ export type {
   OverlayPosition,
   OverlayType,
   Ratings,
-} from "@tinkerbell/overlays";
+} from "@rube/overlays";
 
 export { SEEDED_RULE, isSeededRule } from "./seeded-rule.ts";
 

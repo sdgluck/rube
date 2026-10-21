@@ -1,7 +1,7 @@
-import type { MigrationPlan } from "@tinkerbell/migrate";
+import type { MigrationPlan } from "@rube/migrate";
 import { createProviderRegistry } from "./registry.ts";
 import { createLegacyConfig } from "./legacy-config.ts";
-import type { Db } from "@tinkerbell/db";
+import type { Db } from "@rube/db";
 import type {
   BuildPlanInput,
   MigrationStatus,
@@ -9,8 +9,8 @@ import type {
   ProviderScanResult,
   ProviderStatus,
 } from "./runtime.ts";
-import { type ConfigStore } from "@tinkerbell/core";
-import { token } from "@tinkerbell/container";
+import { type ConfigStore } from "@rube/core";
+import { token } from "@rube/container";
 
 export type {
   BuildPlanInput,

@@ -1,14 +1,14 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { errorMessage, REDACTED_SECRET } from "@tinkerbell/core";
+import { errorMessage, REDACTED_SECRET } from "@rube/core";
 import {
   detectTelegramChats,
   EVENT_TYPES,
   NOTIFICATION_SERVICES,
   sampleMessageFor,
   TelegramDetectError,
-} from "@tinkerbell/domain.notifications";
+} from "@rube/domain.notifications";
 import { t, procedure } from "./_base.ts";
 
 const EVENT_IDS = EVENT_TYPES.map((e) => e.id) as [string, ...string[]];

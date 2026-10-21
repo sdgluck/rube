@@ -18,8 +18,8 @@ import { fork } from "node:child_process";
 import { join } from "node:path";
 import { setTimeout as delay } from "node:timers/promises";
 
-import { createTestDb } from "@tinkerbell/db/test-db";
-import { stressTestRuns } from "@tinkerbell/db";
+import { createTestDb } from "@rube/db/test-db";
+import { stressTestRuns } from "@rube/db";
 import { eq } from "drizzle-orm";
 
 const WORKER = join(import.meta.dirname, "worker.ts");
@@ -33,7 +33,7 @@ function forkWorker(dataDir: string) {
 }
 
 describe("the stress-test worker entrypoint", () => {
-  const testDb = createTestDb("tinkerbell-stress-worker-");
+  const testDb = createTestDb("rube-stress-worker-");
   after(() => testDb.dispose());
 
   it("stays alive after being forked", async () => {

@@ -10,7 +10,7 @@
  * portal's tRPC client sends the current one as `X-Match-Guest` — and only
  * when nobody is signed in, since a session wins on the server anyway.
  */
-import { MATCH_CODE_ALPHABET, MATCH_CODE_LENGTH } from "@tinkerbell/contracts";
+import { MATCH_CODE_ALPHABET, MATCH_CODE_LENGTH } from "@rube/contracts";
 
 export interface MatchRoute {
   code: string | null;

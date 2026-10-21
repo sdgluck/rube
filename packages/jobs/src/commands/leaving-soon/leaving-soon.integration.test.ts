@@ -9,11 +9,11 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { ConfigStoreToken, displayTitle, noopCheckpoint, type JobContext } from "@tinkerbell/core";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { cleanupCandidates, DbToken, jobRuns, jobs, rules } from "@tinkerbell/db";
-import { ClockToken } from "@tinkerbell/ports";
+import { ConfigStoreToken, displayTitle, noopCheckpoint, type JobContext } from "@rube/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { cleanupCandidates, DbToken, jobRuns, jobs, rules } from "@rube/db";
+import { ClockToken } from "@rube/ports";
 import { eq } from "drizzle-orm";
 import { startMockPlex, type MockItem, type MockPlex } from "../../test-support/mock-plex-server.ts";
 import { createLeavingSoonCommand, LEAVING_LABEL } from "./index.ts";
@@ -133,7 +133,7 @@ describe("leaving-soon", () => {
     assert.equal(more.length, 0, "no row in TV, where nothing is leaving");
     assert.equal(displayTitle(row.title), "Leaving Soon");
     assert.notEqual(row.title, "Leaving Soon", "carries its own mark, so a hand-made one isn't pooled with it");
-    assert.deepEqual(row.labels, ["Tinkerbell", LEAVING_LABEL]);
+    assert.deepEqual(row.labels, ["Rube", LEAVING_LABEL]);
     assert.deepEqual(row.memberKeys, ["100", "101", "102"]);
     assert.equal(row.summary, "Cleanup removes these within 5 days. Watch them before they go.");
     assert.deepEqual(plex.journal.pinHomes, [{ ratingKey: row.ratingKey, own: true, shared: true, recommended: true }]);

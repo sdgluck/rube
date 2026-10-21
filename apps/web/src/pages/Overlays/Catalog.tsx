@@ -4,7 +4,7 @@ import { useMediaQuery } from "#hooks/useMediaQuery";
 import styles from "../Overlays.module.css";
 import { OVERLAY_CATALOG, POSITIONS } from "./constants";
 import { badgePreviewStyle } from "./helpers";
-import type { OverlayPosition, OverlayType } from "@tinkerbell/contracts";
+import type { OverlayPosition, OverlayType } from "@rube/contracts";
 
 /**
  * The badge catalog. With a mouse a badge is dragged onto the poster; a touch

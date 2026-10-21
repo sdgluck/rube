@@ -1,12 +1,12 @@
 import { describe, test, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { eq } from "drizzle-orm";
-import { createTestDb } from "@tinkerbell/db/test-db";
-import { matchRooms, mediaItems, plexSections, plexUsers } from "@tinkerbell/db";
-import { DAY_MS } from "@tinkerbell/core";
+import { createTestDb } from "@rube/db/test-db";
+import { matchRooms, mediaItems, plexSections, plexUsers } from "@rube/db";
+import { DAY_MS } from "@rube/core";
 import { createMatch, MATCH_ROOM_RETENTION_MS, MatchError, ONLINE_WINDOW_MS, type ServerUser } from "./index.ts";
 
-const testDb = createTestDb("tinkerbell-match-test-");
+const testDb = createTestDb("rube-match-test-");
 after(testDb.dispose);
 const { db } = testDb;
 

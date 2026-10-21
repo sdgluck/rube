@@ -6,7 +6,7 @@
  * keys win over everything — no variant may turn "Remove Overlays" into
  * "Apply Overlays".
  */
-import { lockedConfigFor, type VariantSpec } from "@tinkerbell/contracts";
+import { lockedConfigFor, type VariantSpec } from "@rube/contracts";
 
 export function buildRunConfig(
   job: { id: string; config: Record<string, unknown> | null },

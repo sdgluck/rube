@@ -12,10 +12,10 @@
  * has already written every show it finished, and the next one skips them.
  */
 import { and, eq, gt, isNotNull, isNull } from "drizzle-orm";
-import { arrSeries, mediaItems, showChecks, type Db } from "@tinkerbell/db";
-import type { ArrInstance } from "@tinkerbell/core";
-import { createSonarrClient, type SonarrClient } from "@tinkerbell/sonarr";
-import type { PlexClient } from "@tinkerbell/plex";
+import { arrSeries, mediaItems, showChecks, type Db } from "@rube/db";
+import type { ArrInstance } from "@rube/core";
+import { createSonarrClient, type SonarrClient } from "@rube/sonarr";
+import type { PlexClient } from "@rube/plex";
 import { compareShow, showFolder } from "./ordering.ts";
 
 export interface ScanDeps {

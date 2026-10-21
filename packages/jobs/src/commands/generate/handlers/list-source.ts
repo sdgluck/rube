@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import { createMdblistCommand } from "../sources/mdblist.ts";
 import { createImdbCommand } from "../sources/imdb.ts";
 import { createTraktCommand } from "../sources/trakt.ts";

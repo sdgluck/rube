@@ -1,9 +1,9 @@
 import { and, eq } from "drizzle-orm";
-import { managedPlaylists, type Db } from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
+import { managedPlaylists, type Db } from "@rube/db";
+import { token } from "@rube/container";
 
 /**
- * Which playlists Tinkerbell built, and which rule owns each.
+ * Which playlists Rube built, and which rule owns each.
  *
  * This exists because **Plex playlists cannot carry labels**. Every other thing
  * this app owns is marked in Plex itself with `Rule:<id>`, which means Plex is

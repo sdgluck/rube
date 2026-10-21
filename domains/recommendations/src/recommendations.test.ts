@@ -10,9 +10,9 @@ import { after, describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { createConfigStore } from "@tinkerbell/core";
-import { mediaItems } from "@tinkerbell/db";
-import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
+import { createConfigStore } from "@rube/core";
+import { mediaItems } from "@rube/db";
+import { createTestDb, type TestDb } from "@rube/db/test-db";
 import { createRecommendations, describeSkip, MIN_COVERAGE, parseModel, solveSpd, type RankResult } from "./index.ts";
 
 const FIXTURE = join(import.meta.dirname, "__fixtures__", "tiny.bin");

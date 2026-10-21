@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { errorMessage } from "@tinkerbell/core";
+import { errorMessage } from "@rube/core";
 import type { TrpcDeps } from "./deps.ts";
 
 import { t, procedure } from "./_base.ts";
@@ -18,7 +18,7 @@ import { t, procedure } from "./_base.ts";
  * A test starts in the background and is polled, not answered on the request
  * that started it. It used to be one mutation held open for the whole run — a
  * library read plus up to three model calls, minutes on a big library — and a
- * reverse proxy in front of Tinkerbell (nginx gives up after 60s) answered the
+ * reverse proxy in front of Rube (nginx gives up after 60s) answered the
  * browser with its own HTML 504 page while the server carried on spending
  * tokens on an answer nobody would see. Polling also lets the page say which
  * step it's on, which is the only clue when one is slow.

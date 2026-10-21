@@ -8,10 +8,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>dev.tinkerbell.app</string>
+			<string>fyi.rube.app</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>tinkerbell</string>
+				<string>rube</string>
 			</array>
 		</dict>
 	</array>
@@ -19,9 +19,9 @@
 	<dict>
 		<key>NSAllowsLocalNetworking</key>
 		<true/>
-		<!-- Tinkerbell is self-hosted: people reach it on whatever hostname
+		<!-- Rube is self-hosted: people reach it on whatever hostname
 		     their LAN, NAS or reverse proxy gives it, very often over plain
-		     http on a name ATS doesn't count as local (tinkerbell.home,
+		     http on a name ATS doesn't count as local (rube.home,
 		     a Tailscale name, a bare IP with a port). Arbitrary loads is the
 		     only setting that lets those work; the app warns on its own when
 		     an http address is off the local network. -->

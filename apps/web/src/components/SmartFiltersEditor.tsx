@@ -7,7 +7,7 @@ import {
   type SmartFilterLeaf,
   type SmartFilterNode,
   type SmartFilterOp,
-} from "@tinkerbell/plex-smart-filter";
+} from "@rube/plex-smart-filter";
 import {
   describeCondition,
   fieldKind,
@@ -17,7 +17,7 @@ import {
   opsFor,
   SMART_FILTER_FIELD_DEFS,
   withFallbackOp,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import FilterValueInput from "#components/smart-filter/FilterValueInput.tsx";
@@ -48,7 +48,7 @@ const SORT_FIELDS = [
  * smart collection, which Plex re-evaluates itself on every view. A field Plex
  * has never heard of would be dropped from the query, and the collection would
  * quietly widen to whatever the remaining clauses matched. Those fields only
- * work on a Tinkerbell rule, which builds a static collection.
+ * work on a Rube rule, which builds a static collection.
  */
 const ALL_KNOWN_FIELDS = SMART_FILTER_FIELD_DEFS.filter((d) => !d.advanced && d.source !== "local")
   .map((d) => d.field)

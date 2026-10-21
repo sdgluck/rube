@@ -20,7 +20,7 @@ export default function SignIn({ branding, finishing, redirecting, error, onSign
         <button type="button" className="btn-plex" onClick={onSignIn} disabled={redirecting || finishing}>
           {finishing ? "Finishing sign-in…" : redirecting ? "Redirecting…" : "Sign in with Plex"}
         </button>
-        <p className="reassurance">Tinkerbell never sees your Plex password.</p>
+        <p className="reassurance">Rube never sees your Plex password.</p>
         {error && (
           <p className="err" role="alert">
             {error}

@@ -10,7 +10,7 @@
  * backup and the appearance of one:
  *
  * **`db.backup()`, never a file copy.** The database runs in WAL mode. Copying
- * `tinkerbell.db` while anything is writing produces a file that opens fine,
+ * `rube.db` while anything is writing produces a file that opens fine,
  * passes a cursory look, and is missing whatever was in the log — you find out
  * on the day you restore it. SQLite's online backup API walks the pages under a
  * read lock and restarts if a writer moves them, which is exactly the problem
@@ -27,18 +27,18 @@ import { join } from "node:path";
 import { pipeline } from "node:stream/promises";
 import { createGzip } from "node:zlib";
 
-import { token } from "@tinkerbell/container";
-import { createLogger, dataDir, errorMessage, type ConfigStore } from "@tinkerbell/core";
-import type { Db } from "@tinkerbell/db";
-import type { EventBus } from "@tinkerbell/ports";
+import { token } from "@rube/container";
+import { createLogger, dataDir, errorMessage, type ConfigStore } from "@rube/core";
+import type { Db } from "@rube/db";
+import type { EventBus } from "@rube/ports";
 import { backupDirMount } from "./mount.ts";
 
 export { backupDirMount, runningInContainer, type BackupDirMount } from "./mount.ts";
 
 const log = createLogger("backup");
 
-/** `tinkerbell-2026-08-20T0300.db.gz` — sortable, and obvious in a file listing. */
-const FILE_PREFIX = "tinkerbell-";
+/** `rube-2026-08-20T0300.db.gz` — sortable, and obvious in a file listing. */
+const FILE_PREFIX = "rube-";
 const FILE_SUFFIX = ".db.gz";
 
 export const DEFAULT_KEEP_COUNT = 7;
@@ -142,7 +142,7 @@ export function createBackups(deps: BackupsDeps) {
       await db.$client.backup(rawPath);
 
       onProgress?.("Compressing");
-      // A Tinkerbell database is mostly text — rule configs, item titles, job
+      // A Rube database is mostly text — rule configs, item titles, job
       // logs — and compresses hard, typically to a fifth.
       await pipeline(createReadStream(rawPath), createGzip(), createWriteStream(gzPath));
 

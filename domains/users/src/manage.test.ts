@@ -3,9 +3,9 @@
  *
  * The one that matters most is `updateContentRatings`. plex.tv keeps a *single*
  * string per media type holding several independent clauses —
- * `contentRating=PG,PG-13|label=Kids` — and Tinkerbell owns the `label=` clause
+ * `contentRating=PG,PG-13|label=Kids` — and Rube owns the `label=` clause
  * while the admin owns `contentRating=`. Personalization writes
- * `label=Tinkerbell,User:<name>` there, and that clause is what limits a shared
+ * `label=Rube,User:<name>` there, and that clause is what limits a shared
  * user to the collections meant for them. A rating change that *replaced* the
  * string instead of composing over it would drop the label clause, and with it
  * every restriction — or, depending on which way Plex resolves an empty
@@ -25,10 +25,10 @@ import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
 import { eq } from "drizzle-orm";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken, plexUserShares, plexUsers, sharingRestrictionBackups } from "@tinkerbell/db";
-import { UsersToken } from "@tinkerbell/domain.users";
-import type { PlexClient } from "@tinkerbell/plex";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken, plexUserShares, plexUsers, sharingRestrictionBackups } from "@rube/db";
+import { UsersToken } from "@rube/domain.users";
+import type { PlexClient } from "@rube/plex";
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -168,50 +168,50 @@ describe("updateContentRatings", () => {
   test("PRESERVES the label clause — the whole reason this composes", async () => {
     // If this ever fails, personalization's per-user restriction has been
     // wiped and the user can see the entire library.
-    shares[0]!.filterMovies = "label=Tinkerbell,User:sam";
+    shares[0]!.filterMovies = "label=Rube,User:sam";
 
     await users.updateContentRatings(client(), FRIEND, { movies: ["PG"] });
 
     const filter = String(journal.settingsWrites.at(-1)!.settings.filterMovies);
-    assert.match(filter, /label=Tinkerbell,User:sam/, "the label clause survived");
+    assert.match(filter, /label=Rube,User:sam/, "the label clause survived");
     assert.match(filter, /contentRating=PG/);
   });
 
   test("preserves an existing label clause on television too", async () => {
-    shares[0]!.filterTelevision = "label=Tinkerbell,User:sam";
+    shares[0]!.filterTelevision = "label=Rube,User:sam";
     await users.updateContentRatings(client(), FRIEND, { television: ["TV-PG"] });
 
     const filter = String(journal.settingsWrites.at(-1)!.settings.filterTelevision);
-    assert.match(filter, /label=Tinkerbell,User:sam/);
+    assert.match(filter, /label=Rube,User:sam/);
     assert.match(filter, /contentRating=TV-PG/);
   });
 
   test("replaces only the content rating, leaving an earlier one behind", async () => {
-    shares[0]!.filterMovies = "contentRating=R|label=Tinkerbell";
+    shares[0]!.filterMovies = "contentRating=R|label=Rube";
     await users.updateContentRatings(client(), FRIEND, { movies: ["PG"] });
 
     const filter = String(journal.settingsWrites.at(-1)!.settings.filterMovies);
-    assert.equal(filter, "contentRating=PG|label=Tinkerbell", "the old R is gone, the label is not");
+    assert.equal(filter, "contentRating=PG|label=Rube", "the old R is gone, the label is not");
   });
 
   test("an empty list clears the rating but keeps the labels", async () => {
     // "No ceiling" is a legitimate choice, and it must not take the labels
     // with it.
-    shares[0]!.filterMovies = "contentRating=PG|label=Tinkerbell";
+    shares[0]!.filterMovies = "contentRating=PG|label=Rube";
     await users.updateContentRatings(client(), FRIEND, { movies: [] });
 
     const filter = String(journal.settingsWrites.at(-1)!.settings.filterMovies);
     assert.doesNotMatch(filter, /contentRating/);
-    assert.match(filter, /label=Tinkerbell/);
+    assert.match(filter, /label=Rube/);
   });
 
   test("a media type not named is left exactly as it was", async () => {
-    shares[0]!.filterTelevision = "contentRating=TV-14|label=Tinkerbell";
+    shares[0]!.filterTelevision = "contentRating=TV-14|label=Rube";
     await users.updateContentRatings(client(), FRIEND, { movies: ["PG"] });
 
     assert.equal(
       journal.settingsWrites.at(-1)!.settings.filterTelevision,
-      "contentRating=TV-14|label=Tinkerbell",
+      "contentRating=TV-14|label=Rube",
       "television was passed through byte-for-byte",
     );
   });
@@ -221,7 +221,7 @@ describe("updateContentRatings", () => {
     // this composed over the cached row it would restore whatever the label
     // clause was at the last sync, undoing a personalization run.
     db.insert(plexUserShares).values({ userId: FRIEND, filterMovies: "label=STALE", syncedAt: 0 }).run();
-    shares[0]!.filterMovies = "label=Tinkerbell,User:fresh";
+    shares[0]!.filterMovies = "label=Rube,User:fresh";
 
     await users.updateContentRatings(client(), FRIEND, { movies: ["PG"] });
 

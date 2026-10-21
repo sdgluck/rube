@@ -31,7 +31,7 @@
 import assert from "node:assert/strict";
 import { after, before, beforeEach, describe, test } from "node:test";
 
-import { startMockRadarr, startMockSonarr, type MockArr } from "@tinkerbell/test-support/arr";
+import { startMockRadarr, startMockSonarr, type MockArr } from "@rube/test-support/arr";
 
 import {
   addItem,

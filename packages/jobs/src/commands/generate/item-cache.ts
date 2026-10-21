@@ -1,4 +1,4 @@
-import type { PlexClient } from "@tinkerbell/plex";
+import type { PlexClient } from "@rube/plex";
 
 /**
  * Wrap a Plex client so the full-library walks are fetched once per section

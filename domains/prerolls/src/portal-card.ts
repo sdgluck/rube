@@ -15,7 +15,7 @@
 import { rename, rm } from "node:fs/promises";
 import sharp from "sharp";
 import { encode } from "uqr";
-import { fitText, measureText, textPathData } from "@tinkerbell/overlays";
+import { fitText, measureText, textPathData } from "@rube/overlays";
 
 export const CARD_WIDTH = 1920;
 export const CARD_HEIGHT = 1080;

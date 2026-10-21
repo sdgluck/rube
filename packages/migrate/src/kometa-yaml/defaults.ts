@@ -13,7 +13,7 @@ import type { PlanConfidence, PlanWarning } from "../types.ts";
  *
  * But we don't need the machine — we need its *output*, and the output of
  * `default: genre` is "one collection per genre in this library", which is
- * exactly what Tinkerbell's `genres` rule already is. So each default maps to
+ * exactly what Rube's `genres` rule already is. So each default maps to
  * a rule type directly, and the template variables that actually change the
  * outcome (`limit`, `include`, `exclude`, `minimum`) are honoured.
  *
@@ -66,7 +66,7 @@ export const DEFAULT_MAPPINGS: Record<string, DefaultMapping> = {
   franchise: { label: "Franchises", ruleType: "tmdb_franchises" },
   resolution_standards: { label: "Video formats", ruleType: "video_formats" },
 
-  // Content ratings ship per-region in Kometa; Tinkerbell's rule reads
+  // Content ratings ship per-region in Kometa; Rube's rule reads
   // whatever ratings the library actually carries, so every region lands on
   // the same rule type.
   content_rating_us: { label: "Content ratings", ruleType: "content_ratings" },
@@ -82,23 +82,23 @@ export const DEFAULT_MAPPINGS: Record<string, DefaultMapping> = {
     label: "Franchises",
     ruleType: "tmdb_franchises",
     confidence: "partial",
-    note: "Kometa's universe collections (MCU, DCEU…) are hand-curated; Tinkerbell builds franchises from TMDb, so the groupings will differ.",
+    note: "Kometa's universe collections (MCU, DCEU…) are hand-curated; Rube builds franchises from TMDb, so the groupings will differ.",
   },
   writer: {
     label: "Writers",
     ruleType: "directors",
     confidence: "partial",
-    note: "Tinkerbell has no writer rule, so this was migrated as a directors rule — the collections it builds will be different.",
+    note: "Rube has no writer rule, so this was migrated as a directors rule — the collections it builds will be different.",
   },
   producer: {
     label: "Producers",
     ruleType: "directors",
     confidence: "partial",
-    note: "Tinkerbell has no producer rule, so this was migrated as a directors rule — the collections it builds will be different.",
+    note: "Rube has no producer rule, so this was migrated as a directors rule — the collections it builds will be different.",
   },
 
   // ─── Awards ────────────────────────────────────────────────────────────
-  // Kometa ships one file per ceremony; Tinkerbell has a single awards rule
+  // Kometa ships one file per ceremony; Rube has a single awards rule
   // that groups by award, so several defaults collapse onto it. The plan
   // de-duplicates identical rules per section, so a config using five award
   // defaults doesn't produce five copies.
@@ -121,25 +121,25 @@ export const DEFAULT_MAPPINGS: Record<string, DefaultMapping> = {
     ruleType: "imdb_chart",
     baseConfig: { chart: "top_250_movies" },
     confidence: "close",
-    note: "Kometa's IMDb chart file builds several charts; Tinkerbell created the Top 250. Add rules for the others if you want them.",
+    note: "Kometa's IMDb chart file builds several charts; Rube created the Top 250. Add rules for the others if you want them.",
   },
   "chart/tmdb": {
     label: "Top rated",
     ruleType: "top_rated",
     confidence: "partial",
-    note: "Tinkerbell's top-rated rule ranks your own library rather than TMDb's global charts, so the contents will differ.",
+    note: "Rube's top-rated rule ranks your own library rather than TMDb's global charts, so the contents will differ.",
   },
 };
 
 /**
- * Defaults whose *concept* doesn't exist in Tinkerbell, so there is nothing to
+ * Defaults whose *concept* doesn't exist in Rube, so there is nothing to
  * migrate and nothing lost. These become an info diagnostic — mentioned, but
  * not listed as a gap, because calling them one would imply a feature is
  * missing when the design simply differs.
  */
 export const DEFAULT_SKIPPED: Record<string, string> = {
-  separator: "Kometa separator collections exist to break up the Plex library view; Tinkerbell doesn't use them.",
-  collectionless: "Kometa's 'collectionless' collection has no Tinkerbell equivalent.",
+  separator: "Kometa separator collections exist to break up the Plex library view; Rube doesn't use them.",
+  collectionless: "Kometa's 'collectionless' collection has no Rube equivalent.",
 };
 
 /**
@@ -156,8 +156,8 @@ export const DEFAULT_UNSUPPORTED: Record<string, string> = {
   "chart/anilist": "AniList charts aren't supported.",
   "chart/myanimelist": "MyAnimeList charts aren't supported.",
   "chart/trakt": "Trakt charts aren't supported yet — Trakt *lists* are.",
-  "chart/other": "This chart file mixes sources Tinkerbell doesn't all support.",
-  "chart/basic": "This chart file mixes sources Tinkerbell doesn't all support.",
+  "chart/other": "This chart file mixes sources Rube doesn't all support.",
+  "chart/basic": "This chart file mixes sources Rube doesn't all support.",
 };
 
 export interface ResolvedDefault {
@@ -244,7 +244,7 @@ export function resolveDefault(
     if (vars[key] != null) {
       warnings.push({
         code: "default-var-dropped",
-        message: `\`${key}\` set ${label}, which Tinkerbell doesn't carry across.`,
+        message: `\`${key}\` set ${label}, which Rube doesn't carry across.`,
       });
       if (confidence === "exact") confidence = "close";
     }

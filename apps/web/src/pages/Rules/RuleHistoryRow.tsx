@@ -43,7 +43,7 @@ function summarise(value: unknown): string {
  */
 function actorLabel(source: string, username: string): string {
   if (username) return username;
-  if (source === "system") return "Tinkerbell itself";
+  if (source === "system") return "Rube itself";
   if (source.startsWith("job:")) return `the ${source.slice(4)} job`;
   if (source === "import") return "an import";
   if (source === "restore") return "a restore";

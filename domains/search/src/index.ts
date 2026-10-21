@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
-import { type Db } from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
+import { type Db } from "@rube/db";
+import { token } from "@rube/container";
 
 export type SearchKind =
   | "collection"
@@ -66,7 +66,7 @@ export function createSearch(deps: SearchDeps) {
   const { db } = deps;
 
   /**
-   * Free-text search across everything Tinkerbell knows about.
+   * Free-text search across everything Rube knows about.
    *
    * `kinds` narrows the sweep — the palette passes it when the query carries a
    * scope prefix (`rule: nolan`). Narrowing here rather than filtering the

@@ -1,4 +1,4 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { ServicesToken, type Services } from "@rube/composition";
 import { createSummaryCommand } from "./summary.ts";
 /**
  * `collection-art` — give every opted-in rule's collections a poster, and the
@@ -15,21 +15,21 @@ import { createSummaryCommand } from "./summary.ts";
  * time is stale within a day. Listing the rule's collections by label at run
  * time is both simpler and correct whenever this happens to run.
  */
-import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
-import { errorMessage, type CollectionArtJobConfig, type JobContext } from "@tinkerbell/core";
-import { type Rule } from "@tinkerbell/domain.rules";
-import { artworkHash, type CollectionArtworkRow } from "@tinkerbell/domain.collections";
+import { createPlexClient, type PlexClient, type PlexSection } from "@rube/plex";
+import { errorMessage, type CollectionArtJobConfig, type JobContext } from "@rube/core";
+import { type Rule } from "@rube/domain.rules";
+import { artworkHash, type CollectionArtworkRow } from "@rube/domain.collections";
 import {
   isCleanupRule,
   isMetadataRule,
   resolvePresentation,
   type PresentationConfig,
   type RuleConfig,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { parseRuleConfig } from "../generate/config.ts";
 import { createTagLabels } from "../generate/tag-labels.ts";
 import { stat } from "node:fs/promises";
-import { findAsset, indexAssetDirectory, readAsset } from "@tinkerbell/posters";
+import { findAsset, indexAssetDirectory, readAsset } from "@rube/posters";
 import { buildCollectionPoster, fetchMemberPosters, posterAlreadyUploaded } from "./poster.ts";
 import { describeRuleFilter, SAMPLE_TITLES } from "./summary.ts";
 
@@ -141,7 +141,7 @@ export function createCollectionArtCommand(deps: Services) {
     // lookups is a cost nobody opted into.
     const assetLookup = await buildAssetLookup(ctx, rules);
 
-    ctx.log(`tinkerbell collection-art`);
+    ctx.log(`rube collection-art`);
     ctx.log(`${rules.length} rule(s), ${sections.length} section(s).`);
     if (config.force) ctx.log("Force: re-rendering and re-uploading regardless of what the ledger says.");
 
@@ -318,7 +318,7 @@ export function createCollectionArtCommand(deps: Services) {
     if (!live || live === ledger.summary.trim()) return false;
 
     recordCollectionArtwork(ruleId, name, { summaryLockedAt: Date.now() });
-    ctx.log(`Summary for "${name}" was edited in Plex — Tinkerbell will stop writing it.`);
+    ctx.log(`Summary for "${name}" was edited in Plex — Rube will stop writing it.`);
     return true;
   }
 

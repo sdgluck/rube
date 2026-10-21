@@ -3,7 +3,7 @@
  * named in one place and obvious to find when tuning.
  */
 
-import { MINUTE_MS, WEEK_MS } from "@tinkerbell/core";
+import { MINUTE_MS, WEEK_MS } from "@rube/core";
 
 /** How long finished job runs are kept before `purge-runs` deletes them. */
 export const JOB_RUN_RETENTION_MS = WEEK_MS;

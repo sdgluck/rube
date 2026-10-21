@@ -5,7 +5,7 @@
  * `__fixtures__/golden/`. To bless new or updated goldens after an intentional
  * rendering change:
  *
- *   UPDATE_GOLDENS=1 pnpm --filter @tinkerbell/posters test
+ *   UPDATE_GOLDENS=1 pnpm --filter @rube/posters test
  *
  * Unlike the overlay goldens, these are compared with a **perceptual
  * tolerance** rather than byte-for-byte. Overlays composite small SVG badges
@@ -23,7 +23,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
-import { COLLECTION_POSTER_HEIGHT, COLLECTION_POSTER_TEMPLATES, COLLECTION_POSTER_WIDTH } from "@tinkerbell/contracts";
+import { COLLECTION_POSTER_HEIGHT, COLLECTION_POSTER_TEMPLATES, COLLECTION_POSTER_WIDTH } from "@rube/contracts";
 import { derivePalette } from "./palette.ts";
 import { renderCollectionPoster } from "./collection-templates.ts";
 

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { DOWNLOAD_CLIENT_KINDS, DOWNLOAD_CLIENT_META, type DownloadClientKind } from "@tinkerbell/contracts";
+import { DOWNLOAD_CLIENT_KINDS, DOWNLOAD_CLIENT_META, type DownloadClientKind } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import UnsavedBanner from "#components/UnsavedBanner";

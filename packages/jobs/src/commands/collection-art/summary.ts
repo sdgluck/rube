@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 /**
  * LLM-written collection summaries, for the rules where a template can't say
  * anything useful.
@@ -11,11 +11,11 @@ import { type Services } from "@tinkerbell/composition";
  * summary is written once and reused until the rule changes rather than
  * regenerated on every nightly run.
  */
-import { createLlmClient } from "@tinkerbell/llm";
-import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
-import { errorMessage } from "@tinkerbell/core";
+import { createLlmClient } from "@rube/llm";
+import { LlmBudgetExceededError } from "@rube/domain.ai-usage";
+import { errorMessage } from "@rube/core";
 
-import { describeSmartFilter, type RuleConfig, type TagResolver } from "@tinkerbell/contracts";
+import { describeSmartFilter, type RuleConfig, type TagResolver } from "@rube/contracts";
 
 /** Titles handed to the model. Ten is enough to characterise a collection. */
 export const SAMPLE_TITLES = 10;

@@ -6,7 +6,7 @@
  *  1. **Tag values.** Plex stores smart-filter values for tag fields as
  *     numeric keys unique to the server — `genre = "5840"`. Registry packs
  *     publish display names instead, and this module swaps them for local
- *     keys. The walk itself lives in `@tinkerbell/contracts`
+ *     keys. The walk itself lives in `@rube/contracts`
  *     (`translateSmartFilterTags`), shared with the bundle exporter, which
  *     needs exactly the same traversal in the opposite direction.
  *  2. **Section scope.** Packs never ship `config.sections`; the importing
@@ -17,10 +17,10 @@
  * Deliberately free of DB and Plex-client imports — the tag lookup arrives as
  * a callback, so this is testable without either.
  */
-import { translateSmartFilterTags, type RegistryRule, type ResolutionWarning } from "@tinkerbell/contracts";
+import { translateSmartFilterTags, type RegistryRule, type ResolutionWarning } from "@rube/contracts";
 
-export type { TagLookup } from "@tinkerbell/contracts";
-import type { TagLookup } from "@tinkerbell/contracts";
+export type { TagLookup } from "@rube/contracts";
+import type { TagLookup } from "@rube/contracts";
 
 export interface ResolveTarget {
   sectionId: string;

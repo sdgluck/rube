@@ -1,11 +1,11 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import { createDispatchCommand } from "./dispatch.ts";
 import { createFunnelCommand } from "./funnel.ts";
-import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
+import { createPlexClient, type PlexClient, type PlexSection } from "@rube/plex";
 
-import { createLogger, deriveJobContext, type JobContext } from "@tinkerbell/core";
+import { createLogger, deriveJobContext, type JobContext } from "@rube/core";
 
-import { ruleAction, type MetadataActionConfig } from "@tinkerbell/contracts";
+import { ruleAction, type MetadataActionConfig } from "@rube/contracts";
 
 import { parseRuleConfig } from "./config.ts";
 

@@ -1,5 +1,5 @@
 /**
- * Tinkerbell's own watch record.
+ * Rube's own watch record.
  *
  * Plex answers "what is playing right now" (`/status/sessions`) and "who viewed
  * what, when" (`/status/sessions/history/all`). It does not answer "how much of
@@ -21,10 +21,10 @@
  * `diff.ts` and `evaluate.ts` are pure and stay plain module exports; the three
  * that touch the database or Plex are factories, composed here.
  */
-import { token } from "@tinkerbell/container";
-import type { Db } from "@tinkerbell/db";
-import type { Clients, ConfigStore } from "@tinkerbell/core";
-import type { Bandwidth } from "@tinkerbell/domain.bandwidth";
+import { token } from "@rube/container";
+import type { Db } from "@rube/db";
+import type { Clients, ConfigStore } from "@rube/core";
+import type { Bandwidth } from "@rube/domain.bandwidth";
 import { createStore } from "./store.ts";
 import { createPoller } from "./poller.ts";
 import { createBackfill } from "./backfill.ts";

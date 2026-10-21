@@ -18,7 +18,7 @@
  */
 
 import { and, inArray, isNull, or, type SQL } from "drizzle-orm";
-import { arrMovies, arrSeries, mediaItems, type Db } from "@tinkerbell/db";
+import { arrMovies, arrSeries, mediaItems, type Db } from "@rube/db";
 
 /** What Discover asks about: a TMDb id, and for a show its TVDb id if known. */
 export interface DiscoverKey {

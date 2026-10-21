@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
-import { arrMovies, arrSeries, mediaItems } from "@tinkerbell/db";
+import { createTestDb, type TestDb } from "@rube/db/test-db";
+import { arrMovies, arrSeries, mediaItems } from "@rube/db";
 import { createArrLibrary, discoverKey } from "./index.ts";
 
 const NOW = 1_700_000_000_000;

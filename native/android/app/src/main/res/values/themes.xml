@@ -4,7 +4,7 @@
       Only what shows before Compose draws: a dark window, so a cold start
       doesn't flash white in the dark room the app is mostly used in.
     -->
-    <style name="Theme.Tinkerbell" parent="android:Theme.Material.NoActionBar">
+    <style name="Theme.Rube" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowBackground">@color/launch_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>

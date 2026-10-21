@@ -1,7 +1,7 @@
 import type { PlanWarning } from "../types.ts";
 
 /**
- * Kometa `schedule:` → Tinkerbell's per-rule schedule.
+ * Kometa `schedule:` → Rube's per-rule schedule.
  *
  * The two systems agree more than they look like they do. Kometa's `daily`,
  * `weekly(sunday)` and `monthly(1)` are cron expressions wearing friendlier
@@ -63,7 +63,7 @@ export function mapSchedule(raw: unknown): ScheduleResult {
   if (entries.length > 1) {
     warnings.push({
       code: "schedule-multiple",
-      message: `Kometa had several schedules for this collection (${entries.join(", ")}); Tinkerbell kept the first.`,
+      message: `Kometa had several schedules for this collection (${entries.join(", ")}); Rube kept the first.`,
     });
   }
 
@@ -152,7 +152,7 @@ export function mapSchedule(raw: unknown): ScheduleResult {
     default:
       warnings.push({
         code: "schedule-unrecognised",
-        message: `Tinkerbell doesn't have an equivalent for Kometa's \`${entry}\` schedule — this rule runs in the nightly batch instead.`,
+        message: `Rube doesn't have an equivalent for Kometa's \`${entry}\` schedule — this rule runs in the nightly batch instead.`,
       });
       return { warnings };
   }

@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 /**
  * Bringing a rule's collections into line with what it selected, instead of
  * deleting them and building them again.
@@ -31,9 +31,9 @@ import { type Services } from "@tinkerbell/composition";
  */
 
 import PQueue from "p-queue";
-import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/plex";
+import { PlexApiError, type PlexClient, type PlexSection } from "@rube/plex";
 
-import { displayTitle, type JobContext } from "@tinkerbell/core";
+import { displayTitle, type JobContext } from "@rube/core";
 
 /** How many Plex calls this module may have in flight. Mirrors `COMMIT_CONCURRENCY`. */
 const RECONCILE_CONCURRENCY = 6;

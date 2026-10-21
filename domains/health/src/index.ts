@@ -1,18 +1,18 @@
 import { eq, desc, and, gte, sql } from "drizzle-orm";
-import { errorMessage, type ConfigStore, type ArrInstances } from "@tinkerbell/core";
-import { events, healthChecks, type Db } from "@tinkerbell/db";
+import { errorMessage, type ConfigStore, type ArrInstances } from "@rube/core";
+import { events, healthChecks, type Db } from "@rube/db";
 
-import { configSchema, WEEK_MS } from "@tinkerbell/core";
-import { createPlexClient } from "@tinkerbell/plex";
-import { createLlmClient } from "@tinkerbell/llm";
-import type { AiUsage } from "@tinkerbell/domain.ai-usage";
+import { configSchema, WEEK_MS } from "@rube/core";
+import { createPlexClient } from "@rube/plex";
+import { createLlmClient } from "@rube/llm";
+import type { AiUsage } from "@rube/domain.ai-usage";
 import { z } from "zod";
-import { type EventBus } from "@tinkerbell/ports";
-import { type Prerolls } from "@tinkerbell/domain.prerolls";
-import { token } from "@tinkerbell/container";
-import { createDownloadClient } from "@tinkerbell/download-clients";
-import { testMqtt } from "@tinkerbell/mqtt";
-import { downloadClientHealthName } from "@tinkerbell/domain.download-clients";
+import { type EventBus } from "@rube/ports";
+import { type Prerolls } from "@rube/domain.prerolls";
+import { token } from "@rube/container";
+import { createDownloadClient } from "@rube/download-clients";
+import { testMqtt } from "@rube/mqtt";
+import { downloadClientHealthName } from "@rube/domain.download-clients";
 
 type ConfigMap = Partial<z.infer<typeof configSchema>>;
 
@@ -242,7 +242,7 @@ export function createHealth(deps: HealthDeps) {
         const reqUrl = new URL("/api/v2/user", "https://plex.tv");
         reqUrl.searchParams.set("X-Plex-Token", cfg.global_plex_token);
         const res = await fetch(reqUrl.toString(), {
-          headers: { Accept: "application/json", "X-Plex-Client-Identifier": "tinkerbell" },
+          headers: { Accept: "application/json", "X-Plex-Client-Identifier": "rube" },
           signal: AbortSignal.timeout(10000),
         });
         if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
@@ -292,14 +292,14 @@ export function createHealth(deps: HealthDeps) {
       }
       case "Seerr": {
         if (!cfg.global_seerr_url || !cfg.global_seerr_api_key) throw new Error("Not configured");
-        const { testSeerrConnection } = await import("@tinkerbell/seerr");
+        const { testSeerrConnection } = await import("@rube/seerr");
         const data = await testSeerrConnection(cfg.global_seerr_url, cfg.global_seerr_api_key);
         reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
         break;
       }
       case "TMDb": {
         if (!cfg.global_tmdb_api_key) throw new Error("Not configured");
-        const { testTmdbKey } = await import("@tinkerbell/tmdb");
+        const { testTmdbKey } = await import("@rube/tmdb");
         const data = await testTmdbKey(cfg.global_tmdb_api_key);
         reportHealth("TMDb", "ok", `Test query OK — ${data.sample}`);
         break;

@@ -1,4 +1,4 @@
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 /**
  * Per-item changesets: what a run actually did to each collection it owns.
  *
@@ -14,7 +14,7 @@ import { perDeps } from "@tinkerbell/container";
  */
 
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
-import { ruleCollectionMembers, ruleRunChanges, type Db } from "@tinkerbell/db";
+import { ruleCollectionMembers, ruleRunChanges, type Db } from "@rube/db";
 
 export interface ChangesetMember {
   ratingKey: string;

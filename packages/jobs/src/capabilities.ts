@@ -1,7 +1,7 @@
-import { type Services } from "@tinkerbell/composition";
-import { HEALTH_SERVICES } from "@tinkerbell/domain.health";
-import { anyNotifierConfigured } from "@tinkerbell/domain.onboarding";
-import type { ScheduleCapabilities } from "@tinkerbell/contracts";
+import { type Services } from "@rube/composition";
+import { HEALTH_SERVICES } from "@rube/domain.health";
+import { anyNotifierConfigured } from "@rube/domain.onboarding";
+import type { ScheduleCapabilities } from "@rube/contracts";
 
 /**
  * Which of the services a job can depend on are set up here.

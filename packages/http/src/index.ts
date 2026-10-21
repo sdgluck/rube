@@ -5,7 +5,7 @@
  * had been doing).
  *
  * Lives in its own leaf package so any client can depend on it without
- * pulling in `@tinkerbell/core` (which itself depends on several clients,
+ * pulling in `@rube/core` (which itself depends on several clients,
  * which would otherwise be a cycle).
  *
  * Migration is incremental: callers that already have specialised

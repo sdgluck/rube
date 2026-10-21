@@ -16,7 +16,7 @@
 import assert from "node:assert/strict";
 import { after, describe, test } from "node:test";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { createTestContainer } from "@rube/composition/test-support";
 import { ConfigStoreToken } from "./index.ts";
 
 const c = createTestContainer();

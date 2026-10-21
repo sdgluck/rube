@@ -1,6 +1,6 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
-import { type PlexClient } from "@tinkerbell/plex";
+import { type PlexClient } from "@rube/plex";
 import {
   resolveOverlayValue,
   evaluateRule,
@@ -11,8 +11,8 @@ import {
   conditionalRuleSchema,
   presetDataSchema,
   type Badge,
-} from "@tinkerbell/domain.overlays";
-import { extractImdbId } from "@tinkerbell/omdb";
+} from "@rube/domain.overlays";
+import { extractImdbId } from "@rube/omdb";
 
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 

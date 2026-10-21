@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/web",
+  "name": "@rube/web",
   "private": true,
   "type": "module",
   "imports": {
@@ -19,10 +19,10 @@
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.21",
-    "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/llm": "workspace:*",
-    "@tinkerbell/plex-smart-filter": "workspace:*",
-    "@tinkerbell/trpc": "workspace:*",
+    "@rube/contracts": "workspace:*",
+    "@rube/llm": "workspace:*",
+    "@rube/plex-smart-filter": "workspace:*",
+    "@rube/trpc": "workspace:*",
     "@trpc/client": "^11.10.0",
     "@trpc/react-query": "^11.10.0",
     "@trpc/server": "^11.10.0",

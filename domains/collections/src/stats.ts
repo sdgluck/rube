@@ -1,4 +1,4 @@
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 /**
  * At-a-glance facts about one collection, answered entirely from the local
  * mirror.
@@ -16,7 +16,7 @@ import { perDeps } from "@tinkerbell/container";
  */
 
 import { eq, inArray } from "drizzle-orm";
-import { collectionItems, mediaItems, watchState, type Db } from "@tinkerbell/db";
+import { collectionItems, mediaItems, watchState, type Db } from "@rube/db";
 
 export interface CollectionStats {
   /** Members the media sync knows about. Never more than the collection's child count. */

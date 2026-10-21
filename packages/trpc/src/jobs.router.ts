@@ -1,12 +1,12 @@
-import { COMMANDS, isCommandName, JobScheduleConflictError, JobUpdateError } from "@tinkerbell/jobs";
-import { JobConfigError, scheduleSettingsSchema } from "@tinkerbell/contracts";
+import { COMMANDS, isCommandName, JobScheduleConflictError, JobUpdateError } from "@rube/jobs";
+import { JobConfigError, scheduleSettingsSchema } from "@rube/contracts";
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
 import { t, procedure } from "./_base.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
-import { searchKeywords } from "@tinkerbell/tmdb";
+import { NativeAdmin } from "@rube/contracts/native-api";
+import { searchKeywords } from "@rube/tmdb";
 
 export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "config" | "jobs" | "stats">) {
   const {

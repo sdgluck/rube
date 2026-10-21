@@ -1,4 +1,4 @@
-import { parseClock } from "@tinkerbell/contracts";
+import { parseClock } from "@rube/contracts";
 
 /**
  * What a `from`–`to` clock window actually covers, as "→ 07:00 next day · 8 h".

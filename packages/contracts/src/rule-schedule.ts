@@ -51,7 +51,7 @@ export const RULE_TRIGGER_NOTES: Record<RuleTrigger, string> = {
  * How soon after the event a trigger can fire, as a badge beside it.
  *
  * The latency is the period of the source job's shipped schedule
- * (`DEFAULT_JOBS` in `@tinkerbell/jobs`), which is the number someone
+ * (`DEFAULT_JOBS` in `@rube/jobs`), which is the number someone
  * expecting "instantly" needs. Approximate on purpose: a user can move those
  * schedules, and the badge is a scale rather than a promise.
  */

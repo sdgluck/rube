@@ -1,5 +1,5 @@
 /**
- * Collection labels Tinkerbell writes itself, lower-cased. The UI renders them
+ * Collection labels Rube writes itself, lower-cased. The UI renders them
  * as provenance rather than as tags a person added.
  *
  * One list rather than four copies in the web app. Adding a job label used to
@@ -7,7 +7,7 @@
  * label styled as an ordinary user tag.
  */
 export const SYSTEM_COLLECTION_LABELS: readonly string[] = [
-  "tinkerbell",
+  "rube",
   "generated",
   "becauseyouwatched",
   "wethinkyoudlike",
@@ -22,7 +22,7 @@ export const SYSTEM_COLLECTION_LABELS: readonly string[] = [
 ];
 
 /**
- * A label Tinkerbell wrote: one of the above, or a `Season:<key>` marker that
+ * A label Rube wrote: one of the above, or a `Season:<key>` marker that
  * says which holiday a Season Collections row is for.
  */
 export function isSystemCollectionLabel(label: string): boolean {

@@ -14,13 +14,13 @@
  * and a short answer, unlike the library-sized calls `ai-preview` had to move
  * to start-and-poll for; the timeout below is what bounds it.
  */
-import { token } from "@tinkerbell/container";
-import { errorMessage, type ConfigStore } from "@tinkerbell/core";
-import { plexUsers, type Db } from "@tinkerbell/db";
-import { createLlmClient, type LlmClient, type LlmConfig } from "@tinkerbell/llm";
-import type { AiUsage } from "@tinkerbell/domain.ai-usage";
-import type { SmartFilterGroup } from "@tinkerbell/plex-smart-filter";
-import type { PlexClient } from "@tinkerbell/plex";
+import { token } from "@rube/container";
+import { errorMessage, type ConfigStore } from "@rube/core";
+import { plexUsers, type Db } from "@rube/db";
+import { createLlmClient, type LlmClient, type LlmConfig } from "@rube/llm";
+import type { AiUsage } from "@rube/domain.ai-usage";
+import type { SmartFilterGroup } from "@rube/plex-smart-filter";
+import type { PlexClient } from "@rube/plex";
 import { buildPrompt, DRAFT_SCHEMA } from "./prompt.ts";
 import { sanitizeDraft, type Draft, type Vocabulary } from "./sanitize.ts";
 

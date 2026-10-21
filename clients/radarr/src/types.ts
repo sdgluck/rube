@@ -1,5 +1,5 @@
 /**
- * Radarr's wire types, narrowed to what Tinkerbell reads.
+ * Radarr's wire types, narrowed to what Rube reads.
  *
  * Deliberately not exhaustive and deliberately not shared with Sonarr. The two
  * apps look similar enough at this level to tempt a common `MediaItem`
@@ -242,7 +242,7 @@ export interface RadarrDiskSpace {
   totalSpace: number;
 }
 
-/** The *Arr's own health warnings — distinct from Tinkerbell's health checks. */
+/** The *Arr's own health warnings — distinct from Rube's health checks. */
 export interface RadarrHealthItem {
   source?: string;
   /** ok | notice | warning | error */

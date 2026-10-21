@@ -182,7 +182,7 @@ export default function Access() {
             <span className={local.panelHint}>none</span>
           ) : (
             share.labelsMovies.map((l) => (
-              <span key={l} className={`${shared.label} ${shared.labelTinkerbell} ${locked}`}>
+              <span key={l} className={`${shared.label} ${shared.labelRube} ${locked}`}>
                 {l}
               </span>
             ))
@@ -194,7 +194,7 @@ export default function Access() {
             <span className={local.panelHint}>none</span>
           ) : (
             share.labelsTelevision.map((l) => (
-              <span key={l} className={`${shared.label} ${shared.labelTinkerbell} ${locked}`}>
+              <span key={l} className={`${shared.label} ${shared.labelRube} ${locked}`}>
                 {l}
               </span>
             ))

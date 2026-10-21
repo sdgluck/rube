@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.health",
+  "name": "@rube/domain.health",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,25 +15,25 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/domain.ai-usage": "workspace:*",
-    "@tinkerbell/domain.download-clients": "workspace:*",
-    "@tinkerbell/domain.events": "workspace:*",
-    "@tinkerbell/domain.prerolls": "workspace:*",
-    "@tinkerbell/download-clients": "workspace:*",
-    "@tinkerbell/llm": "workspace:*",
-    "@tinkerbell/mqtt": "workspace:*",
-    "@tinkerbell/plex": "workspace:*",
-    "@tinkerbell/ports": "workspace:*",
-    "@tinkerbell/seerr": "workspace:*",
-    "@tinkerbell/tmdb": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
+    "@rube/domain.ai-usage": "workspace:*",
+    "@rube/domain.download-clients": "workspace:*",
+    "@rube/domain.events": "workspace:*",
+    "@rube/domain.prerolls": "workspace:*",
+    "@rube/download-clients": "workspace:*",
+    "@rube/llm": "workspace:*",
+    "@rube/mqtt": "workspace:*",
+    "@rube/plex": "workspace:*",
+    "@rube/ports": "workspace:*",
+    "@rube/seerr": "workspace:*",
+    "@rube/tmdb": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@tinkerbell/composition": "workspace:*",
+    "@rube/composition": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"
   }

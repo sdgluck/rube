@@ -20,8 +20,8 @@ import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
 import { initTRPC } from "@trpc/server";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
 import {
   DbToken,
   cleanupCandidates,
@@ -32,8 +32,8 @@ import {
   plexUsers,
   rules,
   userPreferences,
-} from "@tinkerbell/db";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
+} from "@rube/db";
+import { JobsToken, registerJobs } from "@rube/jobs";
 import { createTrpc } from "./index.ts";
 
 const c = createTestContainer({ overrides: registerJobs });
@@ -55,7 +55,7 @@ function callerFor(userId: number, username: string) {
     resHeaders: new Headers(),
     secure: false,
     handshakeNonce: undefined,
-    origin: "http://portal.tinkerbell.test",
+    origin: "http://portal.rube.test",
     ip: "test",
   };
   return initTRPC.context<PortalContext>().create().createCallerFactory(portalRouter)(ctx);

@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { formatBytes } from "@tinkerbell/contracts";
+import { formatBytes } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import PageShell, { StatusChip } from "#components/PageShell";
 import EmptyState from "#components/EmptyState";
@@ -10,7 +10,7 @@ import QualityProfiles from "./Quality/QualityProfiles";
 import styles from "./ArrInstances.module.css";
 
 /**
- * One Radarr or Sonarr, and the settings Tinkerbell manages on it.
+ * One Radarr or Sonarr, and the settings Rube manages on it.
  *
  * `ArrInstances` linked every card here from phase 1 onward and the route did
  * not exist, so the click fell through to the catch-all. Quality profiles are

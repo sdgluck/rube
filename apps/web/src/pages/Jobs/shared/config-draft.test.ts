@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { fieldsFor } from "@tinkerbell/contracts";
+import { fieldsFor } from "@rube/contracts";
 import { draftFromConfig, isVisible, patchFromDraft } from "./config-draft.ts";
 
 const BYW = fieldsFor("because-you-watched");

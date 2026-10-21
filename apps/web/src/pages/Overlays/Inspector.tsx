@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { EMPTY } from "#/format";
-import type { BadgeStyle, ConditionalRule, OverlayType } from "@tinkerbell/contracts";
+import type { BadgeStyle, ConditionalRule, OverlayType } from "@rube/contracts";
 import styles from "../Overlays.module.css";
 import { COLOR_PRESETS, FONT_SIZE_OPTIONS, OVERLAY_CATALOG, SHAPE_OPTIONS } from "./constants";
 

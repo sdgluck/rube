@@ -6,7 +6,7 @@ rated, so on its own it covers no TV at all. Content features fill that gap.
 
 They come from Wikidata rather than TMDb because TMDb's API terms forbid using
 its content to train a model (§1.C, §2.A). Wikidata is CC0, and its film and TV
-items carry TMDb ids (P4947 and P4983), so they join on the keys Tinkerbell
+items carry TMDb ids (P4947 and P4983), so they join on the keys Rube
 already stores.
 
 Fetched from QLever (University of Freiburg's SPARQL engine over a recent
@@ -27,7 +27,7 @@ from pathlib import Path
 import requests
 
 ENDPOINT = "https://qlever.dev/api/wikidata"
-USER_AGENT = "TinkerbellRecs/0.1 (https://github.com/sdgluck/tinkerbell; offline recommender training)"
+USER_AGENT = "RubeRecs/0.1 (https://github.com/sdgluck/rube; offline recommender training)"
 ENTITY = "<http://www.wikidata.org/entity/"
 
 # Property → feature field. Roles are grouped across film and TV on purpose:

@@ -1,10 +1,5 @@
 import { z } from "zod";
-import {
-  collectLocalLeaves,
-  isLocalField,
-  smartFilterGroupSchema,
-  splitLocalLeaves,
-} from "@tinkerbell/plex-smart-filter";
+import { collectLocalLeaves, isLocalField, smartFilterGroupSchema, splitLocalLeaves } from "@rube/plex-smart-filter";
 import { fieldKind, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 import type { ArrService } from "./arr.ts";
 import { presentationConfigSchema } from "./presentation.ts";
@@ -21,7 +16,7 @@ const LOCAL_FIELDS = new Set(LOCAL_FIELD_DEFS.map((d) => d.field));
 export const CLEANUP_MODES = ["label", "collection_only", "unmonitor", "delete"] as const;
 export type CleanupMode = (typeof CLEANUP_MODES)[number];
 
-/** Modes that remove or alter something outside Tinkerbell's own bookkeeping. */
+/** Modes that remove or alter something outside Rube's own bookkeeping. */
 export const DESTRUCTIVE_CLEANUP_MODES: readonly CleanupMode[] = ["unmonitor", "delete"];
 
 export function isDestructiveMode(mode: string): boolean {
@@ -85,7 +80,7 @@ const cleanupActionSchema = z
        * list, which `commitCollection` throws away because a collection is a
        * set. A playlist keeps it, which is the whole reason somebody wants one.
        *
-       * Playlists are server-level rather than library-scoped, and Tinkerbell
+       * Playlists are server-level rather than library-scoped, and Rube
        * authenticates as the server owner, so a playlist it builds is the
        * owner's. There is no per-user equivalent of the label-and-restrict
        * trick that makes personalised collections work.
@@ -265,7 +260,7 @@ export function metadataActionIsEmpty(action: MetadataActionConfig): boolean {
  * places need to agree on it and none of them can import the others: the job
  * parses it at run time, the admin UI writes it, and the registry build
  * validates published packs against it before they ever reach a Plex server.
- * `@tinkerbell/jobs` re-exports it so server-side call sites are unchanged.
+ * `@rube/jobs` re-exports it so server-side call sites are unchanged.
  */
 /** One Radarr or Sonarr a rule sends missing items to, and how it files them. */
 const arrTargetSchema = z.object({
@@ -576,7 +571,7 @@ export const RULE_TYPE_VALUES = [
   "awards",
   /**
    * A collection whose members are recorded rather than derived. Exists for
-   * migration: it lets a Kometa collection Tinkerbell has no builder for be
+   * migration: it lets a Kometa collection Rube has no builder for be
    * adopted and kept alive instead of lost.
    */
   "static_list",

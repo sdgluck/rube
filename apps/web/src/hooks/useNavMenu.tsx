@@ -32,7 +32,7 @@ import {
  * already does exactly this for the pre-paint problem. The server always wins
  * the moment it answers; this is a guess at what it will say, not a cache.
  */
-const MIRROR_KEY = "tinkerbell.nav-prefs";
+const MIRROR_KEY = "rube.nav-prefs";
 
 function readMirror(): NavPrefs {
   try {

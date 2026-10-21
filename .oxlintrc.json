@@ -21,8 +21,8 @@
           {
             "patterns": [
               {
-                "group": ["@tinkerbell/server", "@tinkerbell/server/*", "**/apps/server/**"],
-                "message": "Cross-app imports are forbidden. Web must consume server code via @tinkerbell/contracts or @tinkerbell/trpc (type only)."
+                "group": ["@rube/server", "@rube/server/*", "**/apps/server/**"],
+                "message": "Cross-app imports are forbidden. Web must consume server code via @rube/contracts or @rube/trpc (type only)."
               }
             ]
           }
@@ -37,7 +37,7 @@
           {
             "patterns": [
               {
-                "group": ["@tinkerbell/web", "@tinkerbell/web/*", "**/apps/web/**"],
+                "group": ["@rube/web", "@rube/web/*", "**/apps/web/**"],
                 "message": "Cross-app imports are forbidden. Server must not depend on web."
               }
             ]
@@ -53,13 +53,7 @@
           {
             "patterns": [
               {
-                "group": [
-                  "@tinkerbell/server",
-                  "@tinkerbell/server/*",
-                  "@tinkerbell/web",
-                  "@tinkerbell/web/*",
-                  "**/apps/**"
-                ],
+                "group": ["@rube/server", "@rube/server/*", "@rube/web", "@rube/web/*", "**/apps/**"],
                 "message": "Packages must not depend on apps. Move shared code into a package or invert the dependency."
               }
             ]
@@ -75,12 +69,12 @@
           {
             "paths": [
               {
-                "name": "@tinkerbell/db",
+                "name": "@rube/db",
                 "importNames": ["createDb", "defaultDataDir"],
-                "message": "Only @tinkerbell/composition opens the database. Take `db: Db` as a dependency and let the container provide it \u2014 a second connection to the same file is how the import-time singleton behaved, and why tests needed a subprocess."
+                "message": "Only @rube/composition opens the database. Take `db: Db` as a dependency and let the container provide it \u2014 a second connection to the same file is how the import-time singleton behaved, and why tests needed a subprocess."
               },
               {
-                "name": "@tinkerbell/composition",
+                "name": "@rube/composition",
                 "importNames": ["buildContainer"],
                 "message": "Building a container is an entrypoint's job (apps/server, the Sidequest worker, the stress-test worker, test-support). A library that builds its own gets a second object graph, which is the bug this replaced."
               }

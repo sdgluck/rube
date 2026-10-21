@@ -8,11 +8,11 @@ import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
 import { desc, eq } from "drizzle-orm";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { changeLog, DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken, REDACTED_SECRET, runAsActor } from "@tinkerbell/core";
-import { OverlaysToken } from "@tinkerbell/domain.overlays";
-import { RulesToken } from "@tinkerbell/domain.rules";
+import { createTestContainer } from "@rube/composition/test-support";
+import { changeLog, DbToken } from "@rube/db";
+import { ConfigStoreToken, REDACTED_SECRET, runAsActor } from "@rube/core";
+import { OverlaysToken } from "@rube/domain.overlays";
+import { RulesToken } from "@rube/domain.rules";
 
 import { ConfigHistoryToken, diffSnapshots } from "./index.ts";
 
@@ -125,7 +125,7 @@ describe("what does not get recorded", () => {
   });
 
   test("keys in UNLOGGED_CONFIG_KEYS produce no rows at all", () => {
-    setConfig("registry_cache", { fetchedAt: 1, url: "https://tinkerbell.dev/registry/index.json", index: {} });
+    setConfig("registry_cache", { fetchedAt: 1, url: "https://rube.fyi/registry/index.json", index: {} });
     setConfig("stats_panel_order", ["a", "b"]);
     setConfig("global_plex_owner_token_hash", "a-hash");
 

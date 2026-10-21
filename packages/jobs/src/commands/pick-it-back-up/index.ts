@@ -24,13 +24,13 @@
  *    there is nothing stale worth keeping: a show they've picked back up
  *    doesn't belong in it, and an empty row on someone's Home is noise.
  */
-import { PIBU_DEFAULTS } from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { displayTitle, errorMessage } from "@tinkerbell/core";
-import type { JobContext, PibuJobConfig } from "@tinkerbell/core";
-import { createPlexClient, type PlexLeaf, type PlexSection } from "@tinkerbell/plex";
+import { PIBU_DEFAULTS } from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { displayTitle, errorMessage } from "@rube/core";
+import type { JobContext, PibuJobConfig } from "@rube/core";
+import { createPlexClient, type PlexLeaf, type PlexSection } from "@rube/plex";
 import { eq, inArray, and } from "drizzle-orm";
-import { mediaItems } from "@tinkerbell/db";
+import { mediaItems } from "@rube/db";
 import { plexConnection, resolveTargetSections } from "../ai-collection-shared.ts";
 import {
   createPersonalRowWriter,
@@ -103,7 +103,7 @@ export function createPickItBackUpCommand(
     }
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell pick-it-back-up`);
+    ctx.log(`rube pick-it-back-up`);
     ctx.log(`Server: ${url}`);
     const machineId = (await client.getIdentity()).machineIdentifier;
     const rows = createPersonalRowWriter({

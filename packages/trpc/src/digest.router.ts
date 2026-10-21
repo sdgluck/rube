@@ -8,8 +8,8 @@ import type { TrpcDeps } from "./deps.ts";
  * what would be sent, see who is subscribed, and see what actually went out.
  */
 import { z } from "zod";
-import { DAY_MS } from "@tinkerbell/core";
-import { type DigestFrequency } from "@tinkerbell/domain.digest";
+import { DAY_MS } from "@rube/core";
+import { type DigestFrequency } from "@rube/domain.digest";
 
 import { t, procedure } from "./_base.ts";
 

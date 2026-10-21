@@ -20,15 +20,15 @@ import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { NATIVE_PROCEDURES, type NativeRouter } from "@tinkerbell/contracts/native-api";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, plexUsers } from "@tinkerbell/db";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
+import { NATIVE_PROCEDURES, type NativeRouter } from "@rube/contracts/native-api";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, plexUsers } from "@rube/db";
+import { JobsToken, registerJobs } from "@rube/jobs";
 import { createTrpc } from "./index.ts";
 import { t } from "./_base.ts";
 
-delete process.env.TINKERBELL_DISABLE_AUTH;
+delete process.env.RUBE_DISABLE_AUTH;
 
 const c = createTestContainer({ overrides: registerJobs });
 after(() => c.dispose());
@@ -128,7 +128,7 @@ async function callEach(router: NativeRouter, caller: unknown) {
 test("every input-less admin query answers within its schema", async () => {
   const raw = createPlexSession(42, "owner", "admin");
   const ctx = createAdminContext({
-    req: new Request("http://tinkerbell.test/api/trpc", { headers: { authorization: `Bearer ${raw}` } }),
+    req: new Request("http://rube.test/api/trpc", { headers: { authorization: `Bearer ${raw}` } }),
     resHeaders: new Headers(),
   });
   const { failures, answered } = await callEach("admin", t.createCallerFactory(appRouter)(ctx));
@@ -139,7 +139,7 @@ test("every input-less admin query answers within its schema", async () => {
 test("every input-less portal query answers within its schema", async () => {
   const raw = createPlexSession(42, "owner", "portal");
   const ctx = createPortalContext({
-    req: new Request("http://tinkerbell.test/api/trpc", { headers: { authorization: `Bearer ${raw}` } }),
+    req: new Request("http://rube.test/api/trpc", { headers: { authorization: `Bearer ${raw}` } }),
     resHeaders: new Headers(),
   });
   const { failures, answered } = await callEach("portal", portalRouter.createCaller(ctx));

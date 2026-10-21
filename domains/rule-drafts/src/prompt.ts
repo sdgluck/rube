@@ -8,7 +8,7 @@
  * `Denmark`, `Norway` and `Sweden` under an OR. The sanitiser would catch
  * the first, but catching it means dropping the clause.
  */
-import { opsFor } from "@tinkerbell/contracts";
+import { opsFor } from "@rube/contracts";
 import { DRAFTABLE_FIELDS, type Vocabulary } from "./sanitize.ts";
 
 /** Values listed per tag field before the rest are summarised as a count. */

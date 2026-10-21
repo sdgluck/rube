@@ -32,7 +32,7 @@ const savedEnv = { ...process.env };
 
 beforeEach(() => {
   process.env.NODE_ENV = "production";
-  delete process.env.TINKERBELL_ALLOW_PRIVATE_OUTBOUND;
+  delete process.env.RUBE_ALLOW_PRIVATE_OUTBOUND;
 });
 
 afterEach(() => {
@@ -221,8 +221,8 @@ describe("the opt-outs", () => {
     assert.throws(() => assertSafeOutboundUrl("file:///etc/passwd", { allowPrivate: true }), UnsafeUrlError);
   });
 
-  test("TINKERBELL_ALLOW_PRIVATE_OUTBOUND=1 switches the guard off globally", () => {
-    process.env.TINKERBELL_ALLOW_PRIVATE_OUTBOUND = "1";
+  test("RUBE_ALLOW_PRIVATE_OUTBOUND=1 switches the guard off globally", () => {
+    process.env.RUBE_ALLOW_PRIVATE_OUTBOUND = "1";
     allows("http://169.254.169.254/latest/meta-data/");
   });
 
@@ -230,7 +230,7 @@ describe("the opt-outs", () => {
     // A truthy-string check would make `=0` and `=false` enable it, which is
     // the opposite of what an operator typing either of those intends.
     for (const value of ["0", "false", "", "true", "yes"]) {
-      process.env.TINKERBELL_ALLOW_PRIVATE_OUTBOUND = value;
+      process.env.RUBE_ALLOW_PRIVATE_OUTBOUND = value;
       refuses("http://127.0.0.1/x", /private\/loopback/);
     }
   });

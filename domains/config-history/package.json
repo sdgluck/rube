@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.config-history",
+  "name": "@rube/domain.config-history",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,17 +15,17 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/ports": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/contracts": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
+    "@rube/ports": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
-    "@tinkerbell/composition": "workspace:*",
-    "@tinkerbell/domain.overlays": "workspace:*",
-    "@tinkerbell/domain.rules": "workspace:*",
+    "@rube/composition": "workspace:*",
+    "@rube/domain.overlays": "workspace:*",
+    "@rube/domain.rules": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"
   }

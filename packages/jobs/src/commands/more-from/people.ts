@@ -3,8 +3,8 @@
  * what they've watched, scored. Apart from the command so the scoring is
  * testable without TMDb.
  */
-import { DAY_MS } from "@tinkerbell/core";
-import type { TmdbCachedDetails } from "@tinkerbell/db";
+import { DAY_MS } from "@rube/core";
+import type { TmdbCachedDetails } from "@rube/db";
 
 /** Billed this high or higher counts as a lead. A cameo in the fourteenth slot says nothing about taste. */
 export const LEAD_BILLING = 3;

@@ -6,8 +6,8 @@
 import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken, apiKeys } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken, apiKeys } from "@rube/db";
 
 import { API_KEY_PREFIX, ApiKeysToken } from "./index.ts";
 

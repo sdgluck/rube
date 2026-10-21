@@ -1,8 +1,8 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient, type PlexClient, type PlexSection } from "@tinkerbell/plex";
-import { errorMessage } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient, type PlexClient, type PlexSection } from "@rube/plex";
+import { errorMessage } from "@rube/core";
 
-import type { JobContext, CollectionsSweepJobConfig } from "@tinkerbell/core";
+import type { JobContext, CollectionsSweepJobConfig } from "@rube/core";
 import { chunked, mapConcurrent } from "#jobs/concurrency.ts";
 
 /** Collection detail fetches in flight while taking inventory. */
@@ -68,7 +68,7 @@ async function takeInventory(
 
         const ruleLabel = detail.labels.find((l) => l.startsWith("Rule:"));
         if (!ruleLabel) {
-          if (detail.labels.includes("Tinkerbell")) unattributed++;
+          if (detail.labels.includes("Rube")) unattributed++;
           continue;
         }
 
@@ -165,7 +165,7 @@ export function createCollectionsSweepCommand(deps: Pick<Services, "clients" | "
    * Deliberately narrow, because this deletes real things off a Plex server:
    *
    *   • Only collections carrying a `Rule:<id>` label are considered at all.
-   *     Hand-made collections, Kometa's, and anything Tinkerbell made outside a
+   *     Hand-made collections, Kometa's, and anything Rube made outside a
    *     rule (Because You Watched, migrations) are never touched.
    *   • A rule that merely exists but is *disabled* still owns its collections.
    *     Turning a rule off is not a request to delete its output.
@@ -189,7 +189,7 @@ export function createCollectionsSweepCommand(deps: Pick<Services, "clients" | "
 
     const dryRun = config.dryRun ?? false;
 
-    ctx.log(`tinkerbell collections-sweep`);
+    ctx.log(`rube collections-sweep`);
     ctx.log(`Server: ${PLEX_URL}`);
     if (dryRun) ctx.log(`DRY RUN — nothing will be deleted.`);
 
@@ -205,7 +205,7 @@ export function createCollectionsSweepCommand(deps: Pick<Services, "clients" | "
     ctx.log(
       `Inspected ${inventory.inspected} collection(s); ${inventory.candidates.length} carry a rule label.` +
         (inventory.unattributed > 0
-          ? ` ${inventory.unattributed} Tinkerbell collection(s) carry no rule label and were left alone.`
+          ? ` ${inventory.unattributed} Rube collection(s) carry no rule label and were left alone.`
           : ""),
     );
 

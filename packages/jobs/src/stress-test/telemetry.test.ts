@@ -149,11 +149,11 @@ describe("buildSample", () => {
       step: 1,
       phase: "measure",
       started: 1,
-      sessions: [{ playerMachineId: "tinkerbell-stress-9f2c1a04", transcodeSpeed: 3, bandwidth: 2000 }],
+      sessions: [{ playerMachineId: "rube-stress-9f2c1a04", transcodeSpeed: 3, bandwidth: 2000 }],
       counters: ZERO,
       prevCounters: ZERO,
       elapsedMs: 1000,
-      idPrefix: "tinkerbell-stress-",
+      idPrefix: "rube-stress-",
     });
     assert.equal(s.sessions[0].id, "9f2c1a04");
   });

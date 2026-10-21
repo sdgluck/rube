@@ -1,7 +1,7 @@
 /**
  * Prerolls domain — the videos Plex plays before a movie starts.
  *
- * Tinkerbell owns the files (under `PREROLLS_DIR`) and the metadata; Plex owns
+ * Rube owns the files (under `PREROLLS_DIR`) and the metadata; Plex owns
  * a single string preference pointing at them. Everything here is either
  * CRUD over that metadata or reconciling the two.
  */
@@ -10,14 +10,14 @@ import { randomUUID } from "node:crypto";
 import { mkdir, rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { and, asc, eq, inArray } from "drizzle-orm";
-import { prerolls, type Db } from "@tinkerbell/db";
-import type { ChangeRecorder } from "@tinkerbell/ports";
-import { prerollsDir, prerollsIncomingDir, prerollsThumbsDir, type ConfigStore, type Clients } from "@tinkerbell/core";
-import { ffmpegVersion } from "@tinkerbell/video";
+import { prerolls, type Db } from "@rube/db";
+import type { ChangeRecorder } from "@rube/ports";
+import { prerollsDir, prerollsIncomingDir, prerollsThumbsDir, type ConfigStore, type Clients } from "@rube/core";
+import { ffmpegVersion } from "@rube/video";
 import { buildPrefValue, prefsMatch, type PrerollMode } from "./pref.ts";
-import { token } from "@tinkerbell/container";
+import { token } from "@rube/container";
 import { createAdopt } from "./adopt.ts";
-import { resolvePortalPrerollCard, type PortalPrerollCard } from "@tinkerbell/contracts";
+import { resolvePortalPrerollCard, type PortalPrerollCard } from "@rube/contracts";
 import type { PortalCardContent } from "./portal-card.ts";
 
 export { buildPrefValue, joinPlexPath, prefsMatch, MODE_SEPARATORS } from "./pref.ts";

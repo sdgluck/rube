@@ -16,10 +16,10 @@
 import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken, plexSections } from "@tinkerbell/db";
-import { SectionsToken } from "@tinkerbell/domain.sections";
-import type { PlexClient } from "@tinkerbell/plex";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken, plexSections } from "@rube/db";
+import { SectionsToken } from "@rube/domain.sections";
+import type { PlexClient } from "@rube/plex";
 
 const c = createTestContainer();
 after(() => c.dispose());

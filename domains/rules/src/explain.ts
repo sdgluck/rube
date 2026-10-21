@@ -16,16 +16,16 @@
  * entirely, the query degrades to the slow-but-correct version rather than to
  * a wrong one.
  */
-import { SECTION_TYPE_MAP, type PlexClient } from "@tinkerbell/plex";
+import { SECTION_TYPE_MAP, type PlexClient } from "@rube/plex";
 import {
   emitSmartFilterTree,
   splitLocalLeaves,
   type SmartFilterGroup,
   type SmartFilterNode,
   type SmartFilterOp,
-} from "@tinkerbell/plex-smart-filter";
-import { describeCondition, ruleCoversSection } from "@tinkerbell/contracts";
-import { evaluateLocal, type Playback } from "@tinkerbell/domain.playback";
+} from "@rube/plex-smart-filter";
+import { describeCondition, ruleCoversSection } from "@rube/contracts";
+import { evaluateLocal, type Playback } from "@rube/domain.playback";
 
 /**
  * A branch as a sentence fragment.

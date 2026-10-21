@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { bundleLoader, readImport } from "@tinkerbell/migrate/kometa-yaml";
+import { bundleLoader, readImport } from "@rube/migrate/kometa-yaml";
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 
@@ -21,7 +21,7 @@ const runInputSchema = z.object({
   /** Bundle to plan from, for providers that ingest files. */
   importId: z.string().optional(),
   /**
-   * Rebuild the Kometa overlay layout as Tinkerbell badges. Off by default —
+   * Rebuild the Kometa overlay layout as Rube badges. Off by default —
    * it replaces whatever overlay configuration a library already has, which is
    * not something to do without being asked.
    */
@@ -173,7 +173,7 @@ export function createMigrationRouter(deps: Pick<TrpcDeps, "collections" | "conf
      * shows progress instead.
      *
      * Nothing here writes to Plex — that's the point. The user gets to see
-     * whether Tinkerbell reproduces their collections *before* letting it
+     * whether Rube reproduces their collections *before* letting it
      * near them.
      */
     verifyRule: procedure.input(z.object({ ruleId: z.string().min(1) })).mutation(async ({ input }) => {
@@ -183,7 +183,7 @@ export function createMigrationRouter(deps: Pick<TrpcDeps, "collections" | "conf
 
       const before = new Set(getCollectionMemberKeys(entry.replacesRatingKeys));
       if (before.size === 0) {
-        return { ruleName: entry.ruleName, comparable: false as const, kometa: 0, tinkerbell: 0, common: 0 };
+        return { ruleName: entry.ruleName, comparable: false as const, kometa: 0, rube: 0, common: 0 };
       }
 
       const preview = await testRule(input.ruleId);
@@ -196,11 +196,11 @@ export function createMigrationRouter(deps: Pick<TrpcDeps, "collections" | "conf
         ruleName: entry.ruleName,
         comparable: true as const,
         kometa: before.size,
-        tinkerbell: after.size,
+        rube: after.size,
         common,
         // Titles read better than rating keys in the "what changed" lists, and
         // the preview is the only side that has them.
-        onlyInTinkerbell: preview.collections
+        onlyInRube: preview.collections
           .flatMap((c) => c.items)
           .filter((i) => !before.has(i.ratingKey))
           .slice(0, 50)
@@ -297,7 +297,7 @@ export function createMigrationRouter(deps: Pick<TrpcDeps, "collections" | "conf
       if (!result.ok) {
         throw result.reason === "already-running"
           ? new Error("A collection migration is already running. Wait for it to finish, then try again.")
-          : new Error("The migrate-collections job is missing. Restart Tinkerbell to re-seed it.");
+          : new Error("The migrate-collections job is missing. Restart Rube to re-seed it.");
       }
       return { runId: result.runId };
     }),

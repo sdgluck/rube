@@ -1,5 +1,5 @@
 import { trpc } from "#/trpc";
-import type { ArrService } from "@tinkerbell/contracts";
+import type { ArrService } from "@rube/contracts";
 import styles from "./InstancePicker.module.css";
 
 /**

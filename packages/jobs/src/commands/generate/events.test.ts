@@ -9,10 +9,10 @@
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { events } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { events } from "@rube/db";
 import { createEventsCommand } from "./events.ts";
 
 const c = createTestContainer();

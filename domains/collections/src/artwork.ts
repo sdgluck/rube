@@ -1,13 +1,13 @@
 /**
- * The collection-presentation ledger: what Tinkerbell has written onto a
+ * The collection-presentation ledger: what Rube has written onto a
  * generated collection's summary and poster, and what was there first.
  *
- * See the table comment in `@tinkerbell/db` for why this is keyed by
+ * See the table comment in `@rube/db` for why this is keyed by
  * `(ruleId, collectionName)` and not by rating key.
  */
 import { createHash } from "node:crypto";
 import { and, eq, type InferSelectModel } from "drizzle-orm";
-import { collectionArtwork, type Db } from "@tinkerbell/db";
+import { collectionArtwork, type Db } from "@rube/db";
 
 export type CollectionArtworkRow = InferSelectModel<typeof collectionArtwork>;
 

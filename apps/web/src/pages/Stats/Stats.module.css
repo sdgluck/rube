@@ -574,7 +574,7 @@
   margin-right: auto;
 }
 
-/* stylelint-disable tinkerbell/primitive-geometry -- sized to the pager's 11px line on purpose, see above */
+/* stylelint-disable rube/primitive-geometry -- sized to the pager's 11px line on purpose, see above */
 .pageSizeSelect {
   composes: select from "../../styles/controls.module.css";
   height: 2.4rem;
@@ -584,7 +584,7 @@
     calc(100% - 1.2rem) 50%,
     calc(100% - 0.8rem) 50%;
 }
-/* stylelint-enable tinkerbell/primitive-geometry */
+/* stylelint-enable rube/primitive-geometry */
 
 /* Backfilled rows carry no completion or watch-time data, so the cell shows a
    dash. The tooltip is what explains why, rather than leaving it looking broken. */

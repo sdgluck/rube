@@ -1,4 +1,4 @@
-import { parseRelativeDate, toRelativeDate } from "@tinkerbell/contracts";
+import { parseRelativeDate, toRelativeDate } from "@rube/contracts";
 import type { SmartFilterGroup, SmartFilterLeaf, SmartFilterOp } from "./types.ts";
 
 /**

@@ -1,21 +1,11 @@
 import type { TrpcDeps } from "./deps.ts";
 import { desc, eq, sql } from "drizzle-orm";
 import type { AnySQLiteTable } from "drizzle-orm/sqlite-core";
-import {
-  collections,
-  mediaItems,
-  rules,
-  plexUsers,
-  jobs,
-  jobRuns,
-  events,
-  prerolls,
-  arrSyncState,
-} from "@tinkerbell/db";
-import { DAY_MS, WEEK_MS } from "@tinkerbell/core";
+import { collections, mediaItems, rules, plexUsers, jobs, jobRuns, events, prerolls, arrSyncState } from "@rube/db";
+import { DAY_MS, WEEK_MS } from "@rube/core";
 
 import { t, procedure } from "./_base.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 /**
  * Fresh-status threshold: a tick / cross next to a sidebar item is only

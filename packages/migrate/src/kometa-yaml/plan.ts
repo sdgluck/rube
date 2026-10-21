@@ -228,7 +228,7 @@ export function buildYamlPlan(imported: KometaImport, opts: YamlPlanOptions): Mi
           title: `default: ${ref.value}`,
           sectionId: section.sectionId,
           sectionTitle: section.sectionTitle,
-          reason: `Tinkerbell doesn't recognise the Kometa default "${ref.value}".`,
+          reason: `Rube doesn't recognise the Kometa default "${ref.value}".`,
           line: ref.line,
         });
         continue;
@@ -298,7 +298,7 @@ export function buildYamlPlan(imported: KometaImport, opts: YamlPlanOptions): Mi
   if (assetDirectory) {
     diagnostics.push({
       severity: "info",
-      message: `Your config points at an asset directory (${assetDirectory}). Migrated rules will read collection artwork from it — set the same path in Settings → Appearance so Tinkerbell can find it.`,
+      message: `Your config points at an asset directory (${assetDirectory}). Migrated rules will read collection artwork from it — set the same path in Settings → Appearance so Rube can find it.`,
     });
   }
 

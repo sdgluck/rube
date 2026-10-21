@@ -6,7 +6,7 @@ import RelativeTime from "#components/RelativeTime";
 import SortableTh from "#components/SortableTh";
 import ToggleSwitch from "#components/ToggleSwitch";
 import { EMPTY } from "#/format";
-import { isAlwaysOnJob, SYSTEM_GROUPS, systemGroupOf, type SystemGroup } from "@tinkerbell/contracts";
+import { isAlwaysOnJob, SYSTEM_GROUPS, systemGroupOf, type SystemGroup } from "@rube/contracts";
 import { useSetEnabled } from "#pages/Jobs/shared/useSetEnabled";
 import { describeCron } from "#/utils";
 import styles from "#pages/Jobs/Jobs.module.css";
@@ -174,7 +174,7 @@ function TaskRow({ job, setEnabled }: { job: Job; setEnabled: ReturnType<typeof 
             <ToggleSwitch size="sm" checked={!!job.enabled} onChange={(next) => setEnabled(job.id, next)} />
           </span>
         ) : job.enabled ? (
-          <span className={styles.alwaysOn} title="Always on — other parts of Tinkerbell depend on it">
+          <span className={styles.alwaysOn} title="Always on — other parts of Rube depend on it">
             <Lock size="1.3rem" aria-label="Always on" />
           </span>
         ) : (

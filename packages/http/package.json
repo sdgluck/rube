@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/http",
+  "name": "@rube/http",
   "version": "0.45.0",
   "private": true,
   "type": "module",

@@ -10,7 +10,7 @@
  *
  * `recordPollSnapshot` in `index.ts` is the thin persistence wrapper.
  */
-import type { PlexSession } from "@tinkerbell/plex";
+import type { PlexSession } from "@rube/plex";
 
 /** A session the poller currently believes is open. */
 export interface OpenSession {

@@ -1,7 +1,7 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
 
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
 export function createSyncCollectionsCommand(deps: Pick<Services, "clients" | "collections" | "config">) {
   const { clients, collections, config } = deps;
@@ -24,7 +24,7 @@ export function createSyncCollectionsCommand(deps: Pick<Services, "clients" | "c
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell sync-collections`);
+    ctx.log(`rube sync-collections`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     const identity = await client.getIdentity();

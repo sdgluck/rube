@@ -8,7 +8,7 @@
  */
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { SmartFilterLeaf, SmartFilterOp } from "@tinkerbell/plex-smart-filter";
+import type { SmartFilterLeaf, SmartFilterOp } from "@rube/plex-smart-filter";
 import { evaluateLocal, resolveDateValue, type LocalEvalContext } from "./evaluate.ts";
 import type { WatchStateRow } from "./store.ts";
 

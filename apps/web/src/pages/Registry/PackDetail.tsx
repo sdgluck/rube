@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import type { RegistryIndex } from "@tinkerbell/contracts";
+import type { RegistryIndex } from "@rube/contracts";
 import Modal from "#components/Modal";
 import ImportModal from "./ImportModal";
 import { TYPE_LABELS } from "#pages/Rules/constants";

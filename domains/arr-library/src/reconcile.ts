@@ -12,8 +12,8 @@
  */
 
 import { and, desc, eq, gt, isNull, isNotNull, ne, sql } from "drizzle-orm";
-import { arrActivity, arrMovies, arrSeries, mediaItems, type Db } from "@tinkerbell/db";
-import type { ProblemKind } from "@tinkerbell/contracts";
+import { arrActivity, arrMovies, arrSeries, mediaItems, type Db } from "@rube/db";
+import type { ProblemKind } from "@rube/contracts";
 
 /** The Problems kinds this module answers. */
 export type ArrIssueKind = Extract<

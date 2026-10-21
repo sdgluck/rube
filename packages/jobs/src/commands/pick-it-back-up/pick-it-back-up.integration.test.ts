@@ -8,10 +8,10 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { displayTitle, noopCheckpoint, personalRowTitle, ConfigStoreToken, type JobContext } from "@tinkerbell/core";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, mediaItems, playbackSessions, plexUsers, userPreferences } from "@tinkerbell/db";
+import { displayTitle, noopCheckpoint, personalRowTitle, ConfigStoreToken, type JobContext } from "@rube/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, mediaItems, playbackSessions, plexUsers, userPreferences } from "@rube/db";
 import { startMockPlex, type MockPlex, type MockShow } from "../../test-support/mock-plex-server.ts";
 import { createPickItBackUpCommand, PIBU_LABEL } from "./index.ts";
 import { createPibuRemoveCommand } from "../pibu-remove.ts";

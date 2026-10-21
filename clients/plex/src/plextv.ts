@@ -1,5 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
-import { httpRequest, HttpError } from "@tinkerbell/http";
+import { httpRequest, HttpError } from "@rube/http";
 import { PlexApiError } from "./http.ts";
 import type { PlexHttp } from "./http.ts";
 import type { PlexTvRequestOptions } from "./types.ts";
@@ -67,8 +67,8 @@ export function createPlexTvRequest(http: PlexHttp): PlexTvRequest {
           signal: http.signal,
           headers: {
             Accept: "application/json",
-            "X-Plex-Client-Identifier": "tinkerbell",
-            "X-Plex-Product": "tinkerbell",
+            "X-Plex-Client-Identifier": "rube",
+            "X-Plex-Product": "rube",
             "X-Plex-Version": "1.0.0",
             ...(payload === undefined ? {} : { "Content-Type": isJsonBody ? "application/json" : "application/xml" }),
             ...headers,

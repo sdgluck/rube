@@ -7,7 +7,7 @@ import {
   resolveRelativeDate,
   toRelativeDate,
   type RelativeUnit,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import TagValueSelect, { type TagValueMode } from "./TagValueSelect.tsx";
 import UserValueSelect from "./UserValueSelect.tsx";
 import styles from "./FilterValueInput.module.css";

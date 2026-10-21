@@ -26,7 +26,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import stylelint from "stylelint";
 
-const ruleName = "tinkerbell/no-shadowed-primitive";
+const ruleName = "rube/no-shadowed-primitive";
 
 const messages = stylelint.utils.ruleMessages(ruleName, {
   shadowed: (name, source) =>

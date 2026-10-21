@@ -1,5 +1,5 @@
-import type { Services } from "@tinkerbell/composition";
-import { perDeps } from "@tinkerbell/container";
+import type { Services } from "@rube/composition";
+import { perDeps } from "@rube/container";
 /**
  * Per-server tag keys as titles, for the summaries written during a run.
  *
@@ -9,15 +9,15 @@ import { perDeps } from "@tinkerbell/container";
  * kind of thing you only ship once.
  *
  * Two things keep this cheap. The lookup only runs for values that are bare
- * numbers — a rule authored in Tinkerbell stores titles already, so the
+ * numbers — a rule authored in Rube stores titles already, so the
  * common case makes no request at all. And the per-section maps are cached
  * across the run, because a grouped rule commits hundreds of collections and
  * every one of them would otherwise re-ask for the same genre list.
  */
-import { needsTagLookup, type TagResolver } from "@tinkerbell/contracts";
-import { fieldDef } from "@tinkerbell/contracts";
-import type { PlexClient } from "@tinkerbell/plex";
-import type { SmartFilterNode } from "@tinkerbell/plex-smart-filter";
+import { needsTagLookup, type TagResolver } from "@rube/contracts";
+import { fieldDef } from "@rube/contracts";
+import type { PlexClient } from "@rube/plex";
+import type { SmartFilterNode } from "@rube/plex-smart-filter";
 
 /**
  * Long enough that one generate run makes a single request per field, short
@@ -67,7 +67,7 @@ export const createTagLabels = perDeps(function createTagLabels(_deps: Services)
 
   /**
    * A resolver for this filter's tag keys, or undefined when it has none to
-   * resolve — which is every rule authored in Tinkerbell, since those store
+   * resolve — which is every rule authored in Rube, since those store
    * titles. Anything the lookup can't translate is returned untouched.
    */
   async function tagResolverFor(

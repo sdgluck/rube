@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
-import { omdbCache, type Db } from "@tinkerbell/db";
-import { httpRequest, HttpError } from "@tinkerbell/http";
+import { omdbCache, type Db } from "@rube/db";
+import { httpRequest, HttpError } from "@rube/http";
 
 export type OmdbHealthCallback = (status: "ok" | "error", message: string) => void;
 

@@ -7,7 +7,7 @@ import type { PlexHttp } from "./http.ts";
  * This is not cosmetic. Plex tears down an existing transcode session when what
  * it believes is the same device starts playing something else — so a harness
  * whose sessions differ only by `X-Plex-Client-Identifier`, and otherwise
- * inherit the shared `tinkerbell` product identity, kills its own previous
+ * inherit the shared `rube` product identity, kills its own previous
  * session on every step. Observed directly: step 1's playlist began returning
  * 404 the instant step 2 started, and every earlier session followed suit, so
  * the ramp measured one live stream however many it had started.
@@ -17,10 +17,10 @@ import type { PlexHttp } from "./http.ts";
 function clientHeaders(clientId: string): Record<string, string> {
   return {
     "X-Plex-Client-Identifier": clientId,
-    "X-Plex-Product": "tinkerbell-stress",
+    "X-Plex-Product": "rube-stress",
     "X-Plex-Version": "1.0.0",
     "X-Plex-Device": clientId,
-    "X-Plex-Device-Name": `Tinkerbell Stress ${clientId}`,
+    "X-Plex-Device-Name": `Rube Stress ${clientId}`,
     "X-Plex-Platform": "Chrome",
   };
 }

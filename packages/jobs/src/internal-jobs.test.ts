@@ -6,10 +6,10 @@
 import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { jobRuns, jobs } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { jobRuns, jobs } from "@rube/db";
 import { createRunner } from "./runner.ts";
 import { createInternalJobs, QUIET_INTERNAL_JOBS } from "./internal-jobs.ts";
 
@@ -55,7 +55,7 @@ afterEach(() => {
 describe("internal jobs", () => {
   it("gets a real JobContext", async () => {
     let seen: { hasLog: boolean; hasProgress: boolean; hasSignal: boolean; hasCheckpoint: boolean } | null = null;
-    descriptor.run = (ctx: import("@tinkerbell/core").JobContext) => {
+    descriptor.run = (ctx: import("@rube/core").JobContext) => {
       seen = {
         hasLog: typeof ctx.log === "function",
         hasProgress: typeof ctx.progress === "function",
@@ -81,7 +81,7 @@ describe("internal jobs", () => {
     // the command path nothing here clears a checkpoint on cancel, so a real
     // one would outlive the run that wrote it.
     let readBack: unknown = "unset";
-    descriptor.run = (ctx: import("@tinkerbell/core").JobContext) => {
+    descriptor.run = (ctx: import("@rube/core").JobContext) => {
       ctx.checkpoint.write({ some: "state" });
       readBack = ctx.checkpoint.read();
       return "done";
@@ -94,7 +94,7 @@ describe("internal jobs", () => {
 
   it("aborts the context signal when cancelled", async () => {
     let abortedDuringRun = false;
-    descriptor.run = (ctx: import("@tinkerbell/core").JobContext) => {
+    descriptor.run = (ctx: import("@rube/core").JobContext) => {
       cancelRun(activeRunId()!);
       abortedDuringRun = ctx.signal.aborted;
       return "stopped early";
@@ -153,7 +153,7 @@ describe("internal jobs", () => {
     const blocked = new Promise<void>((resolve) => (released = resolve));
     let abortedByWatchdog = false;
 
-    descriptor.run = async (ctx: import("@tinkerbell/core").JobContext) => {
+    descriptor.run = async (ctx: import("@rube/core").JobContext) => {
       ctx.signal.addEventListener("abort", () => {
         abortedByWatchdog = true;
         released();

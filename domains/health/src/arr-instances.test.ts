@@ -1,4 +1,4 @@
-import { arrHealthServiceNames } from "@tinkerbell/domain.health";
+import { arrHealthServiceNames } from "@rube/domain.health";
 /**
  * An extra \*Arr instance's health identity is its display name — `Radarr (4K)` —
  * because that string is what the notification target picker offers and what
@@ -12,11 +12,11 @@ import { arrHealthServiceNames } from "@tinkerbell/domain.health";
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { healthChecks } from "@tinkerbell/db";
-import { HealthToken } from "@tinkerbell/domain.health";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { healthChecks } from "@rube/db";
+import { HealthToken } from "@rube/domain.health";
 
 const c = createTestContainer();
 after(() => c.dispose());

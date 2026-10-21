@@ -9,11 +9,11 @@
  */
 import { after, afterEach, beforeEach, describe, it } from "node:test";
 import assert from "node:assert/strict";
-import type { JobContext } from "@tinkerbell/core";
-import { ConfigStoreToken, noopCheckpoint } from "@tinkerbell/core";
-import { ServicesToken } from "@tinkerbell/composition";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { startMockRadarr, startMockSonarr, type MockArr } from "@tinkerbell/test-support";
+import type { JobContext } from "@rube/core";
+import { ConfigStoreToken, noopCheckpoint } from "@rube/core";
+import { ServicesToken } from "@rube/composition";
+import { createTestContainer } from "@rube/composition/test-support";
+import { startMockRadarr, startMockSonarr, type MockArr } from "@rube/test-support";
 import { createArrCommand } from "./arr.ts";
 
 const c = createTestContainer();

@@ -14,7 +14,7 @@ import {
   isMonthDayWindowActive,
   type ResolvedSeason,
   type SeasonsConfig,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import MonthDaySelect from "#components/MonthDaySelect";

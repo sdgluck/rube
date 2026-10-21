@@ -23,8 +23,8 @@
  * proxy logs and `Referer`s.
  */
 import type { IncomingMessage, ServerResponse } from "node:http";
-import type { Services } from "@tinkerbell/composition";
-import { parseBearerToken } from "@tinkerbell/core";
+import type { Services } from "@rube/composition";
+import { parseBearerToken } from "@rube/core";
 import { parseCookieHeader } from "./security.ts";
 
 const ADMIN_COOKIE = "tb_admin_session";

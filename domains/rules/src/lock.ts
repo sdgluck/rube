@@ -9,7 +9,7 @@
 
 import { randomUUID } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
-import { ruleLocks, type Db } from "@tinkerbell/db";
+import { ruleLocks, type Db } from "@rube/db";
 
 /**
  * How long a lock stays valid without a renewal. Long enough that a slow

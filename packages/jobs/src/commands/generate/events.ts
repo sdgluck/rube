@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 /**
  * Events a rule run announces about the *library*, as opposed to the ones the
  * job runner announces about itself.

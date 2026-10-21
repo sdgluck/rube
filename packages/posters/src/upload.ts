@@ -9,10 +9,10 @@
  *
  * The output is always the geometry Plex expects. A collection poster that is
  * the wrong shape isn't rejected by Plex, it is letterboxed by every client
- * that shows it, which looks like a bug in Tinkerbell rather than in the file.
+ * that shows it, which looks like a bug in Rube rather than in the file.
  */
 import sharp from "sharp";
-import { COLLECTION_POSTER_HEIGHT, COLLECTION_POSTER_WIDTH, POSTER_MAX_BYTES } from "@tinkerbell/contracts";
+import { COLLECTION_POSTER_HEIGHT, COLLECTION_POSTER_WIDTH, POSTER_MAX_BYTES } from "@rube/contracts";
 
 export type PosterUpload = { status: "ok"; buffer: Buffer } | { status: "rejected"; reason: string };
 

@@ -1,8 +1,8 @@
 # Changelog
 
-All notable changes to Tinkerbell are documented here.
+All notable changes to Rube are documented here.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Tinkerbell is currently beta software (0.x) — APIs, data shapes, and behaviour may change between releases.
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). Rube is currently beta software (0.x) — APIs, data shapes, and behaviour may change between releases.
 
 ## [Unreleased]
 
@@ -52,7 +52,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - **Existing `seasonal` rules will build smaller, correct collections after upgrading.** The rule type now uses the same season table as the season collections feature and requires a keyword. Most of its old keyword ids pointed at unrelated keywords such as "space", "zombie" and "pop star". It also took every film released in the holiday's month, so every December release counted as Christmas.
 - **If you installed the registry's Spooky Season pack, version 4 narrows its "Halloween Picks" rule to Halloween titles in an October window.** The previous version built a collection for every holiday all year round.
-- **The QR codes in Settings now open the single new Tinkerbell app, and one scan sets up both its admin and portal parts.** Settings → Mobile app also warns when you have it open at a loopback address, because a phone would resolve that address to itself.
+- **The QR codes in Settings now open the single new Rube app, and one scan sets up both its admin and portal parts.** Settings → Mobile app also warns when you have it open at a loopback address, because a phone would resolve that address to itself.
 - **On phones, the admin web interface is now a plain responsive page and no longer imitates a native app.** Below 768px the sidebar becomes a drawer that the menu button opens. Dialogs and menus are the desktop ones, tables scroll sideways, and search pickers open their own popover.
 - **On phones, the portal now has one mobile-web look and no longer imitates iOS and Material.** Movie-match room options sit in a menu, and rows have visible buttons instead of swipe actions. The swipe deck and bottom sheets stay.
 - The Settings sidebar has been regrouped under shorter headings, eight including About, so no group runs past six pages.
@@ -71,7 +71,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Removed
 
-- **The old "Tinkerbell" and "Tinkerbell Portal" phone apps stop working with this release.** Install the new native app and connect it from Settings → Mobile app.
+- **The old "Rube" and "Rube Portal" phone apps stop working with this release.** Install the new native app and connect it from Settings → Mobile app.
 - **Neither the admin server nor the portal server answers cross-origin (CORS) requests any more, for any caller.**
 - **Media links that carry an `?access_token=` parameter are no longer accepted, because the media tokens behind them have been removed.** The new native app is unaffected because it sends its sign-in token with every request, image requests included.
 - The bottom navigation tabs setting has been retired, because the new responsive phone layout no longer uses bottom tabs.
@@ -82,7 +82,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 - The \*Arr integration now lists the 4K films that nobody watches in 4K, so you can see which 4K copies go unused.
 - You can now swap one of those unwatched 4K films to 1080p, and once the 1080p file has downloaded it is imported over the 4K one.
-- Tinkerbell can now publish current streams, jobs, failing rules, problems and service health to Home Assistant over MQTT, with discovery support; this integration only publishes and does not take commands from Home Assistant.
+- Rube can now publish current streams, jobs, failing rules, problems and service health to Home Assistant over MQTT, with discovery support; this integration only publishes and does not take commands from Home Assistant.
 - The collections list now shows the plays, the number of viewers and the last play for each collection, and it only counts plays made after a title joined that collection.
 - You can now sort the collections list by plays or by when a collection was last played.
 
@@ -92,9 +92,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
-- Rules no longer fail every night when Plex refuses to add items to a collection or the collection disappears mid-run; Tinkerbell rebuilds the collection instead. It still never rebuilds an empty shell whose same-titled twin is not managed by any rule, because deleting that shell would empty the twin collection for good.
+- Rules no longer fail every night when Plex refuses to add items to a collection or the collection disappears mid-run; Rube rebuilds the collection instead. It still never rebuilds an empty shell whose same-titled twin is not managed by any rule, because deleting that shell would empty the twin collection for good.
 - When another collection in the same library already has the name a rule wants, the rule's collection now gets a title of its own, so two rules no longer leave one of the collections as an empty shell.
-- When Tinkerbell sweeps duplicate collections, it now keeps the copy that actually has items in it rather than possibly keeping the empty one.
+- When Rube sweeps duplicate collections, it now keeps the copy that actually has items in it rather than possibly keeping the empty one.
 
 ## [0.42.4] - 2026-10-16
 
@@ -126,7 +126,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- AI prompt rules have a new option that has the AI pick only a theme and a few example titles for each collection. Tinkerbell's built-in recommender then fills the rest of the collection with the closest matching titles in your library. This is aimed at small local models, which choose a coherent 20 titles out of a large library poorly and tend to repeat their own earlier lists. The default is unchanged: the AI still picks every title itself.
+- AI prompt rules have a new option that has the AI pick only a theme and a few example titles for each collection. Rube's built-in recommender then fills the rest of the collection with the closest matching titles in your library. This is aimed at small local models, which choose a coherent 20 titles out of a large library poorly and tend to repeat their own earlier lists. The default is unchanged: the AI still picks every title itself.
 - Each AI prompt rule can now have its own maximum collection size. If you don't set one, the maximum stays at 30 titles, which is what the AI was always asked for before.
 
 ### Fixed
@@ -138,7 +138,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
-- Personalized rows built for shared users no longer show up on the server owner's Recommended tab in Plex. Tinkerbell now sends the visibility flag under the name Plex actually reads, so those rows stay off the owner's Recommended tab.
+- Personalized rows built for shared users no longer show up on the server owner's Recommended tab in Plex. Rube now sends the visibility flag under the name Plex actually reads, so those rows stay off the owner's Recommended tab.
 
 ## [0.41.0] - 2026-10-14
 
@@ -175,7 +175,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- The "Because you watched" and "We think you'd like" rows can now be ranked by a recommendation model that ships inside Tinkerbell, so both rows work even if you have no AI provider configured. Each person's taste is worked out on your server from their own plays, and nothing is sent anywhere else.
+- The "Because you watched" and "We think you'd like" rows can now be ranked by a recommendation model that ships inside Rube, so both rows work even if you have no AI provider configured. Each person's taste is worked out on your server from their own plays, and nothing is sent anywhere else.
 - The bundled recommendation model is off after you upgrade and stays off until you turn it on in Settings → AI, so an upgrade never changes what an existing "Because you watched" or "We think you'd like" row picks.
 
 ### Changed
@@ -232,15 +232,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
-- Shared users now see the rows labelled for them. Tinkerbell used to write each user's share restriction as `label=Tinkerbell|User:<name>`. Plex reads that as allowing only the Tinkerbell label, so no shared user ever saw a row meant for them. The restriction is now written as `label=Tinkerbell,User:<name>`, which Plex accepts.
-- **On existing installs, the next user sync rewrites any share restriction still in the old pipe-separated form.** Tinkerbell now reads that old form the way Plex enforces it, so it can tell that the restriction is wrong and replace it with the corrected one.
+- Shared users now see the rows labelled for them. Rube used to write each user's share restriction as `label=Rube|User:<name>`. Plex reads that as allowing only the Rube label, so no shared user ever saw a row meant for them. The restriction is now written as `label=Rube,User:<name>`, which Plex accepts.
+- **On existing installs, the next user sync rewrites any share restriction still in the old pipe-separated form.** Rube now reads that old form the way Plex enforces it, so it can tell that the restriction is wrong and replace it with the corrected one.
 - The admin preview of a user's share restriction used the same wrong format as the old restriction. It now shows the same result that Plex enforces.
 
 ## [0.37.1] - 2026-10-12
 
 ### Fixed
 
-- Per-user Because You Watched, We Think You'd Like and other personalized rows are now private to the person they were built for. Before this fix they carried the baseline Tinkerbell label, which every shared user's label restriction allows, so all shared users could see them.
+- Per-user Because You Watched, We Think You'd Like and other personalized rows are now private to the person they were built for. Before this fix they carried the baseline Rube label, which every shared user's label restriction allows, so all shared users could see them.
 - Per-user Because You Watched, We Think You'd Like and other personalized rows now appear on the Home screen of the shared user they were built for. Before this fix they were pinned with admin-only Home visibility and never reached that user.
 - **Existing per-user personalized rows are repaired on the next run**, so rows that were already built with the shared label and admin-only Home visibility become private and move to their owner's Home without being recreated.
 - **Orphaned per-user personalized rows are deleted on the next run**, so any orphaned Because You Watched, We Think You'd Like or personalized rows on your server will be removed when you upgrade.
@@ -283,12 +283,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- Tinkerbell now ships as native iOS and Android apps that bundle the admin and portal UI and connect to your server over a bearer session — set it up from Settings → Mobile app, which shows a QR code to connect a phone.
+- Rube now ships as native iOS and Android apps that bundle the admin and portal UI and connect to your server over a bearer session — set it up from Settings → Mobile app, which shows a QR code to connect a phone.
 - On phones — in the native apps and in mobile browsers alike — the admin app and portal now use a native-style layout: a pinned navigation bar with back button and large titles, sliding/fading page transitions, a tab bar that remembers each tab's scroll position, bottom sheets instead of modals, native alerts and action sheets, and edge-swipe-back on iOS.
 - Admin tables, settings pages, sub-tabs, filters and wizards are redesigned for phones as inset grouped lists, native forms with switches, segmented controls or tab rows, filter chips, and a stacked job config.
 - The portal is now a tabbed phone app with a bottom tab bar, an Account tab (server, app lock, sign out), swipeable lists, tap-to-cycle genre chips, and undo for "Not for me".
 - Every phone screen now supports pull to refresh.
-- The tinkerbell.dev marketing site now covers all nineteen product features (up from six), grouped by area, with real screenshots and a poster strip generated from the demo library instead of placeholder artwork.
+- The rube.fyi marketing site now covers all nineteen product features (up from six), grouped by area, with real screenshots and a poster strip generated from the demo library instead of placeholder artwork.
 
 ### Fixed
 
@@ -453,7 +453,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Every job's settings are checked against that job's own rules when saved, installed or run, so invalid values are rejected up front.
 - Remove Overlays' mode is fixed to remove, and always-on jobs can no longer be disabled.
 - Metadata Overrides has a job entry, so it can be run.
-- Personalized Collections rows for users or rules you have dropped from the target are deleted at the start of the next run, so they do not stay pinned to anyone's home. Only collections carrying Tinkerbell's User and Rule labels for a known user and rule are removed.
+- Personalized Collections rows for users or rules you have dropped from the target are deleted at the start of the next run, so they do not stay pinned to anyone's home. Only collections carrying Rube's User and Rule labels for a known user and rule are removed.
 - The job run page's breadcrumb shows the job's name.
 - The portal's digest email input is styled to match the rest of the form.
 
@@ -590,7 +590,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Security
 
-- Closed two gaps in the guard on outbound requests to addresses Tinkerbell should never fetch. An IPv4-mapped IPv6 literal (`[::ffff:127.0.0.1]`) and a hostname with a trailing dot (`127.0.0.1.`) both reach loopback but neither was recognised, so a notification webhook or preroll URL pointing at one was allowed through.
+- Closed two gaps in the guard on outbound requests to addresses Rube should never fetch. An IPv4-mapped IPv6 literal (`[::ffff:127.0.0.1]`) and a hostname with a trailing dot (`127.0.0.1.`) both reach loopback but neither was recognised, so a notification webhook or preroll URL pointing at one was allowed through.
 
 ### Fixed
 
@@ -602,21 +602,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Changed
 
-- Tinkerbell now runs its full test suite, type checks and linting on every change, and no image is published until they pass. None of that was automated before, so the checks only ran when someone remembered — and one of the fixes above is a defect that had been sitting on the main branch as a result.
+- Rube now runs its full test suite, type checks and linting on every change, and no image is published until they pass. None of that was automated before, so the checks only ran when someone remembered — and one of the fixes above is a defect that had been sitting on the main branch as a result.
 - Test coverage was extended across the code that changes things you cannot easily get back: deleting media through Radarr and Sonarr, changing what a shared user can see, applying database migrations on upgrade, reordering poster overlays, and pruning old backups. This does not change behaviour on its own; it is what stops the behaviour changing by accident later.
 
 ## [0.23.0] - 2026-08-20
 
 ### Added
 
-- **Tinkerbell can now browse and manage your Radarr and Sonarr libraries.** A new "Managers" section in the sidebar adds Movies, TV, Downloads and Instances pages, so the everyday questions — what's monitored, what's missing, what's downloading — no longer mean opening three tabs.
-- Movies and TV list every configured instance together in one sortable, filterable table, and you can monitor, unmonitor, search for and remove items without leaving Tinkerbell. If you run a split setup (a 1080p Radarr and a 4K one, say), both appear side by side with an instance column and a picker to narrow to one.
+- **Rube can now browse and manage your Radarr and Sonarr libraries.** A new "Managers" section in the sidebar adds Movies, TV, Downloads and Instances pages, so the everyday questions — what's monitored, what's missing, what's downloading — no longer mean opening three tabs.
+- Movies and TV list every configured instance together in one sortable, filterable table, and you can monitor, unmonitor, search for and remove items without leaving Rube. If you run a split setup (a 1080p Radarr and a 4K one, say), both appear side by side with an instance column and a picker to narrow to one.
 - **A new health page finds the things neither Radarr nor Plex can see on their own** — titles that are on disk according to Radarr but that Plex has never scanned, releases that were grabbed but never imported, films held by more than one instance, and items in Plex that nothing is managing. Each finding explains what it means and whether it is a fault or just worth knowing.
 - The Downloads page shows every instance's queue together with live progress, and surfaces the actual error when an import is blocked rather than just the word "blocked". An Activity tab lists recent grabs, imports and failures across all instances.
 - The Instances page shows each Radarr and Sonarr with its version, item count, queue, free space on the volume the library actually lives on, and when it last synced — with the full error text if it is unreachable.
 - Multiple instances of each service are supported throughout, and one being down no longer affects the others: a failed sync is recorded against that instance alone and retried on the next run, leaving its existing data untouched.
 - A nightly "Sync Radarr & Sonarr" job mirrors your libraries locally so these pages load instantly instead of waiting on each server, and a lightweight poll keeps the Downloads count current. Both appear in Jobs and can be run on demand.
-- Tinkerbell now records the provider IDs (TMDb, IMDb, TVDb) of items in your Plex library during the regular media sync, which is what lets a Plex item and a Radarr record be matched reliably rather than guessed at from titles and years.
+- Rube now records the provider IDs (TMDb, IMDb, TVDb) of items in your Plex library during the regular media sync, which is what lets a Plex item and a Radarr record be matched reliably rather than guessed at from titles and years.
 - This release covers browsing, monitoring and searching. Editing an instance's own settings — quality profiles, custom formats, indexers, download clients — is not included yet; keep using Radarr's and Sonarr's own settings pages for those.
 
 ## [0.22.0] - 2026-08-20
@@ -633,10 +633,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 ### Added
 
 - New "History" entry in a rule's row menu shows every past edit to that rule, with a restore option that reverts it to the selected version.
-- Tinkerbell now records a change history for rules, config values, job schedules, overlay presets and prerolls, capturing the full state before and after each edit. Secrets are redacted before being stored.
+- Rube now records a change history for rules, config values, job schedules, overlay presets and prerolls, capturing the full state before and after each edit. Secrets are redacted before being stored.
 - Added configuration export and import: export bundles rules, job schedules, overlay presets/layouts and settings into a single JSON file; credentials are excluded by default (with a warning if you choose to include them), and authentication state is never exported.
 - Import previews changes before applying them, classifying each item as new, identical, or differing from your current setup, and lets you choose to keep your existing configuration or take the incoming version for anything that differs.
-- **Tinkerbell now takes a nightly database backup by default at 03:30, gzipped and keeping the last seven copies.** Backups use SQLite's online backup mechanism so they're safe to take while the app is running; restoring from a backup is a manual, documented procedure.
+- **Rube now takes a nightly database backup by default at 03:30, gzipped and keeping the last seven copies.** Backups use SQLite's online backup mechanism so they're safe to take while the app is running; restoring from a backup is a manual, documented procedure.
 
 ### Fixed
 
@@ -666,7 +666,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 - Media page: file-size tracking per item (shown in Cleanup and Media), a duplicate finder for both Plex's own multi-version items and separately-matched duplicate items, bulk selection with bulk labelling, and item-detail actions for refreshing metadata, editing tags/genres/labels, and viewing edit history.
 - Media detail page now names which rule produced each collection an item is in (in plain English) and adds "Open in Plex" / "Edit the rule behind this" links.
 - New `/changes` page: a single read-only feed of everything the app changed (collections, metadata writes, deletions, deleted rules), pulled from existing records rather than a new log.
-- New `/users/:userId` page for managing Plex users without leaving Tinkerbell: invite, library access, downloads, Live TV, rating ceiling, and session termination.
+- New `/users/:userId` page for managing Plex users without leaving Rube: invite, library access, downloads, Live TV, rating ceiling, and session termination.
 - Stats dashboard: panels can now be hidden and collapsed individually; five new panels (Top Users, Playback Activity, Stream Quality, Devices & Apps, Bandwidth); TV libraries are now included in storage totals; byte sizes now scale to TB/PB instead of wrapping; and Most Watched can count each person once instead of ranking by total plays.
 - Jobs page: a 24-hour timeline of job-lane activity, watchdog failures now shown distinctly from command errors, and a banner when a run resumes from a checkpoint after a restart.
 - Web/UI: a light/dark theme toggle independent of your OS setting; a skip link and route announcements for screen readers; command palette scoping (`rule:`, `job:` prefixes), recent destinations, and running/testing rules or jobs directly from it; saved list views with shareable URLs; "create rule from this view" on the Media page; a searchable settings sidebar; and a cron field that previews its next three fire times in your schedule's timezone.
@@ -762,7 +762,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Fixed
 
-- Deleting a collection that Plex had already removed (returning a 404) no longer fails and leaves the stale entry on screen — Tinkerbell now clears it locally and tells you it was already gone.
+- Deleting a collection that Plex had already removed (returning a 404) no longer fails and leaves the stale entry on screen — Rube now clears it locally and tells you it was already gone.
 - Panels on the Stats and Jobs dashboards no longer swap places under your cursor as their contents update (e.g. a stream starting or a job finishing); each panel now keeps a fixed position. Summary tiles also no longer change height as their values load in, so they no longer shift the rest of the page.
 
 ## [0.17.2] - 2026-08-15
@@ -837,7 +837,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- **Tinkerbell now requires signing in with your Plex account to access the app.** Existing installs will be prompted to sign in on their next visit; each sign-in is bound to the browser that started it, and the admin and public-portal sign-in flows are kept fully separate.
+- **Rube now requires signing in with your Plex account to access the app.** Existing installs will be prompted to sign in on their next visit; each sign-in is bound to the browser that started it, and the admin and public-portal sign-in flows are kept fully separate.
 - A new "Cleanup" action for rules: instead of only building a collection, a rule can now label or delete matching items in Plex (and, optionally, remove and unmonitor them in Radarr/Sonarr, with the option to delete files). It ships with safety rails — nothing is ever acted on the run it first matches, a rule that suddenly matches more than 25% of a section is treated as a filter mistake and refuses to act, a global per-run cap limits how much can be deleted across all rules combined, and the job refuses to run on a library index older than 48 hours.
 - The rule wizard has a new Outcome step where you choose between building a Collection (the previous default behavior) or the new Cleanup action; choosing Cleanup shows a plain-English summary of what the next run will actually do once dry run is turned off, and switching from label to delete re-arms dry run rather than carrying over settings that were only safe for labelling.
 - A new /cleanup page lists everything currently queued for a cleanup action and when it's due, and lets you grant any single item a 90-day reprieve ("Keep") — there is no button to action items early from this page.
@@ -854,9 +854,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- The rule wizard's smart-filter editor now offers watch-history fields: watched by everyone, watched by nobody, watched by a specific person, total plays across all users, last played by anyone, and abandoned below a given percentage. They sit in their own group with a note, because Plex only ever reports the server owner's view state — so its "Unplayed" and Tinkerbell's "Watched by nobody" answer genuinely different questions. Inside an OR group they are shown disabled with the reason rather than hidden, since the local half of such a filter could never be recombined with what Plex returned.
+- The rule wizard's smart-filter editor now offers watch-history fields: watched by everyone, watched by nobody, watched by a specific person, total plays across all users, last played by anyone, and abandoned below a given percentage. They sit in their own group with a note, because Plex only ever reports the server owner's view state — so its "Unplayed" and Rube's "Watched by nobody" answer genuinely different questions. Inside an OR group they are shown disabled with the reason rather than hidden, since the local half of such a filter could never be recombined with what Plex returned.
 - The collection drawer deliberately does **not** offer these fields. It edits a Plex smart collection, which Plex re-evaluates itself and cannot evaluate a field it has never heard of — so the drawer and its API reject them outright rather than letting the collection silently widen to whatever the remaining clauses matched.
-- Smart-filter rules can now use those watch-history clauses, evaluated against Tinkerbell's own playback history after Plex returns its matches. The job log records both counts — what Plex returned and what survived the local pass — plus the resolved list of users counted as "everyone", so it is clear what a rule matched and why. Rules using a watch-history field warn in the editor while the playback record is still filling up, since a young history makes "watched by nobody" match almost everything.
+- Smart-filter rules can now use those watch-history clauses, evaluated against Rube's own playback history after Plex returns its matches. The job log records both counts — what Plex returned and what survived the local pass — plus the resolved list of users counted as "everyone", so it is clear what a rule matched and why. Rules using a watch-history field warn in the editor while the playback record is still filling up, since a young history makes "watched by nobody" match almost everything.
 
 ### Changed
 
@@ -870,7 +870,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- The bandwidth test page now explains why its readings run higher than a browser speed test: it measures the server Tinkerbell runs on over multiple simultaneous connections, the way concurrent streams would, rather than one connection on your local device.
+- The bandwidth test page now explains why its readings run higher than a browser speed test: it measures the server Rube runs on over multiple simultaneous connections, the way concurrent streams would, rather than one connection on your local device.
 - Bandwidth test results now record how many parallel connections were used, so a figure can be compared against other tools or against future runs with a different connection count. Results saved before this change show as not recorded rather than guessing a value.
 
 ### Fixed
@@ -924,7 +924,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- **Tinkerbell now keeps its own playback history.** A new "Poll Playback Sessions" job samples what is playing every 30 seconds and records each play — who watched, how much of it they got through, on what device, and whether it was transcoded. It is enabled by default and starts recording as soon as you upgrade. Plex can tell you what is playing right now and that something was viewed, but not how much of it was actually watched; this is the data that watch-based collection rules and cleanup rules will be built on.
+- **Rube now keeps its own playback history.** A new "Poll Playback Sessions" job samples what is playing every 30 seconds and records each play — who watched, how much of it they got through, on what device, and whether it was transcoded. It is enabled by default and starts recording as soon as you upgrade. Plex can tell you what is playing right now and that something was viewed, but not how much of it was actually watched; this is the data that watch-based collection rules and cleanup rules will be built on.
 - A new "Import Plex Watch History" job seeds that history from Plex's own view log, so you are not starting from nothing. **It does not run on a schedule — run it once from the Jobs page after upgrading.** It is safe to re-run: it resumes from where it stopped and will not double-count plays already recorded live.
 - New Stats panel showing recent plays with user, device, transcode decision and completion, paginated and filterable by period.
 - Most Watched gains a 7d / 30d / 90d / All period selector, replacing the hardcoded "This Week".
@@ -934,7 +934,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Changed
 
-- **Most Watched and the dashboard activity tiles will read empty immediately after upgrading.** They previously came from an hourly cached snapshot of Plex's view log, capped at whatever fitted in its last 1,000 entries; they now read Tinkerbell's own playback history, which starts empty. Running "Import Plex Watch History" once fills them back in — after which the counts are exact rather than capped and up to an hour stale.
+- **Most Watched and the dashboard activity tiles will read empty immediately after upgrading.** They previously came from an hourly cached snapshot of Plex's view log, capped at whatever fitted in its last 1,000 entries; they now read Rube's own playback history, which starts empty. Running "Import Plex Watch History" once fills them back in — after which the counts are exact rather than capped and up to an hour stale.
 - History entries imported from Plex's view log are shown differently from plays recorded live, because Plex's log records only that something was watched — no completion percentage, no watch time, no device. A tooltip explains the distinction rather than showing a misleading 0%.
 
 ### Removed
@@ -1009,7 +1009,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ### Added
 
-- Public rule registry: browse curated rule packs from tinkerbell.dev and import them in-app, with a dry-run preview that reports filter values your server has no tag for, integrations you haven't configured, and rule names that would collide.
+- Public rule registry: browse curated rule packs from rube.fyi and import them in-app, with a dry-run preview that reports filter values your server has no tag for, integrations you haven't configured, and rule names that would collide.
 - Import options for packs: choose homepage pinning, how many collections rotate onto the home at a time, a cap on collections per rule, and a minimum items per collection — all before anything is written, and shown in the preview.
 - Grouped rules (Directors, Studios, Genres, Decades, Resolutions, …) now expose their collection cap and minimum-items floor in the rule wizard, with a warning about how many collections an uncapped rule can build.
 - The TMDb-sourced rules (Popular Actors, Popular Directors, Franchises) expose how many people or franchise groups they fetch per run, which previously wasn't reachable from the UI.
@@ -1110,7 +1110,7 @@ unattended.
 ### Added
 
 - **Settings → Schedules** — choose the timezone all job schedules are evaluated in. Previously schedules followed the container's clock with nothing showing what that was, and drifted by an hour twice a year at daylight-saving changes.
-- Jobs whose scheduled time passed while Tinkerbell was down now run once on the next start, staggered a few seconds apart. Schedules that fire more often than hourly are skipped, and every decision is logged.
+- Jobs whose scheduled time passed while Rube was down now run once on the next start, staggered a few seconds apart. Schedules that fire more often than hourly are skipped, and every decision is logged.
 - **Generate Collections** and **Sync Media** record progress as they run and resume where they left off after a restart, instead of starting from zero.
 - A separate queue lane for work you trigger and wait on — uploading a preroll no longer sits behind an hour-long nightly job.
 - `LOG_LEVEL` (`debug`/`info`/`warn`/`error`) and `LOG_FORMAT=json` environment variables. Raising the level also surfaces the job engine's own internals.
@@ -1131,7 +1131,7 @@ unattended.
 ### Added
 
 - Preroll management — control which videos Plex plays before movies
-- Public marketing website (tinkerbell.dev) with screenshot harness
+- Public marketing website (rube.fyi) with screenshot harness
 - Portal background image upload
 - Admin-customizable portal branding with auto-reconciliation on user sync
 - Portal fuzzy title picker and mood selector with per-input help
@@ -1182,7 +1182,7 @@ unattended.
 
 ### Added
 
-- Kometa to Tinkerbell migration support (Phase 1)
+- Kometa to Rube migration support (Phase 1)
 - Credits tab in Settings listing open-source dependencies
 - Auto-applied Kometa default posters for collection artwork
 - Per-rule pin-to-homepage option
@@ -1236,7 +1236,7 @@ First public beta.
 
 ### Added
 
-- Plex collection sync with Tinkerbell-managed labels (`Tinkerbell` base, plus per-feature and per-user labels).
+- Plex collection sync with Rube-managed labels (`Rube` base, plus per-feature and per-user labels).
 - Per-collection detail page with member listing and rule bindings.
 - Auto-generated "Because You Watched" collections per user.
 - Per-user collection scoping via `User:{plexUsername}` labels.
@@ -1265,9 +1265,9 @@ First public beta.
 - Command palette and keyboard shortcuts.
 - Mobile layout with bottom-tab navigation and pull-to-refresh.
 - Docker image with Unraid-compatible entrypoint.
-- SQLite-backed configuration and state (`tinkerbell.db`).
+- SQLite-backed configuration and state (`rube.db`).
 - Monorepo layout: `apps/{server,web}`, `packages/db`, `clients/*`.
 
 ### Notes
 
-- Tinkerbell is beta — expect rough edges and breaking changes before 1.0. Back up `tinkerbell.db` before upgrading.
+- Rube is beta — expect rough edges and breaking changes before 1.0. Back up `rube.db` before upgrading.

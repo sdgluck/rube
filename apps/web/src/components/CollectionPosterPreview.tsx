@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import type { PresentationConfig } from "@tinkerbell/contracts";
+import type { PresentationConfig } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import styles from "./CollectionPosterPreview.module.css";
 

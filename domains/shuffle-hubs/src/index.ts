@@ -8,7 +8,7 @@
  * Used by both the scheduled `shuffle` job and the Preview page button.
  */
 
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import type { PlexClient, PlexSection } from "@rube/plex";
 
 const COLLECTION_HUB_PREFIX = "custom.collection.";
 

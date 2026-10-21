@@ -93,7 +93,7 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "system",
     group: "library",
     description:
-      "Compares the quality profiles Tinkerbell manages with their presets, and reports any changed outside Tinkerbell. It never changes them.",
+      "Compares the quality profiles Rube manages with their presets, and reports any changed outside Rube. It never changes them.",
     settingsHref: "/arrs",
     settingsLabel: "Instances",
   },
@@ -212,7 +212,7 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
     kind: "system",
     group: "automation",
     description:
-      "Finds collections Tinkerbell made that no rule produces any more — and duplicates of ones it does — and deletes them from Plex.",
+      "Finds collections Rube made that no rule produces any more — and duplicates of ones it does — and deletes them from Plex.",
   },
   "registry-updates": {
     kind: "system",
@@ -325,7 +325,7 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   "label-undo": {
     kind: "hidden",
     description:
-      "Removes the Tinkerbell label from items and strips per-user labels from collections. Does not change sharing restrictions.",
+      "Removes the Rube label from items and strips per-user labels from collections. Does not change sharing restrictions.",
   },
   "metadata-undo": {
     kind: "hidden",
@@ -334,7 +334,7 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   "byw-remove": {
     kind: "hidden",
     description:
-      "Tears down Because You Watched: deletes its collections from Plex and clears every shared user's sharing restrictions. Item-level Tinkerbell labels are left intact.",
+      "Tears down Because You Watched: deletes its collections from Plex and clears every shared user's sharing restrictions. Item-level Rube labels are left intact.",
   },
   "wtyl-remove": {
     kind: "hidden",
@@ -395,7 +395,7 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   "migrate-collections": {
     kind: "hidden",
     description:
-      "Imports existing Plex collections into Tinkerbell rule-based collections, optionally deleting the originals.",
+      "Imports existing Plex collections into Rube rule-based collections, optionally deleting the originals.",
   },
   "preroll-process": {
     kind: "hidden",

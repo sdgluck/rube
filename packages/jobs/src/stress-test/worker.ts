@@ -20,17 +20,17 @@
  * is the same `buildContainer()` the server and the Sidequest worker call.
  */
 
-import { buildContainer, ServicesToken, type Services } from "@tinkerbell/composition";
+import { buildContainer, ServicesToken, type Services } from "@rube/composition";
 import { createStressTest } from "./index.ts";
 import { eq } from "drizzle-orm";
-import { deriveJobContext, errorMessage } from "@tinkerbell/core";
-import { stressTestRuns } from "@tinkerbell/db";
-import { createPlexClient } from "@tinkerbell/plex";
+import { deriveJobContext, errorMessage } from "@rube/core";
+import { stressTestRuns } from "@rube/db";
+import { createPlexClient } from "@rube/plex";
 
 import { registerJobs } from "../index.ts";
 import { type StressTestConfig } from "./index.ts";
 import { decimate, type StressTestSample } from "./telemetry.ts";
-import { type JobContext } from "@tinkerbell/core";
+import { type JobContext } from "@rube/core";
 import {
   JOB_CANCEL_POLL_INTERVAL_MS,
   JOB_LOG_FLUSH_INTERVAL_MS,

@@ -13,8 +13,8 @@
  */
 import { createHash, randomUUID, randomBytes } from "node:crypto";
 import { and, eq, lt } from "drizzle-orm";
-import { token } from "@tinkerbell/container";
-import { plexSessions, plexUsers, type Db } from "@tinkerbell/db";
+import { token } from "@rube/container";
+import { plexSessions, plexUsers, type Db } from "@rube/db";
 import type { ConfigStore } from "./config.ts";
 
 export type SessionScope = "portal" | "admin";

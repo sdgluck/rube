@@ -24,9 +24,9 @@
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { inArray } from "drizzle-orm";
-import { token } from "@tinkerbell/container";
-import { createLogger, errorMessage, type ConfigStore } from "@tinkerbell/core";
-import { mediaItems, type Db } from "@tinkerbell/db";
+import { token } from "@rube/container";
+import { createLogger, errorMessage, type ConfigStore } from "@rube/core";
+import { mediaItems, type Db } from "@rube/db";
 import { dot, norm, solveSpd } from "./linalg.ts";
 import { parseModel, type Model, type ModelHeader } from "./model.ts";
 
@@ -123,7 +123,7 @@ export function createRecommendations(deps: RecommendationsDeps) {
     if (!loaded) {
       const path = deps.modelPath ?? modelPath();
       if (!existsSync(path)) {
-        loaded = { error: "This build of Tinkerbell doesn't include the recommender model." };
+        loaded = { error: "This build of Rube doesn't include the recommender model." };
       } else {
         try {
           loaded = { model: parseModel(readFileSync(path)) };

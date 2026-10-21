@@ -22,8 +22,8 @@
  */
 
 import { sql } from "drizzle-orm";
-import { playbackSessions, type Db } from "@tinkerbell/db";
-import { perDeps } from "@tinkerbell/container";
+import { playbackSessions, type Db } from "@rube/db";
+import { perDeps } from "@rube/container";
 
 export const PERFORMANCE_WINDOW_DAYS = 90;
 const DAY_MS = 86_400_000;

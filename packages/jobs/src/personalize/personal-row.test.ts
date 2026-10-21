@@ -9,10 +9,7 @@ import { personalRowLabels, personalRowPin } from "./personal-row.ts";
 
 describe("personalRowLabels", () => {
   test("never the baseline label, which every restricted user's filter admits", () => {
-    assert.deepEqual(personalRowLabels("alice", "Tinkerbell", "BecauseYouWatched"), [
-      "BecauseYouWatched",
-      "User:alice",
-    ]);
+    assert.deepEqual(personalRowLabels("alice", "Rube", "BecauseYouWatched"), ["BecauseYouWatched", "User:alice"]);
   });
 });
 

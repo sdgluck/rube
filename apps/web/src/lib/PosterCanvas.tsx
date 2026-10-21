@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { badgeScale, calculatePosition, loadBadgeFont, renderBadgeSvg } from "./badgeRender.ts";
-import type { BadgeStyle, OverlayPosition, OverlayType } from "@tinkerbell/contracts";
+import type { BadgeStyle, OverlayPosition, OverlayType } from "@rube/contracts";
 
 export interface CanvasBadge {
   /** Optional config id — emitted back via onLayout so callers can match hit boxes to configs. */

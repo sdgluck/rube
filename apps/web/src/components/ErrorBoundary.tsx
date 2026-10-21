@@ -61,7 +61,7 @@ class ErrorBoundaryInner extends Component<Props, State> {
         // height and centres the card, which stays sized to its own content.
         <div className={styles.wrap}>
           <div className={styles.container} role="alert">
-            <h2 className={styles.title}>{stale ? "Tinkerbell was updated" : "Something went wrong"}</h2>
+            <h2 className={styles.title}>{stale ? "Rube was updated" : "Something went wrong"}</h2>
             <p className={styles.message}>
               {stale
                 ? "Reload to pick up the new version."

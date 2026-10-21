@@ -9,7 +9,7 @@
  * not a Christmas film, so the release month is gone and the ids are the ones
  * TMDb actually files those holidays under (checked against
  * themoviedb.org/keyword/<id> when written — `fetchKeyword` in
- * `@tinkerbell/tmdb` re-checks one).
+ * `@rube/tmdb` re-checks one).
  *
  * The feature stores *overrides* of these presets, keyed by preset key, rather
  * than a copy of the list. A copy would freeze the table at install time: a

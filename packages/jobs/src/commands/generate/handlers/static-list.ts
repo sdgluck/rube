@@ -8,12 +8,12 @@ import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts
  * Every other rule type answers "which items match this description?". This
  * one answers "which items did I say?", which sounds like a step backwards
  * until you look at what it's for: migration. A Kometa config contains
- * definitions Tinkerbell has no builder for — a Letterboxd list, a TMDb
+ * definitions Rube has no builder for — a Letterboxd list, a TMDb
  * discover query, a hand-picked `tmdb_movie` id list — and the alternative to
  * this rule type is telling the user those collections are simply gone.
  *
  * With it, the migration can adopt any collection at all: freeze its current
- * members, keep it alive under Tinkerbell's management, and let the user
+ * members, keep it alive under Rube's management, and let the user
  * convert it to a real rule later or leave it exactly as it is. That is the
  * difference between "we migrated most of it" and "nothing was lost".
  *

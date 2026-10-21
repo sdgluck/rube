@@ -76,7 +76,7 @@ if (offenders.length > 0) {
   for (const o of offenders) console.error(`  ${o}`);
   console.error(
     `\n${offenders.length} offender(s). Give each an AbortSignal.timeout(), route it through ` +
-      `@tinkerbell/http (which takes timeoutMs), or add it to ALLOWLIST in scripts/check-fetch.mjs ` +
+      `@rube/http (which takes timeoutMs), or add it to ALLOWLIST in scripts/check-fetch.mjs ` +
       `with a reason.`,
   );
   process.exit(1);

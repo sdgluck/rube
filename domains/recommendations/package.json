@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.recommendations",
+  "name": "@rube/domain.recommendations",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,9 +15,9 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {

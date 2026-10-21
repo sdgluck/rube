@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { formatBytes, type ArrService, type DownloadClientOverview } from "@tinkerbell/contracts";
+import { formatBytes, type ArrService, type DownloadClientOverview } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import PageShell, { StatusChip } from "#components/PageShell";
 import EmptyState from "#components/EmptyState";
@@ -92,7 +92,7 @@ function QueueForInstance({
           </thead>
           <tbody>
             {records.map((item) => {
-              // The client's own item, where Tinkerbell can reach that client:
+              // The client's own item, where Rube can reach that client:
               // fresher than the *Arr's copy, and the thing pause acts on.
               const match = findClientItem(clientItems, item.downloadId);
               const pct = match?.item.progress ?? progress(item.size, item.sizeleft);

@@ -1,4 +1,4 @@
-import type { Scope } from "@tinkerbell/container";
+import type { Scope } from "@rube/container";
 
 /**
  * Per-job resumable state.
@@ -98,7 +98,7 @@ export {
   digestJobConfigSchema,
   generateJobConfigSchema,
   overlaysJobConfigSchema,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 export type {
   BywJobConfig,
   WtylJobConfig,
@@ -116,4 +116,4 @@ export type {
   DigestJobConfig,
   GenerateJobConfig,
   OverlaysJobConfig,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";

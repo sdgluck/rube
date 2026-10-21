@@ -5,15 +5,15 @@
  * Shares change out-of-band — someone edits them in the Plex web app, or the
  * personalization job rewrites a filter — and a stale library list that
  * silently lies is worse than a slower page. The cached row still supplies
- * the parts that only Tinkerbell knows (friendly name, collection count,
+ * the parts that only Rube knows (friendly name, collection count,
  * portal opt-in).
  */
 
-import { getFilterClause } from "@tinkerbell/plex";
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import type { Db } from "@tinkerbell/db";
+import { getFilterClause } from "@rube/plex";
+import type { PlexClient, PlexSection } from "@rube/plex";
+import type { Db } from "@rube/db";
 import { createQuery, type LocalUser } from "./query.ts";
-import { type ConfigStore } from "@tinkerbell/core";
+import { type ConfigStore } from "@rube/core";
 
 export interface UserShareState {
   /** Null when the server isn't shared with them (Home users often aren't). */

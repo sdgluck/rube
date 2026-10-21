@@ -15,7 +15,7 @@
   justify-content: center;
   gap: 0.5rem;
   width: 2.6rem;
-  /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the one row-action size app-wide, inside a 38px row; a 32px target would crowd it */
+  /* stylelint-disable-next-line rube/primitive-geometry -- the one row-action size app-wide, inside a 38px row; a 32px target would crowd it */
   height: 2.6rem;
   padding: 0;
   border: none;
@@ -124,7 +124,7 @@
 @media (pointer: coarse) {
   .trigger {
     width: 4.4rem;
-    /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the touch size of the same control, the platform minimum */
+    /* stylelint-disable-next-line rube/primitive-geometry -- the touch size of the same control, the platform minimum */
     height: 4.4rem;
   }
 }

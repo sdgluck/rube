@@ -8,7 +8,7 @@
  */
 
 import { z } from "zod";
-import { ARR_SERVICES } from "@tinkerbell/contracts";
+import { ARR_SERVICES } from "@rube/contracts";
 import type { TrpcDeps } from "../deps.ts";
 import { t, procedure } from "../_base.ts";
 import { createArrClients, upstream } from "./_shared.ts";

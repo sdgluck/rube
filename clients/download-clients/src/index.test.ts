@@ -18,8 +18,8 @@ import {
   createMockTransmission,
   type MockDownload,
   type MockDownloadClient,
-} from "@tinkerbell/test-support/download-clients";
-import type { DownloadClientKind } from "@tinkerbell/contracts";
+} from "@rube/test-support/download-clients";
+import type { DownloadClientKind } from "@rube/contracts";
 import { apiAtLeast, createDownloadClient, DownloadClientError, rpcPath, type DownloadClientConfig } from "./index.ts";
 
 const GB = 1024 ** 3;

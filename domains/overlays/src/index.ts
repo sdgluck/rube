@@ -1,7 +1,7 @@
 import { and, eq, max } from "drizzle-orm";
 import { z } from "zod";
-import { overlayConfigs, overlayOriginals, overlayPresets, type Db } from "@tinkerbell/db";
-import type { ChangeRecorder } from "@tinkerbell/ports";
+import { overlayConfigs, overlayOriginals, overlayPresets, type Db } from "@rube/db";
+import type { ChangeRecorder } from "@rube/ports";
 import {
   badgeStyleSchema,
   conditionalRuleSchema,
@@ -11,8 +11,8 @@ import {
   type ConditionalRule,
   type OverlayPosition,
   type OverlayType,
-} from "@tinkerbell/overlays";
-import { token } from "@tinkerbell/container";
+} from "@rube/overlays";
+import { token } from "@rube/container";
 
 export {
   overlayPositionSchema,
@@ -38,7 +38,7 @@ export {
   type ConditionalRule,
   type MediaInfo,
   type Ratings,
-} from "@tinkerbell/overlays";
+} from "@rube/overlays";
 
 const overlayConfigRowSchema = z.object({
   id: z.number(),

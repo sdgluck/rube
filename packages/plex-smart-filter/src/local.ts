@@ -2,14 +2,14 @@
  * Local filter leaves — the part of a filter tree Plex cannot answer.
  *
  * Plex evaluates view state against the token that made the request, and
- * Tinkerbell queries with the server owner's. So `unwatched=1` means "the owner
+ * Rube queries with the server owner's. So `unwatched=1` means "the owner
  * hasn't watched it", never "nobody has". The questions that actually drive
  * collections and cleanup — watched by everyone, watched by nobody, played by
  * anyone in the last N days — have no Plex query form at all, so they are
  * evaluated locally against `watch_state` after Plex returns.
  *
  * This module owns the split. It lives beside `emit.ts`/`parse.ts` rather than
- * in `@tinkerbell/contracts` for two reasons: the round-trip tests are here,
+ * in `@rube/contracts` for two reasons: the round-trip tests are here,
  * and contracts already depends on this package — putting it there would close
  * a cycle. Contracts owns the *table* of local fields (labels, kinds); this
  * module owns the *convention* that identifies one.

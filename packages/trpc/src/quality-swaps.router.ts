@@ -1,7 +1,7 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
-import { arrQualityProfiles } from "@tinkerbell/db";
+import { arrQualityProfiles } from "@rube/db";
 
 import { t, procedure } from "./_base.ts";
 

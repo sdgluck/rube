@@ -17,9 +17,9 @@
 
 import { createHash, randomUUID } from "node:crypto";
 import { and, desc, eq, inArray, lt, notInArray } from "drizzle-orm";
-import { arrManagedProfiles, arrSettingsSnapshots, type Db } from "@tinkerbell/db";
-import { createLogger, currentActor, errorMessage, type ArrInstance, type ArrInstances } from "@tinkerbell/core";
-import type { ChangeRecorder, Clock, EventBus } from "@tinkerbell/ports";
+import { arrManagedProfiles, arrSettingsSnapshots, type Db } from "@rube/db";
+import { createLogger, currentActor, errorMessage, type ArrInstance, type ArrInstances } from "@rube/core";
+import type { ChangeRecorder, Clock, EventBus } from "@rube/ports";
 import {
   minimumMaxGb,
   presetsFor,
@@ -27,8 +27,8 @@ import {
   sizeLimitSchema,
   type QualityPreset,
   type SizeLimit,
-} from "@tinkerbell/contracts";
-import type { FieldChange } from "@tinkerbell/domain.config-history";
+} from "@rube/contracts";
+import type { FieldChange } from "@rube/domain.config-history";
 import { clientFor, qualityApiFor, readLive, type ArrClient } from "./live.ts";
 import { planPreset, PlanError, type Plan, type PlanStep, type PlanTarget, type Sibling } from "./plan.ts";
 import type { LiveQuality, QualityApi, WireCustomFormat, WireDefinition, WireProfile } from "./wire.ts";
@@ -161,7 +161,7 @@ export function createQualityService(deps: QualityServiceDeps) {
     };
   }
 
-  /** The instance's profiles, with Tinkerbell's record of each it manages. */
+  /** The instance's profiles, with Rube's record of each it manages. */
   async function profiles(instanceId: string) {
     const instance = requireInstance(instanceId);
     const { api } = connect(instance);
@@ -399,9 +399,7 @@ export function createQualityService(deps: QualityServiceDeps) {
       const next = evaluate(row, rows, instance, live);
       if ((next.status === "drifted" || next.status === "missing") && row.status !== next.status) {
         const what =
-          next.status === "missing"
-            ? "is missing"
-            : `was changed outside Tinkerbell (${next.drift.length} differences)`;
+          next.status === "missing" ? "is missing" : `was changed outside Rube (${next.drift.length} differences)`;
         deps.emitEvent("arr.quality_drift", `“${row.profileName}” on ${instance.name} ${what}.`, {
           instanceId,
           managedId: row.id,

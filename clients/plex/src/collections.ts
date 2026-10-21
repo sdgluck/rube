@@ -151,7 +151,7 @@ export function createCollectionsModule(http: PlexHttp) {
     if (updates.titleSort !== undefined) {
       params["titleSort.value"] = updates.titleSort;
       // Without the lock Plex recomputes the sort title from the title on its
-      // next refresh, silently undoing the write — which reads as "Tinkerbell
+      // next refresh, silently undoing the write — which reads as "Rube
       // didn't apply my sort title" rather than "Plex overwrote it".
       params["titleSort.locked"] = "1";
     }

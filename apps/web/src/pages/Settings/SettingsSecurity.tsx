@@ -95,8 +95,8 @@ export default function SettingsSecurity() {
             )}
             {status.configured && status.disabledByEnv && (
               <p className={styles.warn}>
-                Authentication is configured but bypassed: <code>TINKERBELL_DISABLE_AUTH</code> is set on the server.
-                Unset it and restart once you can sign in again.
+                Authentication is configured but bypassed: <code>RUBE_DISABLE_AUTH</code> is set on the server. Unset it
+                and restart once you can sign in again.
               </p>
             )}
             {!status.configured && status.ownerResolved && (

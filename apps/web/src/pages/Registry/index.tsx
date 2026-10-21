@@ -39,8 +39,8 @@ export default function Registry() {
       count={index.packs.length.toLocaleString()}
       actions={
         <>
-          <a className={styles.ghost} href="https://tinkerbell.dev/registry" target="_blank" rel="noreferrer">
-            tinkerbell.dev
+          <a className={styles.ghost} href="https://rube.fyi/registry" target="_blank" rel="noreferrer">
+            rube.fyi
           </a>
           <button
             type="button"

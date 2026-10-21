@@ -22,7 +22,7 @@ import { existsSync, readFileSync, rmSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = join(import.meta.dirname, "..");
-const REPO = "sdgluck/tinkerbell";
+const REPO = "sdgluck/rube";
 const require = process.argv.includes("--require");
 const pin = JSON.parse(readFileSync(join(ROOT, "models", "recs.json"), "utf8"));
 const target = join(ROOT, "models", "recs.bin");

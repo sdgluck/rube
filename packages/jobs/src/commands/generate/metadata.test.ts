@@ -1,5 +1,5 @@
 import { planWrites } from "./metadata.ts";
-import { decodeTags } from "@tinkerbell/domain.metadata";
+import { decodeTags } from "@rube/domain.metadata";
 /**
  * The metadata gates.
  *
@@ -15,15 +15,15 @@ import { decodeTags } from "@tinkerbell/domain.metadata";
  */
 import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext } from "@rube/core";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { config, events, metadataOriginals, rules } from "@tinkerbell/db";
-import { noopCheckpoint } from "@tinkerbell/core";
-import { MetadataToken } from "@tinkerbell/domain.metadata";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { config, events, metadataOriginals, rules } from "@rube/db";
+import { noopCheckpoint } from "@rube/core";
+import { MetadataToken } from "@rube/domain.metadata";
 import { createMetadataCommand } from "./metadata.ts";
 
 const c = createTestContainer();
@@ -35,8 +35,8 @@ const { setConfig } = c.resolve(ConfigStoreToken);
 const { batchRows, listBatches, snapshotWrites } = c.resolve(MetadataToken);
 const { runHandlerWithMetadata, createMetadataBudget } = createMetadataCommand(services);
 
-const { createPlexClient } = await import("@tinkerbell/plex");
-type ItemFields = import("@tinkerbell/plex").ItemFields;
+const { createPlexClient } = await import("@rube/plex");
+type ItemFields = import("@rube/plex").ItemFields;
 
 const RULE_ID = "metadata-rule";
 const SECTIONS = [{ key: "1", title: "Films", type: "movie" }];

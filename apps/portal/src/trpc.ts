@@ -1,7 +1,7 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
-import type { PortalRouter } from "@tinkerbell/trpc";
+import type { PortalRouter } from "@rube/trpc";
 import { activeGuestToken } from "./match/link.ts";
 
 export const portalTrpc = createTRPCReact<PortalRouter>();

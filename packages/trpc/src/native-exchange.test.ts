@@ -12,16 +12,16 @@
 import { describe, test, after, before, beforeEach, mock } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, plexUsers } from "@tinkerbell/db";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
-import { startMockPlexTv, type MockPlexTvServer } from "@tinkerbell/test-support/plex-tv";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, plexUsers } from "@rube/db";
+import { JobsToken, registerJobs } from "@rube/jobs";
+import { startMockPlexTv, type MockPlexTvServer } from "@rube/test-support/plex-tv";
 import { createTrpc } from "./index.ts";
 import { t } from "./_base.ts";
 import { createHandshakes } from "./handshake.ts";
 
-delete process.env.TINKERBELL_DISABLE_AUTH;
+delete process.env.RUBE_DISABLE_AUTH;
 
 const c = createTestContainer({ overrides: registerJobs });
 after(() => c.dispose());
@@ -41,11 +41,11 @@ const OWNER_TOKEN = "plex-token-for-tests";
 let plexTv: MockPlexTvServer;
 before(async () => {
   plexTv = await startMockPlexTv({ defaultAccount: OWNER });
-  process.env.TINKERBELL_PLEX_TV_URL = plexTv.origin;
+  process.env.RUBE_PLEX_TV_URL = plexTv.origin;
   db.insert(plexUsers).values({ userId: SHARED.id, username: SHARED.username, label: "alice", syncedAt: 0 }).run();
 });
 after(async () => {
-  delete process.env.TINKERBELL_PLEX_TV_URL;
+  delete process.env.RUBE_PLEX_TV_URL;
   await plexTv.close();
 });
 
@@ -60,7 +60,7 @@ beforeEach(() => {
 
 function admin(headers: Record<string, string> = {}) {
   const ctx = createAdminContext({
-    req: new Request("http://tinkerbell.test/api/trpc", { method: "POST", headers }),
+    req: new Request("http://rube.test/api/trpc", { method: "POST", headers }),
     resHeaders: new Headers(),
   });
   return { ctx, caller: t.createCallerFactory(appRouter)(ctx) };
@@ -68,7 +68,7 @@ function admin(headers: Record<string, string> = {}) {
 
 function portal(headers: Record<string, string> = {}) {
   const ctx = createPortalContext({
-    req: new Request("http://tinkerbell.test/api/trpc", { method: "POST", headers }),
+    req: new Request("http://rube.test/api/trpc", { method: "POST", headers }),
     resHeaders: new Headers(),
   });
   return { ctx, caller: portalRouter.createCaller(ctx) };

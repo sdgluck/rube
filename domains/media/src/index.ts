@@ -4,12 +4,12 @@
 
 import { eq, and, asc, desc, inArray, lt, notInArray, or, sql, type InferSelectModel } from "drizzle-orm";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
-import { mediaItems, likeContains, type Db } from "@tinkerbell/db";
-import { imdbId, tmdbId, tvdbId } from "@tinkerbell/core";
+import { mediaItems, likeContains, type Db } from "@rube/db";
+import { imdbId, tmdbId, tvdbId } from "@rube/core";
 
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
-import { type EventBus } from "@tinkerbell/ports";
-import { token } from "@tinkerbell/container";
+import type { PlexClient, PlexSection } from "@rube/plex";
+import { type EventBus } from "@rube/ports";
+import { token } from "@rube/container";
 import { createDuplicates } from "./duplicates.ts";
 
 export type MediaItemRow = InferSelectModel<typeof mediaItems>;

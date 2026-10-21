@@ -7,14 +7,14 @@ import { cronJobs } from "./schedule.ts";
 import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { config, jobRuns, jobs } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { config, jobRuns, jobs } from "@rube/db";
 import { createSchedule } from "./schedule.ts";
-import { JobStarterToken, registerJobs } from "@tinkerbell/jobs";
-import { DAY_MS, HOUR_MS } from "@tinkerbell/core";
+import { JobStarterToken, registerJobs } from "@rube/jobs";
+import { DAY_MS, HOUR_MS } from "@rube/core";
 
 /**
  * Which job ids the scheduler actually asked to start.

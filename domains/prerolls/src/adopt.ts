@@ -4,7 +4,7 @@
  * `PREROLLS_DIR` is a bind mount the admin can write to directly, so it often
  * arrives with videos in it already — copied from a previous tool, restored
  * from a backup, or dropped in by hand. Those files are invisible to
- * Tinkerbell (Plex plays only what the preference names, and the preference is
+ * Rube (Plex plays only what the preference names, and the preference is
  * built from the database), so this turns them into real rows.
  *
  * Adoption reuses the upload path rather than trusting the file: the video is
@@ -15,7 +15,7 @@
 
 import { readdir, rename, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { prerollsDir } from "@tinkerbell/core";
+import { prerollsDir } from "@rube/core";
 import { ensurePrerollDirs, extensionOf, incomingPath, type CreatePrerollInput, type Preroll } from "./index.ts";
 import { ALLOWED_EXTENSIONS, assertSupportedFilename } from "./ingest.ts";
 import { isBareFilename } from "./safe-name.ts";
@@ -107,7 +107,7 @@ export function createAdopt(deps: AdoptDeps) {
    * processing job to pick up.
    *
    * A move rather than a copy. The file is already inside the directory
-   * Tinkerbell owns, the destination is the same filesystem so the rename is
+   * Rube owns, the destination is the same filesystem so the rename is
    * atomic and free, and copying would silently double the disk footprint of a
    * library that can run to gigabytes. If processing fails the bytes are still
    * there under the row's id, and the failed row offers a retry.

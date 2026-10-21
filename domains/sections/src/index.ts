@@ -3,9 +3,9 @@
  */
 
 import { lt } from "drizzle-orm";
-import { plexSections, type Db } from "@tinkerbell/db";
-import type { PlexClient } from "@tinkerbell/plex";
-import { token } from "@tinkerbell/container";
+import { plexSections, type Db } from "@rube/db";
+import type { PlexClient } from "@rube/plex";
+import { token } from "@rube/container";
 
 interface SyncStats {
   synced: number;

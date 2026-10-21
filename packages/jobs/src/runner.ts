@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 import { createStressTest } from "./stress-test/index.ts";
 import { createInternalJobs } from "./internal-jobs.ts";
 import { createSchedule } from "./schedule.ts";
@@ -18,9 +18,9 @@ import {
   variantFor,
   type VariantSpec,
   stampLog,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { buildRunConfig } from "./run-config.ts";
-import { jobs, jobRuns } from "@tinkerbell/db";
+import { jobs, jobRuns } from "@rube/db";
 
 import {
   createLogger,
@@ -30,7 +30,7 @@ import {
   logLevel,
   runAsActor,
   type JobContext,
-} from "@tinkerbell/core";
+} from "@rube/core";
 
 import { type InternalJobDescriptor, type InternalJobName } from "./internal-jobs.ts";
 import {} from "./schedule.ts";
@@ -195,7 +195,7 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
     enabled: 1,
   },
   // Daily and off-peak. The registry index is cached for an hour, so this is
-  // one small GET a day against tinkerbell.dev.
+  // one small GET a day against rube.fyi.
   {
     id: "registry-updates",
     name: "Check Registry Updates",
@@ -234,7 +234,7 @@ export const DEFAULT_JOBS: (Omit<Job, "config" | "command"> & { command: JobComm
   },
   // ── Background / escape-hatch (hidden from UI, invoked via Settings or BYW lifecycle) ──
   { id: "label", name: "Apply Collection Restrictions", command: "label", schedule: "", enabled: 1 },
-  { id: "label-undo", name: "Clear Tinkerbell Labels", command: "label-undo", schedule: "", enabled: 1 },
+  { id: "label-undo", name: "Clear Rube Labels", command: "label-undo", schedule: "", enabled: 1 },
   { id: "metadata-undo", name: "Revert Metadata Changes", command: "metadata-undo", schedule: "", enabled: 1 },
   { id: "byw-remove", name: "Remove Because You Watched", command: "byw-remove", schedule: "", enabled: 1 },
   { id: "wtyl-remove", name: "Remove We Think You'd Like", command: "wtyl-remove", schedule: "", enabled: 1 },
@@ -810,7 +810,7 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
           status: "failed",
           log: sql`${jobRuns.log} || ${`\n[watchdog] ${reason}. Marking the run as failed.\n`}`,
           message: reason,
-          // Recorded structurally as well as in the log: "Tinkerbell gave up on
+          // Recorded structurally as well as in the log: "Rube gave up on
           // this run" and "this run threw" want to read differently in the UI,
           // and grepping a multi-megabyte log for `[watchdog]` is not a way to
           // tell them apart.

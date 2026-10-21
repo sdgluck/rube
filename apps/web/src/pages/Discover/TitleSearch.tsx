@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { keepPreviousData } from "@tanstack/react-query";
-import { tmdbPosterUrl } from "@tinkerbell/contracts";
+import { tmdbPosterUrl } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import PageShell, { StatusChip } from "#components/PageShell";
 import SearchInput from "#components/SearchInput";

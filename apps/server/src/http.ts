@@ -9,7 +9,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { createLogger, errorMessage } from "@tinkerbell/core";
+import { createLogger, errorMessage } from "@rube/core";
 
 export function toFetchRequest(req: IncomingMessage): Request {
   const url = new URL(req.url!, `http://${req.headers.host}`);

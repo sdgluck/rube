@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { DOWNLOAD_CLIENT_META, formatBytes, type DownloadClientOverview } from "@tinkerbell/contracts";
+import { DOWNLOAD_CLIENT_META, formatBytes, type DownloadClientOverview } from "@rube/contracts";
 import { StatusChip } from "#components/PageShell";
 import controls from "#/styles/controls.module.css";
 import shared from "#/styles/shared.module.css";

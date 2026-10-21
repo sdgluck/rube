@@ -146,7 +146,7 @@ export const NOTIFICATION_SERVICES: Record<string, NotificationServiceConfig> = 
       {
         key: "from",
         label: "From Address",
-        placeholder: "tinkerbell@example.com",
+        placeholder: "rube@example.com",
         hint: "Many providers require this to match the username",
       },
       {

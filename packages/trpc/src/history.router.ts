@@ -2,16 +2,16 @@ import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { CHANGE_LOG_ENTITIES } from "@tinkerbell/domain.config-history";
+import { CHANGE_LOG_ENTITIES } from "@rube/domain.config-history";
 import { assertValidRuleConfig } from "./rules.router.ts";
 
 import { t, procedure } from "./_base.ts";
 
 /**
- * The settings history: what you changed about Tinkerbell, and how to put one
+ * The settings history: what you changed about Rube, and how to put one
  * of those changes back.
  *
- * Distinct from `changes.router.ts`, which is the feed of what Tinkerbell did
+ * Distinct from `changes.router.ts`, which is the feed of what Rube did
  * to Plex. The two are deliberately not merged — see the header of
  * `domains/config-history` — and they answer different questions: that one is
  * "why is this collection wrong", this one is "what did I do on Tuesday".

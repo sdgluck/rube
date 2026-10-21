@@ -1,8 +1,8 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { ServicesToken, type Services } from "@rube/composition";
 import { createReconcile } from "../personalize/reconcile.ts";
-import { createPlexClient } from "@tinkerbell/plex";
+import { createPlexClient } from "@rube/plex";
 
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
 export function createSyncUsersCommand(deps: Services) {
   const { clients, config, users } = deps;
@@ -26,7 +26,7 @@ export function createSyncUsersCommand(deps: Services) {
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell sync-users`);
+    ctx.log(`rube sync-users`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     const identity = await client.getIdentity();

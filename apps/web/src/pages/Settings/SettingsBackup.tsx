@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Download, Upload } from "lucide-react";
-import { BUNDLE_PARTS, formatFileSize, type BundlePart, type ImportResolution } from "@tinkerbell/contracts";
+import { BUNDLE_PARTS, formatFileSize, type BundlePart, type ImportResolution } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import useUnsavedChanges from "#hooks/useUnsavedChanges";
@@ -36,7 +36,7 @@ interface PreviewItem {
 
 interface Preview {
   items: PreviewItem[];
-  tinkerbellVersion: string;
+  rubeVersion: string;
   exportedAt: number;
   sameServer: boolean;
   containsSecrets: boolean;
@@ -305,13 +305,13 @@ export default function SettingsBackup() {
         <div className={local.restoreNote}>
           <strong>Restoring is a manual procedure, on purpose.</strong>
           <ol>
-            <li>Stop the Tinkerbell container.</li>
+            <li>Stop the Rube container.</li>
             <li>
-              Decompress the backup: <code>gunzip tinkerbell-….db.gz</code>
+              Decompress the backup: <code>gunzip rube-….db.gz</code>
             </li>
             <li>
-              Replace <code>tinkerbell.db</code> in your data directory with it, and delete any{" "}
-              <code>tinkerbell.db-wal</code> and <code>tinkerbell.db-shm</code> beside it.
+              Replace <code>rube.db</code> in your data directory with it, and delete any <code>rube.db-wal</code> and{" "}
+              <code>rube.db-shm</code> beside it.
             </li>
             <li>Start the container.</li>
           </ol>
@@ -401,7 +401,7 @@ export default function SettingsBackup() {
         {preview && (
           <div className={local.preview}>
             <p className={settings.hint}>
-              Exported by Tinkerbell {preview.tinkerbellVersion} <RelativeTime timestamp={preview.exportedAt} />
+              Exported by Rube {preview.rubeVersion} <RelativeTime timestamp={preview.exportedAt} />
               {preview.sameServer ? " — from this server." : " — from a different server."}
             </p>
 

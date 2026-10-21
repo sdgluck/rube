@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "@tinkerbell/trpc";
-import { defaultCeiling, type SizeLimit } from "@tinkerbell/contracts";
+import type { AppRouter } from "@rube/trpc";
+import { defaultCeiling, type SizeLimit } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import Modal from "#components/Modal";
 import { useToast } from "#components/Toast";
@@ -282,7 +282,7 @@ function PlanPreview({ result }: { result: PlanResult }) {
 
       {plan.steps.length === 0 ? (
         <p className={styles.hint}>
-          “{plan.profileName}” already matches this preset. Applying records that Tinkerbell manages it, so changes made
+          “{plan.profileName}” already matches this preset. Applying records that Rube manages it, so changes made
           elsewhere are reported.
         </p>
       ) : (

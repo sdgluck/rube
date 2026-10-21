@@ -10,7 +10,7 @@ import {
   SCHEDULE_SERVICE_LABELS,
   type JobPlanEntry,
   type ScheduleJob,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import CronPreview from "#components/CronPreview";
 import SchedulePicker from "#components/SchedulePicker";
 import controls from "#/styles/controls.module.css";

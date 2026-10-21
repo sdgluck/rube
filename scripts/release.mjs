@@ -69,7 +69,7 @@ const commitCount = commits.split("\n").filter((l) => l.startsWith("=== ")).leng
 console.error(`release: prev=${prevRef} next=${next}`);
 console.error(`release: summarising ${commitCount} commits via claude…`);
 
-const prompt = `You are writing the CHANGELOG entry for a new release of Tinkerbell, a self-hosted tool that generates Plex collections from rules. Its readers are the people who run it: they read this to decide whether to upgrade and what will change on their server when they do.
+const prompt = `You are writing the CHANGELOG entry for a new release of Rube, a self-hosted tool that generates Plex collections from rules. Its readers are the people who run it: they read this to decide whether to upgrade and what will change on their server when they do.
 
 Below are the commits since the last release, each starting with "=== " followed by its subject and then its body.
 
@@ -268,8 +268,8 @@ if (process.env.SKIP_SCREENSHOTS === "1") {
   }
   updated.push(
     join(ROOT, "screenshots"),
-    join(ROOT, "apps/tinkerbell.dev/public/screenshots"),
-    join(ROOT, "apps/tinkerbell.dev/public/posters"),
+    join(ROOT, "apps/rube.fyi/public/screenshots"),
+    join(ROOT, "apps/rube.fyi/public/posters"),
   );
 }
 

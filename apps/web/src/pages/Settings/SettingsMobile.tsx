@@ -1,4 +1,4 @@
-import { isLoopbackAddress, nativeConnectLink } from "@tinkerbell/contracts";
+import { isLoopbackAddress, nativeConnectLink } from "@rube/contracts";
 import CardSection from "#components/CardSection";
 import QrCode from "#components/QrCode";
 import { useToast } from "#components/Toast";
@@ -28,19 +28,19 @@ export default function SettingsMobile() {
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="Connect a phone">
         <p className={settings.hint}>
-          Install Tinkerbell on your phone, then scan this with the camera. It opens the app pointed at the address this
-          page is open at — so open Tinkerbell at an address your phone can reach first, not <code>localhost</code>.
+          Install Rube on your phone, then scan this with the camera. It opens the app pointed at the address this page
+          is open at — so open Rube at an address your phone can reach first, not <code>localhost</code>.
         </p>
         {loopback && (
           <p className={settings.hint} role="alert">
-            This page is open at <code>{server}</code>, which on a phone means the phone itself. Open Tinkerbell at this
+            This page is open at <code>{server}</code>, which on a phone means the phone itself. Open Rube at this
             computer&apos;s network address instead — and if the server listens on <code>127.0.0.1</code> (the default{" "}
             <code>HOST</code>), set <code>HOST=0.0.0.0</code> so the phone can reach it at all.
           </p>
         )}
         <div className={styles.connect}>
           <div className={styles.qr}>
-            <QrCode value={link} label="QR code that connects the Tinkerbell app to this server" />
+            <QrCode value={link} label="QR code that connects the Rube app to this server" />
           </div>
           <div className={styles.linkColumn}>
             <span className={settings.label}>Or open this link on the phone</span>

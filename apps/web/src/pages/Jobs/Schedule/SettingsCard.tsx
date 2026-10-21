@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { ScheduleSettings } from "@tinkerbell/contracts";
+import type { ScheduleSettings } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { timezoneOptions } from "#lib/timezones";
 import controls from "#/styles/controls.module.css";

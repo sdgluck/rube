@@ -5,7 +5,7 @@
  * cookies are not port-scoped — so they must use different names or signing
  * into one would clobber the other's session.
  */
-import { sessionMaxAgeSeconds, type SessionScope } from "@tinkerbell/core";
+import { sessionMaxAgeSeconds, type SessionScope } from "@rube/core";
 
 export const COOKIE_NAMES: Record<SessionScope, string> = {
   portal: "tb_session",

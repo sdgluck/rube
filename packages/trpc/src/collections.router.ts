@@ -2,15 +2,15 @@ import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { eq, inArray } from "drizzle-orm";
-import { rules } from "@tinkerbell/db";
-import { errorMessage } from "@tinkerbell/core";
-import { LOCAL_FIELD_DEFS, posterUrlError, resolvePosterTemplate } from "@tinkerbell/contracts";
-import { derivePalette, fetchPosterUrl, renderCollectionPoster } from "@tinkerbell/posters";
+import { rules } from "@rube/db";
+import { errorMessage } from "@rube/core";
+import { LOCAL_FIELD_DEFS, posterUrlError, resolvePosterTemplate } from "@rube/contracts";
+import { derivePalette, fetchPosterUrl, renderCollectionPoster } from "@rube/posters";
 
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { createPreviewCache } from "./preview.router.ts";
 import { paginationInput } from "./_pagination.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 const ratingKeyInput = z.object({ ratingKey: z.string() });
 
@@ -123,7 +123,7 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
    * failing that by the rule that recorded it as its last generated collection.
    *
    * The label is the durable link and the rating key is the fallback: smart
-   * filter rules created by migration adopt a collection Tinkerbell never
+   * filter rules created by migration adopt a collection Rube never
    * labelled, so they can only be recognised the second way.
    */
   function owningRuleFor(ratingKey: string): { id: string; name: string; type: string } | null {
@@ -287,7 +287,7 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
     }),
 
     /**
-     * What Tinkerbell has written onto each collection, keyed by rating key.
+     * What Rube has written onto each collection, keyed by rating key.
      *
      * Resolved here rather than per row because the ledger is keyed by
      * `(ruleId, collectionName)` and the list only knows rating keys — the join
@@ -531,7 +531,7 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
     }),
 
     /**
-     * Set the poster from a URL. Tinkerbell fetches it and uploads the bytes
+     * Set the poster from a URL. Rube fetches it and uploads the bytes
      * rather than handing the URL to Plex: the allowlist and the size cap are
      * only worth anything if the fetch happens somewhere they apply.
      */
@@ -559,7 +559,7 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
     }),
 
     /**
-     * What Tinkerbell has written onto this collection, and what was there
+     * What Rube has written onto this collection, and what was there
      * first. Null for a collection no rule owns — nothing has ever written to it,
      * which is itself the answer.
      */
@@ -573,7 +573,7 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
     }),
 
     /**
-     * Stop Tinkerbell managing this collection's artwork.
+     * Stop Rube managing this collection's artwork.
      *
      * Honest about its limits: collections are deleted and recreated on every
      * rule run, so there is usually no image to put back — what this does is
@@ -670,14 +670,14 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
         // it can only reference fields Plex knows. A `tb.` field would be sent
         // as a query parameter Plex ignores, and the collection would silently
         // widen to everything the remaining clauses match. Watch-history fields
-        // are only valid on Tinkerbell rules, which build static collections.
+        // are only valid on Rube rules, which build static collections.
         const localField = LOCAL_FIELD_DEFS.map((d) => d.field).find(
           (f) => input.contentUri.includes(`${encodeURIComponent(f)}=`) || input.contentUri.includes(`${f}=`),
         );
         if (localField) {
           throw new TRPCError({
             code: "BAD_REQUEST",
-            message: `"${localField}" is a Tinkerbell watch-history field. Plex evaluates smart collections itself and has no such field, so it can only be used on a Tinkerbell rule that builds a static collection.`,
+            message: `"${localField}" is a Rube watch-history field. Plex evaluates smart collections itself and has no such field, so it can only be used on a Rube rule that builds a static collection.`,
           });
         }
 

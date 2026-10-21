@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
-import { RULE_RUN_TRIGGER_LABELS } from "@tinkerbell/contracts";
+import { RULE_RUN_TRIGGER_LABELS } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import ConfirmModal from "#components/ConfirmModal";

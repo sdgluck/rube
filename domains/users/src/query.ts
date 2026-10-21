@@ -1,6 +1,6 @@
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 import { eq, or, asc, desc, sql } from "drizzle-orm";
-import { plexUsers, plexUserShares, plexInvites, userPreferences, likeContains, type Db } from "@tinkerbell/db";
+import { plexUsers, plexUserShares, plexInvites, userPreferences, likeContains, type Db } from "@rube/db";
 
 export interface UserFilters {
   /** Narrows to a single user. Used by the detail page's cached half. */

@@ -1,6 +1,6 @@
 /**
- * The poller against a real HTTP mock Plex, for one property: Tinkerbell's own
- * simulated playback must leave no trace in anything Tinkerbell reports.
+ * The poller against a real HTTP mock Plex, for one property: Rube's own
+ * simulated playback must leave no trace in anything Rube reports.
  *
  * The stress harness starts genuine Plex sessions on purpose — a fake one would
  * measure nothing — so from `/status/sessions` they are indistinguishable from
@@ -17,12 +17,12 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, playbackSessions, bandwidthSamples } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { SYNTHETIC_CLIENT_PREFIX } from "@tinkerbell/plex";
-import type { MockPlex } from "@tinkerbell/test-support";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, playbackSessions, bandwidthSamples } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { SYNTHETIC_CLIENT_PREFIX } from "@rube/plex";
+import type { MockPlex } from "@rube/test-support";
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -32,7 +32,7 @@ const db = c.resolve(DbToken);
 const { setConfig } = c.resolve(ConfigStoreToken);
 const { pollPlaybackOnce } = services.playback;
 
-const { startMockPlex } = await import("@tinkerbell/test-support");
+const { startMockPlex } = await import("@rube/test-support");
 
 const ITEMS = [
   { ratingKey: "1", title: "A Real Film", sectionId: "1", guids: [], labels: [], duration: 5_400_000 },
@@ -60,7 +60,7 @@ function playing(clientId: string, ratingKey: string): void {
   plex.playback.sessions.set(clientId, { ratingKey, clientId });
 }
 
-describe("the poller and Tinkerbell's own simulated playback", () => {
+describe("the poller and Rube's own simulated playback", () => {
   it("records a real viewer", () => {
     // The control. Without it, an assertion that nothing was recorded would
     // pass just as well against a poller that records nothing at all.

@@ -1,5 +1,5 @@
-import { posterUrlRejection, type CollectionModeChoice, type CollectionSortChoice } from "@tinkerbell/contracts";
-import { parseSmartFilterUri } from "@tinkerbell/plex-smart-filter";
+import { posterUrlRejection, type CollectionModeChoice, type CollectionSortChoice } from "@rube/contracts";
+import { parseSmartFilterUri } from "@rube/plex-smart-filter";
 import { mapFilters, mapPlexSearch } from "./filters.ts";
 import { asRecord, asStringList } from "./parse.ts";
 import { mapSchedule } from "./schedule.ts";
@@ -7,7 +7,7 @@ import type { KometaDefinition } from "./types.ts";
 import type { PlanConfidence, PlanWarning } from "../types.ts";
 
 /**
- * Kometa builder → Tinkerbell rule.
+ * Kometa builder → Rube rule.
  *
  * This table is the migration. Everything else in the package exists to
  * deliver a `KometaDefinition` to it in good enough shape to be mapped.
@@ -50,7 +50,7 @@ export interface MapOptions {
   hasAssetDirectory?: boolean;
 }
 
-/** Kometa chart id → Tinkerbell `imdb_chart` config value. */
+/** Kometa chart id → Rube `imdb_chart` config value. */
 const IMDB_CHART_MAP: Record<string, string> = {
   top_movies: "top_250_movies",
   top_250: "top_250_movies",
@@ -63,7 +63,7 @@ const IMDB_CHART_MAP: Record<string, string> = {
 };
 
 /**
- * Builders that need a Tinkerbell feature that doesn't exist yet, with the
+ * Builders that need a Rube feature that doesn't exist yet, with the
  * reason stated in the user's terms rather than ours. These end up in the
  * not-migrated report, which doubles as the feature-request funnel — so the
  * wording is the message, not a placeholder.
@@ -76,9 +76,9 @@ const KNOWN_UNSUPPORTED: Record<string, string> = {
   tmdb_trending_weekly: "TMDb trending isn't supported yet.",
   tmdb_now_playing: "TMDb now-playing isn't supported yet.",
   tmdb_upcoming: "TMDb upcoming isn't supported yet.",
-  tmdb_popular: "TMDb popular isn't supported yet — try Tinkerbell's own top-rated rule instead.",
+  tmdb_popular: "TMDb popular isn't supported yet — try Rube's own top-rated rule instead.",
   // Trakt public lists migrate; anything scoped to a Trakt *account* can't,
-  // because Tinkerbell authenticates with a client id rather than a sign-in.
+  // because Rube authenticates with a client id rather than a sign-in.
   trakt_watchlist: "Trakt watchlists need a Trakt sign-in, which isn't supported yet — only public lists migrate.",
   trakt_collection: "Trakt collections need a Trakt sign-in, which isn't supported yet — only public lists migrate.",
   trakt_recommendations:
@@ -94,20 +94,20 @@ const KNOWN_UNSUPPORTED: Record<string, string> = {
   flixpatrol_top: "FlixPatrol charts aren't supported yet.",
   boxofficemojo_top: "Box Office Mojo charts aren't supported yet.",
   tautulli_popular:
-    "Tautulli builders aren't supported — Tinkerbell tracks playback itself, so a most-played rule can replace this.",
+    "Tautulli builders aren't supported — Rube tracks playback itself, so a most-played rule can replace this.",
   tautulli_watched:
-    "Tautulli builders aren't supported — Tinkerbell tracks playback itself, so a most-played rule can replace this.",
+    "Tautulli builders aren't supported — Rube tracks playback itself, so a most-played rule can replace this.",
   mal_all: "MyAnimeList builders aren't supported.",
   anilist_top_rated: "AniList builders aren't supported.",
   anidb_popular: "AniDB builders aren't supported.",
   radarr_all: "Reading everything from Radarr isn't supported.",
   sonarr_all: "Reading everything from Sonarr isn't supported.",
-  plex_collectionless: "Kometa's 'collectionless' builder has no Tinkerbell equivalent.",
+  plex_collectionless: "Kometa's 'collectionless' builder has no Rube equivalent.",
   plex_watchlist: "Watchlist builders aren't supported yet.",
-  plex_pilots: "The pilot-episodes builder has no Tinkerbell equivalent.",
+  plex_pilots: "The pilot-episodes builder has no Rube equivalent.",
 };
 
-/** Kometa `collection_mode` → Tinkerbell's named mode. */
+/** Kometa `collection_mode` → Rube's named mode. */
 const COLLECTION_MODE_MAP: Record<string, CollectionModeChoice | undefined> = {
   default: "default",
   hide: "hide",
@@ -129,7 +129,7 @@ const COLLECTION_SORT_MAP: Record<string, CollectionSortChoice | undefined> = {
   custom: "custom",
 };
 
-/** Definition settings that carry no meaning for Tinkerbell. Dropped quietly. */
+/** Definition settings that carry no meaning for Rube. Dropped quietly. */
 const IGNORED_SETTINGS = new Set([
   "save_report",
   "show_missing",
@@ -186,12 +186,12 @@ export function mapDefinition(def: KometaDefinition, opts: MapOptions = {}): Map
   }
 
   if (builderKeys.length === 0) {
-    return { reason: "No builder — nothing tells Tinkerbell what to put in this collection.", builders: [] };
+    return { reason: "No builder — nothing tells Rube what to put in this collection.", builders: [] };
   }
   if (builderKeys.length > 1) {
     warnings.push({
       code: "multiple-builders",
-      message: `Kometa combined ${builderKeys.length} builders here (${builderKeys.join(", ")}); Tinkerbell rules have one source, so only the first was used.`,
+      message: `Kometa combined ${builderKeys.length} builders here (${builderKeys.join(", ")}); Rube rules have one source, so only the first was used.`,
     });
   }
 
@@ -199,7 +199,7 @@ export function mapDefinition(def: KometaDefinition, opts: MapOptions = {}): Map
   if (!base) {
     const reason = builderKeys.map((k) => KNOWN_UNSUPPORTED[k]).find(Boolean);
     return {
-      reason: reason ?? `Tinkerbell has no equivalent for the \`${builderKeys[0]}\` builder.`,
+      reason: reason ?? `Rube has no equivalent for the \`${builderKeys[0]}\` builder.`,
       builders: builderKeys,
     };
   }
@@ -227,17 +227,17 @@ export function mapDefinition(def: KometaDefinition, opts: MapOptions = {}): Map
       presentation.poster = "url";
       presentation.posterUrl = url;
     } else {
-      // The allow-list exists because Tinkerbell fetches these server-side on
+      // The allow-list exists because Rube fetches these server-side on
       // a schedule and hands the bytes to an image decoder. Kometa's own
       // Default-Images and TMDb are on it; a personal file server is not.
       warnings.push({
         code: "poster-host-not-allowed",
-        message: `The poster URL (${url}) isn't on Tinkerbell's allowed image hosts, so it wasn't carried across.`,
+        message: `The poster URL (${url}) isn't on Rube's allowed image hosts, so it wasn't carried across.`,
       });
     }
   }
   // A `file_poster`, or an `asset_directory` in the config, both mean "the
-  // artwork is a file on disk". Tinkerbell reads the same directory, matching
+  // artwork is a file on disk". Rube reads the same directory, matching
   // on the collection's name the way Kometa does.
   if (settings.file_poster != null || opts.hasAssetDirectory) {
     if (presentation.poster == null) presentation.poster = "asset";
@@ -294,7 +294,7 @@ export function mapDefinition(def: KometaDefinition, opts: MapOptions = {}): Map
     warnings.push({
       code: "sync-mode-append",
       message:
-        "Kometa appended to this collection without removing anything; Tinkerbell rebuilds membership each run, so items that no longer match will be removed.",
+        "Kometa appended to this collection without removing anything; Rube rebuilds membership each run, so items that no longer match will be removed.",
     });
     confidence = "partial";
   }
@@ -303,7 +303,7 @@ export function mapDefinition(def: KometaDefinition, opts: MapOptions = {}): Map
     if (settings[key] != null) {
       warnings.push({
         code: "item-attribute-unsupported",
-        message: `\`${key}\` wasn't carried across — Tinkerbell edits item metadata through a separate rule action.`,
+        message: `\`${key}\` wasn't carried across — Rube edits item metadata through a separate rule action.`,
       });
     }
   }
@@ -311,7 +311,7 @@ export function mapDefinition(def: KometaDefinition, opts: MapOptions = {}): Map
   if (settings.builder_level != null) {
     warnings.push({
       code: "builder-level-unsupported",
-      message: `This collection held ${String(settings.builder_level)}s rather than whole titles, which Tinkerbell doesn't support.`,
+      message: `This collection held ${String(settings.builder_level)}s rather than whole titles, which Rube doesn't support.`,
     });
     confidence = "partial";
   }
@@ -437,7 +437,7 @@ function mapBuilder(
     if (!chart) {
       warnings.push({
         code: "imdb-chart-unknown",
-        message: `Tinkerbell doesn't have IMDb's "${key}" chart.`,
+        message: `Rube doesn't have IMDb's "${key}" chart.`,
       });
       return null;
     }
@@ -460,7 +460,7 @@ function mapBuilder(
     warnings.push({
       code: "award-generalised",
       message:
-        "Tinkerbell's awards rule groups by award rather than reproducing one specific ceremony or year, so this collection's contents will differ.",
+        "Rube's awards rule groups by award rather than reproducing one specific ceremony or year, so this collection's contents will differ.",
     });
     return { ruleType: "awards", ruleConfig: {}, confidence: "partial" };
   }
@@ -477,7 +477,7 @@ function mapBuilder(
 
   // Only the list builders map. The rest of the `trakt_*` family needs a Trakt
   // *sign-in* — a watchlist belongs to a person, not to a server — and
-  // Tinkerbell authenticates with a client id alone. Mapping them anyway would
+  // Rube authenticates with a client id alone. Mapping them anyway would
   // mint rules that fail on every run, which is a worse outcome than an
   // honest entry in the not-migrated report.
   if ("trakt_list" in b || "trakt_userlist" in b) {
@@ -509,7 +509,7 @@ function mapBuilder(
     warnings.push({
       code: "franchise-generalised",
       message:
-        "Tinkerbell builds franchise collections from TMDb across the whole library rather than from one named collection id, so this may produce a different set.",
+        "Rube builds franchise collections from TMDb across the whole library rather than from one named collection id, so this may produce a different set.",
     });
     return { ruleType: "tmdb_franchises", ruleConfig: {}, confidence: "partial" };
   }
@@ -517,7 +517,7 @@ function mapBuilder(
     warnings.push({
       code: "top-rated-is-local",
       message:
-        "Tinkerbell's top-rated rule ranks what's in your library rather than TMDb's global chart, so the contents will differ.",
+        "Rube's top-rated rule ranks what's in your library rather than TMDb's global chart, so the contents will differ.",
     });
     return { ruleType: "top_rated", ruleConfig: { collectionName }, confidence: "partial" };
   }
@@ -528,12 +528,12 @@ function mapBuilder(
 const SMART_BECOMES_STATIC: PlanWarning = {
   code: "smart-becomes-static",
   message:
-    "Tinkerbell rebuilds this collection on each run instead of leaving Plex a live smart filter, so membership updates on the rule's schedule rather than instantly.",
+    "Rube rebuilds this collection on each run instead of leaving Plex a live smart filter, so membership updates on the rule's schedule rather than instantly.",
 };
 
 function TMDB_BY_NAME(kind: string): PlanWarning {
   return {
     code: "tmdb-id-to-name",
-    message: `Kometa selected this by TMDb ${kind} id; Tinkerbell groups by ${kind} name, so titles TMDb attributes differently may not line up.`,
+    message: `Kometa selected this by TMDb ${kind} id; Rube groups by ${kind} name, so titles TMDb attributes differently may not line up.`,
   };
 }

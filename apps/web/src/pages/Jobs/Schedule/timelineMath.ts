@@ -5,7 +5,7 @@
  * past midnight must come back at 00:15, not at 24:15 or at the far left
  * with the remainder lost.
  */
-import { SNAP_MINUTES } from "@tinkerbell/contracts";
+import { SNAP_MINUTES } from "@rube/contracts";
 
 export const DAY_MINUTES = 1440;
 export const WEEK_MINUTES = 7 * DAY_MINUTES;

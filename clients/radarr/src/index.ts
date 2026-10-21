@@ -12,7 +12,7 @@
  * instance was reachable.
  */
 
-import { createServarrHttp, createCommands, type ServarrHttpOptions } from "@tinkerbell/servarr-http";
+import { createServarrHttp, createCommands, type ServarrHttpOptions } from "@rube/servarr-http";
 import { createLibrary } from "./library.ts";
 import { createActivity } from "./activity.ts";
 import { createSystem } from "./system.ts";

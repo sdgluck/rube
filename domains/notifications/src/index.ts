@@ -2,13 +2,7 @@
  * Which services exist, which events each one wants, and how an event becomes
  * a delivered message.
  */
-import {
-  errorMessage,
-  isWithinClockWindow,
-  type ConfigValue,
-  type ConfigKey,
-  type ConfigStore,
-} from "@tinkerbell/core";
+import { errorMessage, isWithinClockWindow, type ConfigValue, type ConfigKey, type ConfigStore } from "@rube/core";
 import {
   EVENT_TYPES,
   NOTIFICATION_SERVICES,
@@ -18,8 +12,8 @@ import {
 } from "./types.ts";
 import { createSenders } from "./senders.ts";
 import { createSmtp } from "./smtp.ts";
-import { type EventBus } from "@tinkerbell/ports";
-import { token } from "@tinkerbell/container";
+import { type EventBus } from "@rube/ports";
+import { token } from "@rube/container";
 
 export * from "./types.ts";
 export { renderEmailHtml, SmtpNotConfiguredError, type SmtpTarget } from "./smtp.ts";
@@ -110,12 +104,12 @@ export function sampleMessageFor(type: string): RichMessage {
     "registry.update_available": "3 registry rules have updates available.",
     "watchlist.requested": 'Requested "Sinners" from radarr.',
     "watchlist.failed": 'Couldn\'t request "Sinners" — sonarr returned 401 Unauthorized.',
-    "arr.quality_drift": "“HD Bluray + WEB” on Radarr was changed outside Tinkerbell (3 differences).",
+    "arr.quality_drift": "“HD Bluray + WEB” on Radarr was changed outside Rube (3 differences).",
     "problems.found":
       "2 new problems: The Office (US) (episode ordering doesn't match your files), Severance (episodes missing from plex)",
     "digest.sent": "Your weekly digest — 12 added, 3 leaving soon.",
   };
-  return plainMessage(label, `${samples[type] ?? "Test notification from Tinkerbell."} (test)`);
+  return plainMessage(label, `${samples[type] ?? "Test notification from Rube."} (test)`);
 }
 
 export { NOTIFICATION_SERVICES };

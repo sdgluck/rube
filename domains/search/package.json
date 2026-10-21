@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.search",
+  "name": "@rube/domain.search",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,12 +15,12 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/db": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
-    "@tinkerbell/composition": "workspace:*",
+    "@rube/composition": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"
   }

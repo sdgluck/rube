@@ -13,9 +13,9 @@
  * worse than the typographic plate it would have fallen back to.
  */
 import sharp from "sharp";
-import { fitText, measureText, textPathData } from "@tinkerbell/overlays";
-import { COLLECTION_POSTER_HEIGHT, COLLECTION_POSTER_WIDTH } from "@tinkerbell/contracts";
-import type { CollectionPosterTemplateId } from "@tinkerbell/contracts";
+import { fitText, measureText, textPathData } from "@rube/overlays";
+import { COLLECTION_POSTER_HEIGHT, COLLECTION_POSTER_WIDTH } from "@rube/contracts";
+import type { CollectionPosterTemplateId } from "@rube/contracts";
 import { hexToRgb, mix, rgbToHex, type Palette } from "./palette.ts";
 
 const W = COLLECTION_POSTER_WIDTH;

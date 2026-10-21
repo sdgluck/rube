@@ -20,12 +20,12 @@ import { join } from "node:path";
 // so this can't leak into another file's prerolls.
 process.env.PREROLLS_DIR = mkdtempSync(join(tmpdir(), "tb-portal-preroll-"));
 
-import type { JobContext } from "@tinkerbell/core";
-import { ConfigStoreToken, noopCheckpoint } from "@tinkerbell/core";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { PortalUrlMissingError, processedPath, thumbPath } from "@tinkerbell/domain.prerolls";
-import { probe } from "@tinkerbell/video";
+import type { JobContext } from "@rube/core";
+import { ConfigStoreToken, noopCheckpoint } from "@rube/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { PortalUrlMissingError, processedPath, thumbPath } from "@rube/domain.prerolls";
+import { probe } from "@rube/video";
 import type { MockPlex } from "../test-support/mock-plex-server.ts";
 import { createPrerollProcessCommand } from "./preroll-process.ts";
 

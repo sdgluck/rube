@@ -17,8 +17,8 @@
  * just be an invisible precedence rule again.
  */
 import { inArray } from "drizzle-orm";
-import { cleanupCandidates, plexSections, ruleCollectionMembers, rules, type Db } from "@tinkerbell/db";
-import { ruleAction, type RuleConfig } from "@tinkerbell/contracts";
+import { cleanupCandidates, plexSections, ruleCollectionMembers, rules, type Db } from "@rube/db";
+import { ruleAction, type RuleConfig } from "@rube/contracts";
 
 export type ConflictKind = "collection-name" | "metadata-field" | "cleanup-vs-collection";
 

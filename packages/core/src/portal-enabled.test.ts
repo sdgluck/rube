@@ -10,10 +10,10 @@
  */
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { createTestDb } from "@tinkerbell/db/test-db";
+import { createTestDb } from "@rube/db/test-db";
 import { createConfigStore } from "./config.ts";
 
-const testDb = createTestDb("tinkerbell-portal-enabled-test-");
+const testDb = createTestDb("rube-portal-enabled-test-");
 after(testDb.dispose);
 
 const { getConfig, setConfig, deleteConfig, portalShouldRun } = createConfigStore({

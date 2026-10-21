@@ -1,10 +1,10 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import PQueue from "p-queue";
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import type { PlexClient, PlexSection } from "@rube/plex";
 
-import { displayTitle, ruleRowTitle, type JobContext } from "@tinkerbell/core";
+import { displayTitle, ruleRowTitle, type JobContext } from "@rube/core";
 import { and, eq, ne, sql } from "drizzle-orm";
-import { collections as collectionsTable } from "@tinkerbell/db";
+import { collections as collectionsTable } from "@rube/db";
 
 import {
   resolveCollectionPrefs,
@@ -13,7 +13,7 @@ import {
   resolveSortTitle,
   type PresentationConfig,
   type RuleConfig,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { bufferLog } from "./log-buffer.ts";
 import { reconcileMembership, type ExistingCollection } from "./reconcile.ts";
 import { createTagLabels } from "./tag-labels.ts";

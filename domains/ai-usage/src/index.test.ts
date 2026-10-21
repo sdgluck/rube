@@ -6,9 +6,9 @@
 import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ConfigStoreToken, DAY_MS } from "@tinkerbell/core";
-import type { LlmClient, LlmResponse } from "@tinkerbell/llm";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ConfigStoreToken, DAY_MS } from "@rube/core";
+import type { LlmClient, LlmResponse } from "@rube/llm";
 
 import { AiUsageToken, LlmBudgetExceededError } from "./index.ts";
 

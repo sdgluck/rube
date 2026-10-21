@@ -9,8 +9,8 @@
  */
 import { and, eq } from "drizzle-orm";
 import { z } from "zod";
-import { token } from "@tinkerbell/container";
-import { userPreferences, plexUsers, type Db } from "@tinkerbell/db";
+import { token } from "@rube/container";
+import { userPreferences, plexUsers, type Db } from "@rube/db";
 
 export const userPreferencesSchema = z.object({
   genres: z
@@ -68,7 +68,7 @@ export const userPreferencesSchema = z.object({
   strictHate: z.boolean().default(true),
   /**
    * The user's own digest subscription, and the only thing that authorises
-   * Tinkerbell to email them.
+   * Rube to email them.
    *
    * Deliberately separate from the `optedIn` column beside this blob: that one
    * is consent to personalised *home screens*, and reusing it would mean
@@ -217,7 +217,7 @@ export function createPreferences(deps: PreferencesDeps) {
    * Both halves are required, and neither is inferable: a frequency without an
    * address has nowhere to go, and an address without a frequency was typed by
    * someone who then chose "never". Users who have never opened the portal have
-   * no row here at all, which is the correct answer — Tinkerbell has no address
+   * no row here at all, which is the correct answer — Rube has no address
    * for them and must not go looking for one.
    */
   function listDigestSubscribers(): DigestSubscriber[] {

@@ -47,7 +47,7 @@ export function parseModel(buf: Uint8Array): Model {
   let off = 8;
   const header = JSON.parse(text.decode(buf.subarray(off, off + headerLength))) as ModelHeader;
   if (header.format !== SUPPORTED_FORMAT) {
-    throw new Error(`recommender model format ${header.format} isn't supported by this version of Tinkerbell`);
+    throw new Error(`recommender model format ${header.format} isn't supported by this version of Rube`);
   }
   off += headerLength;
 

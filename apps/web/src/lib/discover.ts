@@ -8,7 +8,7 @@
  * regresses silently inside a `.map()`.
  */
 
-import type { ArrService } from "@tinkerbell/contracts";
+import type { ArrService } from "@rube/contracts";
 import type { StatusChipTone } from "#components/PageShell";
 
 export interface DiscoverArrHolding {

@@ -4,9 +4,9 @@
  * has the row in it. The cleanup queue itself is untouched; removing the row
  * changes nothing about what cleanup will delete.
  */
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
-import type { JobContext } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
+import type { JobContext } from "@rube/core";
 import { plexConnection } from "./ai-collection-shared.ts";
 import { LEAVING_LABEL } from "./leaving-soon/index.ts";
 
@@ -21,7 +21,7 @@ export function createLeavingRemoveCommand(deps: Pick<Services, "clients" | "col
     if (!token) throw new Error("Plex token is required. Configure it in Settings.");
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell leaving-remove`);
+    ctx.log(`rube leaving-remove`);
     ctx.log(`Server: ${url}`);
 
     const sections = await client.getSections();

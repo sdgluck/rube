@@ -20,7 +20,7 @@
 import { z } from "zod";
 
 export const stressTestSessionSampleSchema = z.object({
-  /** The client identifier, minus the `tinkerbell-stress-` prefix. */
+  /** The client identifier, minus the `rube-stress-` prefix. */
   id: z.string(),
   /** This session's transcode speed, or null in direct play. */
   speed: z.number().nullable(),

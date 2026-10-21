@@ -8,7 +8,7 @@
  */
 
 import { z } from "zod";
-import { ARR_SERVICES, MINIMUM_AVAILABILITY, SERIES_MONITOR_MODES } from "@tinkerbell/contracts";
+import { ARR_SERVICES, MINIMUM_AVAILABILITY, SERIES_MONITOR_MODES } from "@rube/contracts";
 import type { TrpcDeps } from "../deps.ts";
 import { t, procedure } from "../_base.ts";
 import { createArrClients, serviceInput, upstream } from "./_shared.ts";

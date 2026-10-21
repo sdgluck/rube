@@ -8,8 +8,8 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
-import { arrActivity, arrMovies, arrSeries } from "@tinkerbell/db";
+import { createTestDb, type TestDb } from "@rube/db/test-db";
+import { arrActivity, arrMovies, arrSeries } from "@rube/db";
 import { createArrReconcile } from "./reconcile.ts";
 
 const DAY = 24 * 60 * 60 * 1000;

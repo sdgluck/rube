@@ -8,14 +8,14 @@
  */
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
-import { arrActivity, arrSeries, mediaItems, ruleRuns, rules, showChecks } from "@tinkerbell/db";
-import { createConfigStore, type ArrInstance } from "@tinkerbell/core";
-import { createPlexClient } from "@tinkerbell/plex";
+import { createTestDb, type TestDb } from "@rube/db/test-db";
+import { arrActivity, arrSeries, mediaItems, ruleRuns, rules, showChecks } from "@rube/db";
+import { createConfigStore, type ArrInstance } from "@rube/core";
+import { createPlexClient } from "@rube/plex";
 import { eq } from "drizzle-orm";
-import { createArrLibrary } from "@tinkerbell/domain.arr-library";
-import { startMockPlex, startMockSonarr, type MockArr, type MockPlex, type MockShow } from "@tinkerbell/test-support";
-import type { ChangeRecord } from "@tinkerbell/ports";
+import { createArrLibrary } from "@rube/domain.arr-library";
+import { startMockPlex, startMockSonarr, type MockArr, type MockPlex, type MockShow } from "@rube/test-support";
+import type { ChangeRecord } from "@rube/ports";
 import { createProblems } from "./index.ts";
 
 const TVDB_S4 = [

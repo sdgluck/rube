@@ -3,7 +3,7 @@
  * Apart from the command so the rules — finished, not lately, rewatched most
  * first — are testable without Plex.
  */
-import { mediaItems, watchState, type Db } from "@tinkerbell/db";
+import { mediaItems, watchState, type Db } from "@rube/db";
 import { and, eq, inArray } from "drizzle-orm";
 
 /** Watched this far through counts as seen — the line the other personal rows draw. */

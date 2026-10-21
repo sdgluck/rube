@@ -1,5 +1,5 @@
 import type { RuleRunsDeps } from "./index.ts";
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 /**
  * Serialises manual rule runs inside this process.
  *

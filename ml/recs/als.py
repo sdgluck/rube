@@ -1,7 +1,7 @@
 """
 Collaborative item vectors: implicit ALS over MovieLens.
 
-Implicit rather than explicit ALS because Tinkerbell never sees a rating —
+Implicit rather than explicit ALS because Rube never sees a rating —
 only plays and how far they got — so the model is trained on "watched and
 liked" as a confidence, the same shape of signal it will be queried with.
 

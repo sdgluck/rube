@@ -1,8 +1,8 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { getQualityProfiles, getRootFolders, type ArrConfig, type ArrService } from "@tinkerbell/arr";
-import { errorMessage } from "@tinkerbell/core";
+import { getQualityProfiles, getRootFolders, type ArrConfig, type ArrService } from "@rube/arr";
+import { errorMessage } from "@rube/core";
 import { t, procedure } from "./_base.ts";
 import { createArrLibraryRouter } from "./arr/library.router.ts";
 import { createArrActivityRouter } from "./arr/activity.router.ts";

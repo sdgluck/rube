@@ -55,7 +55,7 @@ export default function SettingsAiRecommender({ enabled, hasProvider }: { enable
         {hasProvider
           ? "Ranks each library for each person from what they've watched, then asks the provider above to choose from the closest 150 titles rather than the whole library. Faster, cheaper, and it works with small local models."
           : "Ranks each library for each person from what they've watched, and builds both rows from that ranking — no AI provider needed."}{" "}
-        Everything happens on this server: the model ships with Tinkerbell, and no viewing history is sent anywhere.
+        Everything happens on this server: the model ships with Rube, and no viewing history is sent anywhere.
       </p>
       {status && !status.available && (
         <span className={`${styles.status} ${styles.statusWarn}`}>

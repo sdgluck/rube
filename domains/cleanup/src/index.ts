@@ -36,9 +36,9 @@ import {
   mediaItems,
   rules,
   type Db,
-} from "@tinkerbell/db";
-import { localDayKey, DAY_MS, type ConfigStore } from "@tinkerbell/core";
-import { token } from "@tinkerbell/container";
+} from "@rube/db";
+import { localDayKey, DAY_MS, type ConfigStore } from "@rube/core";
+import { token } from "@rube/container";
 
 export type CleanupAction = "label" | "collection_only" | "unmonitor" | "delete";
 

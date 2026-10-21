@@ -20,7 +20,7 @@ test("rankCandidates orders by rating, then newest, then key — and drops repea
 });
 
 test("rowIdentity reads the season and owner from a row's labels", () => {
-  assert.deepEqual(rowIdentity(["Tinkerbell", "SeasonCollections", "Season:christmas"]), {
+  assert.deepEqual(rowIdentity(["Rube", "SeasonCollections", "Season:christmas"]), {
     season: "christmas",
     user: null,
   });

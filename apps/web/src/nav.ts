@@ -70,7 +70,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { to: "/prerolls", label: "Prerolls", metric: { kind: "count", key: "prerolls" } },
     ],
   },
-  // Between Library (what Plex holds) and Automation (what Tinkerbell does
+  // Between Library (what Plex holds) and Automation (what Rube does
   // about it), because that is where acquiring things belongs: after you know
   // what you have, before you decide what to do with it.
   {

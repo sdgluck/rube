@@ -15,9 +15,9 @@
 
 import { createHash, randomBytes, randomUUID } from "node:crypto";
 import { desc, eq } from "drizzle-orm";
-import { apiKeys, type Db } from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
-import type { Clock } from "@tinkerbell/ports";
+import { apiKeys, type Db } from "@rube/db";
+import { token } from "@rube/container";
+import type { Clock } from "@rube/ports";
 
 /**
  * Recognisable in a config file or a leaked log line, which is the point:

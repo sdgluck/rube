@@ -13,7 +13,7 @@ import shared from "#/styles/shared.module.css";
 import styles from "./Changes.module.css";
 
 /**
- * What Tinkerbell did to the library, and what can be taken back.
+ * What Rube did to the library, and what can be taken back.
  *
  * Every one of these changes was already recorded, and every one was recorded
  * somewhere else — collection membership on the rule's runs page, metadata

@@ -16,7 +16,7 @@ import {
   type BuilderSchedule,
   type BuilderTime,
   type Nth,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import controls from "#/styles/controls.module.css";
 import styles from "./SchedulePicker.module.css";
 

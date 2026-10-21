@@ -9,8 +9,8 @@
  * stays an error.
  */
 import { TRPCError } from "@trpc/server";
-import { HttpError } from "@tinkerbell/http";
-import { getPlexAccount, type PlexUserAccount } from "@tinkerbell/plex";
+import { HttpError } from "@rube/http";
+import { getPlexAccount, type PlexUserAccount } from "@rube/plex";
 
 export async function exchangeAccount(plexToken: string, clientId: string): Promise<PlexUserAccount> {
   try {

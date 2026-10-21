@@ -6,8 +6,8 @@
  */
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { estimateTokens } from "@tinkerbell/llm";
-import type { PlexItem } from "@tinkerbell/plex";
+import { estimateTokens } from "@rube/llm";
+import type { PlexItem } from "@rube/plex";
 import { libraryTitleMatcher } from "../ai-collection-shared.ts";
 import { fitLibrary, pickRatingKeys } from "./index.ts";
 

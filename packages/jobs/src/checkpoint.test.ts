@@ -2,10 +2,10 @@ import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
 import { createCheckpoint } from "./checkpoint.ts";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { jobCheckpoints, jobs } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { jobCheckpoints, jobs } from "@rube/db";
 
 const c = createTestContainer();
 after(() => c.dispose());

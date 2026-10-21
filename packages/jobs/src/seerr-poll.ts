@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import { createRuleTriggers } from "./rule-triggers.ts";
 /**
  * "An Overseerr request became available" — the one rule trigger with no
@@ -15,8 +15,8 @@ import { createRuleTriggers } from "./rule-triggers.ts";
  * go available again — a watermark would miss the second one.
  */
 
-import { fetchSeerrRequests } from "@tinkerbell/seerr";
-import { createLogger, errorMessage, type JobContext } from "@tinkerbell/core";
+import { fetchSeerrRequests } from "@rube/seerr";
+import { createLogger, errorMessage, type JobContext } from "@rube/core";
 
 const log = createLogger("seerr-poll");
 

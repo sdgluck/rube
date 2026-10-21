@@ -1,9 +1,9 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { ServicesToken, type Services } from "@rube/composition";
 import { createRuleTriggers } from "../rule-triggers.ts";
-import { createPlexClient } from "@tinkerbell/plex";
+import { createPlexClient } from "@rube/plex";
 import { labelNewArrivals } from "../personalize/label-new-arrivals.ts";
 
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
 interface SyncMediaCheckpoint {
   /** The `syncedAt` watermark the interrupted run stamped its rows with. */
@@ -70,7 +70,7 @@ export function createSyncMediaCommand(deps: Services) {
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell sync-media`);
+    ctx.log(`rube sync-media`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     const identity = await client.getIdentity();

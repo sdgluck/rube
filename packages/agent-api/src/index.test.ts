@@ -9,11 +9,11 @@
  */
 import { describe, test, before, after } from "node:test";
 import assert from "node:assert/strict";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
-import { createTrpc } from "@tinkerbell/trpc";
-import { startMockPlex, type MockPlex } from "@tinkerbell/test-support";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { JobsToken, registerJobs } from "@rube/jobs";
+import { createTrpc } from "@rube/trpc";
+import { startMockPlex, type MockPlex } from "@rube/test-support";
 import { createAgentApi, isAgentApiPath, SUPPORTED_PROTOCOL_VERSIONS, TOOLS } from "./index.ts";
 import { argsFromQuery } from "./rest.ts";
 import { inputSchemaOf } from "./json-schema.ts";
@@ -30,7 +30,7 @@ const { handleAgentRequest } = createAgentApi({
   version: "9.9.9",
 });
 
-const ORIGIN = "http://tinkerbell.test";
+const ORIGIN = "http://rube.test";
 const { key } = services.apiKeys.createApiKey("test agent");
 
 let plex: MockPlex;
@@ -250,7 +250,7 @@ describe("agent api: REST", () => {
 
     const doc = await (await request("/api/v1/openapi.json", { headers: { "x-forwarded-proto": "https" } })).json();
     assert.equal(doc.openapi, "3.1.0");
-    assert.equal(doc.servers[0].url, "https://tinkerbell.test");
+    assert.equal(doc.servers[0].url, "https://rube.test");
     for (const tool of TOOLS) assert.ok(doc.paths[`/api/v1/tools/${tool.name}`], tool.name);
   });
 

@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
@@ -42,7 +42,7 @@ export function createSeerrRequestsCommand(deps: Pick<Services, "config">) {
     ctx.log(`[Seerr Requests] ${tmdbToItem.size}/${items.length} items have TMDB IDs.`);
 
     ctx.log(`[Seerr Requests] Streaming Seerr requests (filter=${filter}) until ${limit} matches...`);
-    const { iterSeerrRequests } = await import("@tinkerbell/seerr");
+    const { iterSeerrRequests } = await import("@rube/seerr");
     const matched: Array<{ ratingKey: string; title: string; year?: number }> = [];
     const seen = new Set<string>();
     let scanned = 0;

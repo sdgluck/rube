@@ -14,7 +14,7 @@
  * NOTE: this file is distinct from `../sidequest/registry.ts`, which is
  * Sidequest's `manualJobResolution` entrypoint and must keep its one-line shape.
  */
-import { HOUR_MS, MINUTE_MS, type JobContext } from "@tinkerbell/core";
+import { HOUR_MS, MINUTE_MS, type JobContext } from "@rube/core";
 
 /**
  * Which Sidequest queue a command runs on.

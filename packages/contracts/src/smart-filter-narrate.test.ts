@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 import { narrateSmartFilter, needsTagLookup } from "./smart-filter-narrate.ts";
-import type { SmartFilterGroup, SmartFilterNode, SmartFilterOp } from "@tinkerbell/plex-smart-filter";
+import type { SmartFilterGroup, SmartFilterNode, SmartFilterOp } from "@rube/plex-smart-filter";
 
 const leaf = (field: string, op: SmartFilterOp, value: string): SmartFilterNode => ({
   kind: "leaf",
@@ -25,7 +25,7 @@ describe("narrateSmartFilter", () => {
     assert.equal(text, "Horror films released in the last 10 years that you haven't watched.");
   });
 
-  it("says who hasn't watched it — Plex's view state is the owner's, Tinkerbell's is everyone's", () => {
+  it("says who hasn't watched it — Plex's view state is the owner's, Rube's is everyone's", () => {
     assert.equal(
       narrateSmartFilter(all(leaf("addedAt", ">=", "-30d"), leaf("tb.watchedByNobody", "=", "1")), series),
       "Series added in the last 30 days that nobody has watched.",

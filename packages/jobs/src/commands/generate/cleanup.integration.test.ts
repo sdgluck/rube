@@ -21,18 +21,18 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext } from "@rube/core";
 import type { MockPlex } from "../../test-support/mock-plex-server.ts";
 import type { MockArr } from "../../test-support/mock-arr-server.ts";
 import { sql } from "drizzle-orm";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { cleanupCandidates, config, events, jobRuns, jobs, rules } from "@tinkerbell/db";
-import { DAY_MS, noopCheckpoint } from "@tinkerbell/core";
-import { CleanupToken } from "@tinkerbell/domain.cleanup";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { cleanupCandidates, config, events, jobRuns, jobs, rules } from "@rube/db";
+import { DAY_MS, noopCheckpoint } from "@rube/core";
+import { CleanupToken } from "@rube/domain.cleanup";
 import { createGenerateCommand } from "./index.ts";
 
 const c = createTestContainer();
@@ -228,7 +228,7 @@ describe("a cleanup rule across three real runs", () => {
     assert.deepEqual(plex.journal.deletedItems, []);
 
     // Nothing is written to Plex. The candidates are reviewable from the first
-    // run on Tinkerbell's own Cleanup page, which is where the streaks, holds
+    // run on Rube's own Cleanup page, which is where the streaks, holds
     // and Keep buttons live — none of which a Plex collection could express.
     assert.deepEqual(plex.journal.createdCollections, [], "cleanup builds no collections");
 
@@ -455,7 +455,7 @@ describe("label mode, through the real job", () => {
     // wrong endpoint would have silently failed to do.
     for (const key of ["100", "101", "102"]) {
       const item = plex.items.get(key)!;
-      assert.ok(item.labels.includes("Tinkerbell:Cleanup"), `"${item.title}" was not labelled`);
+      assert.ok(item.labels.includes("Rube:Cleanup"), `"${item.title}" was not labelled`);
     }
   });
 });
@@ -516,7 +516,7 @@ describe("a collection rule is untouched by any of this", () => {
     assert.equal(plex.journal.createdCollections.length, 1);
     // No cleanup label on an ordinary rule's collection.
     const collection = [...plex.collections.values()][0];
-    assert.ok(!collection.labels.includes("Tinkerbell:Cleanup"));
+    assert.ok(!collection.labels.includes("Rube:Cleanup"));
   });
 });
 

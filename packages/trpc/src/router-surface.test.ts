@@ -10,15 +10,15 @@
  */
 import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { ConfigStoreToken, REDACTED_SECRET } from "@tinkerbell/core";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { ConfigStoreToken, REDACTED_SECRET } from "@rube/core";
+import { JobsToken, registerJobs } from "@rube/jobs";
 import { createTrpc } from "./index.ts";
 import { t } from "./_base.ts";
 
 // The router is built from a container now, so the test builds one. It used to
-// have to set `DATA_DIR` before anything imported `@tinkerbell/db`, because
+// have to set `DATA_DIR` before anything imported `@rube/db`, because
 // that import opened a SQLite file wherever the environment pointed.
 const c = createTestContainer({ overrides: registerJobs });
 after(() => c.dispose());
@@ -34,7 +34,7 @@ const { getConfig } = c.resolve(ConfigStoreToken);
  * unauthenticated by definition. `enable` is public so the feature can be
  * adopted at all — there is no session to authenticate with before auth is
  * on — and re-checks for a session itself once it is. `server` is the native
- * app's "is this a Tinkerbell, and which release?", asked before sign-in and
+ * app's "is this a Rube, and which release?", asked before sign-in and
  * answering only a product name and version. `exchange` is the native app's
  * sign-in — it turns a Plex token the app got from plex.tv into a session,
  * after the same admin check as `poll`. Nothing else belongs here: not
@@ -58,7 +58,7 @@ function anonymousContext() {
     resHeaders: new Headers(),
     secure: false,
     handshakeNonce: undefined,
-    origin: "http://tinkerbell.test",
+    origin: "http://rube.test",
     ip: "test",
     authRequired: true,
   };

@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
-import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
-import { playbackSessions } from "@tinkerbell/db";
+import { createTestDb, type TestDb } from "@rube/db/test-db";
+import { playbackSessions } from "@rube/db";
 import { pickUpPoint, pickUpSummary, stalledShows, type EpisodePlay, type Leaf } from "./stalled.ts";
 
 const DAY = 86_400_000;

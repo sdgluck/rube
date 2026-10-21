@@ -9,9 +9,9 @@ interface Verdict {
   ruleName: string;
   comparable: boolean;
   kometa: number;
-  tinkerbell: number;
+  rube: number;
   common: number;
-  onlyInTinkerbell?: string[];
+  onlyInRube?: string[];
 }
 
 /** Below this share in common, a rule is worth opening rather than trusting. */
@@ -99,7 +99,7 @@ export default function VerifyPanel() {
               <tr>
                 <th>Rule</th>
                 <th className={local.numCol}>Kometa</th>
-                <th className={local.numCol}>Tinkerbell</th>
+                <th className={local.numCol}>Rube</th>
                 <th className={local.numCol}>In common</th>
                 <th>Verdict</th>
               </tr>
@@ -124,15 +124,15 @@ export default function VerifyPanel() {
                   <tr key={entry.ruleId}>
                     <td>
                       {v.ruleName}
-                      {v.onlyInTinkerbell && v.onlyInTinkerbell.length > 0 && (
+                      {v.onlyInRube && v.onlyInRube.length > 0 && (
                         <div className={local.rowHint}>
-                          new: {v.onlyInTinkerbell.slice(0, 3).join(", ")}
-                          {v.onlyInTinkerbell.length > 3 ? ", …" : ""}
+                          new: {v.onlyInRube.slice(0, 3).join(", ")}
+                          {v.onlyInRube.length > 3 ? ", …" : ""}
                         </div>
                       )}
                     </td>
                     <td className={local.numCol}>{v.kometa}</td>
-                    <td className={local.numCol}>{v.tinkerbell}</td>
+                    <td className={local.numCol}>{v.rube}</td>
                     <td className={local.numCol}>{v.common}</td>
                     <td>
                       <span className={local.verdictChip} data-status={status}>

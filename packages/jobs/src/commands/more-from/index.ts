@@ -20,14 +20,14 @@
  *    change, the old row goes and the new one comes — and a row for a name
  *    still on top is edited in place.
  */
-import { MORE_FROM_DEFAULTS } from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { displayTitle, errorMessage } from "@tinkerbell/core";
-import type { JobContext, MoreFromJobConfig } from "@tinkerbell/core";
-import { mediaItems, type TmdbCachedDetails } from "@tinkerbell/db";
-import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
-import { ClockToken } from "@tinkerbell/ports";
-import { fetchPersonCredits, type TmdbConfig } from "@tinkerbell/tmdb";
+import { MORE_FROM_DEFAULTS } from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { displayTitle, errorMessage } from "@rube/core";
+import type { JobContext, MoreFromJobConfig } from "@rube/core";
+import { mediaItems, type TmdbCachedDetails } from "@rube/db";
+import { createPlexClient, type PlexSection } from "@rube/plex";
+import { ClockToken } from "@rube/ports";
+import { fetchPersonCredits, type TmdbConfig } from "@rube/tmdb";
 import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { plexConnection, resolveTargetSections } from "../ai-collection-shared.ts";
 import { createTmdbMetadataCommand } from "../generate/tmdb-metadata.ts";
@@ -106,7 +106,7 @@ export function createMoreFromCommand(
     if (users.length === 0) throw noUsersError(allowlist);
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell more-from`);
+    ctx.log(`rube more-from`);
     ctx.log(`Server: ${url}`);
     const machineId = (await client.getIdentity()).machineIdentifier;
     const writer = createPersonalRowWriter({

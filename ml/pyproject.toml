@@ -1,7 +1,7 @@
 [project]
-name = "tinkerbell-recs"
+name = "rube-recs"
 version = "0.1.0"
-description = "Offline training for Tinkerbell's shared recommender item vectors"
+description = "Offline training for Rube's shared recommender item vectors"
 requires-python = ">=3.11,<3.13"
 dependencies = [
   "implicit==0.7.2",

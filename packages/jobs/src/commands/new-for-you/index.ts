@@ -17,13 +17,13 @@
  *  - **Never something they've seen**, by film or by show, ever — a re-added
  *    file isn't news to someone who watched it last year.
  */
-import { NEW_FOR_YOU_DEFAULTS } from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { DAY_MS, displayTitle } from "@tinkerbell/core";
-import type { JobContext, NewForYouJobConfig } from "@tinkerbell/core";
-import { mediaItems } from "@tinkerbell/db";
-import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
-import { ClockToken } from "@tinkerbell/ports";
+import { NEW_FOR_YOU_DEFAULTS } from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { DAY_MS, displayTitle } from "@rube/core";
+import type { JobContext, NewForYouJobConfig } from "@rube/core";
+import { mediaItems } from "@rube/db";
+import { createPlexClient, type PlexSection } from "@rube/plex";
+import { ClockToken } from "@rube/ports";
 import { and, desc, gte, inArray } from "drizzle-orm";
 import { plexConnection, resolveTargetSections } from "../ai-collection-shared.ts";
 import { everWatchedKeys, historyUserIds } from "../we-think-youd-like/profile.ts";
@@ -91,7 +91,7 @@ export function createNewForYouCommand(
     if (users.length === 0) throw noUsersError(allowlist);
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell new-for-you`);
+    ctx.log(`rube new-for-you`);
     ctx.log(`Server: ${url}`);
     const machineId = (await client.getIdentity()).machineIdentifier;
     const writer = createPersonalRowWriter({

@@ -13,11 +13,11 @@ plugins {
 val release = Properties().apply { rootProject.file("version.properties").inputStream().use { load(it) } }
 
 android {
-    namespace = "dev.tinkerbell.app"
+    namespace = "fyi.rube.app"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "dev.tinkerbell.app"
+        applicationId = "fyi.rube.app"
         minSdk = 35
         targetSdk = 35
         versionCode = release.getProperty("versionCode").toInt()

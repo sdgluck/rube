@@ -1,7 +1,7 @@
 import Database, { type Database as SqliteHandle } from "better-sqlite3";
 import { drizzle, type BetterSQLite3Database } from "drizzle-orm/better-sqlite3";
 import { join } from "node:path";
-import { token } from "@tinkerbell/container";
+import { token } from "@rube/container";
 import * as schema from "./schema.ts";
 
 export * from "./schema.ts";
@@ -19,8 +19,8 @@ export type Db = BetterSQLite3Database<typeof schema> & { $client: SqliteHandle 
 /**
  * The database, as a container token.
  *
- * Lives here rather than in `@tinkerbell/ports` because this package owns the
- * type — ports holds only the edges that have no owner. `@tinkerbell/db`
+ * Lives here rather than in `@rube/ports` because this package owns the
+ * type — ports holds only the edges that have no owner. `@rube/db`
  * depends on nothing but the container kernel, so nobody who needs the token
  * inherits a dependency they didn't want.
  */
@@ -28,7 +28,7 @@ export const DbToken = token<Db>("db");
 
 /**
  * Where the database file lives when nobody says otherwise: `DATA_DIR`, else
- * the repo root. Exported so `@tinkerbell/composition` can read the
+ * the repo root. Exported so `@rube/composition` can read the
  * environment in one place rather than every consumer doing it.
  */
 export function defaultDataDir(): string {
@@ -52,11 +52,11 @@ export interface CreateDbOptions {
  * connection was already open against the wrong file.
  *
  * Migrations are still NOT applied here. They run as a discrete entrypoint step
- * (dev script, Docker entrypoint) via `pnpm --filter @tinkerbell/db migrate` —
+ * (dev script, Docker entrypoint) via `pnpm --filter @rube/db migrate` —
  * see `migrate.ts`. Application code assumes the schema is already current.
  */
 export function createDb(opts: CreateDbOptions): Db {
-  const sqlite = new Database(join(opts.dataDir, opts.fileName ?? "tinkerbell.db"));
+  const sqlite = new Database(join(opts.dataDir, opts.fileName ?? "rube.db"));
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("synchronous = NORMAL");
   sqlite.pragma("foreign_keys = ON");

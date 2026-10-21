@@ -75,7 +75,7 @@ export default function SettingsPortal() {
   }
 
   const PreviewIcon = getPortalIcon(form.icon);
-  const title = form.title.trim() || "Tinkerbell";
+  const title = form.title.trim() || "Rube";
 
   if (configQuery.error && !configQuery.data) {
     return (
@@ -97,7 +97,7 @@ export default function SettingsPortal() {
             type="text"
             value={form.title}
             onChange={(e) => setForm({ ...form, title: e.target.value })}
-            placeholder="Tinkerbell"
+            placeholder="Rube"
           />
         </label>
 

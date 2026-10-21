@@ -12,11 +12,11 @@ import { createServer } from "node:http";
 import type { AddressInfo } from "node:net";
 import { after, before, describe, test } from "node:test";
 import { initTRPC } from "@trpc/server";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { DbToken, mediaItems, plexSections, plexUsers } from "@tinkerbell/db";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { ConfigStoreToken } from "@rube/core";
+import { DbToken, mediaItems, plexSections, plexUsers } from "@rube/db";
+import { JobsToken, registerJobs } from "@rube/jobs";
 import { createTrpc } from "./index.ts";
 
 const c = createTestContainer({ overrides: registerJobs });
@@ -32,7 +32,7 @@ function caller(ctx: Partial<PortalContext>) {
   return initTRPC.context<PortalContext>().create().createCallerFactory(portalRouter)({
     resHeaders: new Headers(),
     secure: false,
-    origin: "http://portal.tinkerbell.test",
+    origin: "http://portal.rube.test",
     ip: "test",
     ...ctx,
   });

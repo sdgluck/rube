@@ -1,16 +1,16 @@
 import { z } from "zod";
-import { collectLocalLeaves, smartFilterGroupSchema } from "@tinkerbell/plex-smart-filter";
+import { collectLocalLeaves, smartFilterGroupSchema } from "@rube/plex-smart-filter";
 import { isNonPortableField, RULE_TYPE_VALUES } from "./rule-config.ts";
 import { presentationConfigSchema, posterUrlError } from "./presentation.ts";
 
 /**
- * Wire format for the public rule registry served from tinkerbell.dev.
+ * Wire format for the public rule registry served from rube.fyi.
  *
  * The registry is static and git-backed: packs are authored as typed TS in
- * `apps/tinkerbell.dev/src/registry/`, built into `dist/registry/index.json`,
+ * `apps/rube.fyi/src/registry/`, built into `dist/registry/index.json`,
  * and fetched by instances over HTTPS. This schema is the contract between
  * those two halves, so it is validated on both sides — at build time (a bad
- * pack fails CI) and at fetch time (a Tinkerbell that predates a format
+ * pack fails CI) and at fetch time (a Rube that predates a format
  * change refuses the payload rather than misreading it).
  */
 export const REGISTRY_FORMAT_VERSION = 1;
@@ -112,7 +112,7 @@ export type RegistryIndex = z.infer<typeof registryIndexSchema>;
 export type RegistryRuleInput = z.input<typeof registryRuleSchema>;
 export type RegistryPackInput = z.input<typeof registryPackSchema>;
 
-export const DEFAULT_REGISTRY_URL = "https://tinkerbell.dev/registry/index.json";
+export const DEFAULT_REGISTRY_URL = "https://rube.fyi/registry/index.json";
 
 /**
  * Per-import tweaks to a pack's published config.

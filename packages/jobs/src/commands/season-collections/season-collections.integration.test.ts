@@ -13,11 +13,11 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { ConfigStoreToken, displayTitle, noopCheckpoint, personalRowTitle, type JobContext } from "@tinkerbell/core";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, mediaItems, plexUsers, tmdbCache, userPreferences } from "@tinkerbell/db";
-import { ClockToken } from "@tinkerbell/ports";
+import { ConfigStoreToken, displayTitle, noopCheckpoint, personalRowTitle, type JobContext } from "@rube/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, mediaItems, plexUsers, tmdbCache, userPreferences } from "@rube/db";
+import { ClockToken } from "@rube/ports";
 import { startMockPlex, type MockItem, type MockPlex } from "../../test-support/mock-plex-server.ts";
 import { createSeasonCollectionsCommand, SEASON_LABEL } from "./index.ts";
 import { createSeasonRemoveCommand } from "../season-remove.ts";
@@ -146,7 +146,7 @@ describe("season-collections, one row for everyone", () => {
     const [row] = rowFor("christmas");
     assert.equal(displayTitle(row.title), "Christmas");
     assert.notEqual(row.title, "Christmas", "carries the per-season mark");
-    assert.deepEqual(row.labels, ["Tinkerbell", SEASON_LABEL, "Season:christmas"]);
+    assert.deepEqual(row.labels, ["Rube", SEASON_LABEL, "Season:christmas"]);
     // Best rated first, and no December space film.
     assert.deepEqual(row.memberKeys, ["102", "101", "100"]);
     assert.equal(row.summary, "Here for Christmas: 1 December – 26 December.");
@@ -195,7 +195,7 @@ describe("season-collections, one row for everyone", () => {
       ratingKey: "9000",
       title: "Christmas",
       sectionId: "1",
-      labels: ["Tinkerbell"],
+      labels: ["Rube"],
       memberKeys: ["101"],
     });
     await run(testContext().ctx, CONFIG);

@@ -1,7 +1,7 @@
-import { ruleConfigSchema, type RuleConfig } from "@tinkerbell/contracts";
-import type { Rule } from "@tinkerbell/domain.rules";
+import { ruleConfigSchema, type RuleConfig } from "@rube/contracts";
+import type { Rule } from "@rube/domain.rules";
 
-// The schema itself lives in `@tinkerbell/contracts` so the admin UI and the
+// The schema itself lives in `@rube/contracts` so the admin UI and the
 // registry build validate against the same definition the job parses with.
 // Re-exported here because every server-side call site already imports it
 // from this module.

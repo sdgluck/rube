@@ -4,7 +4,7 @@
 # Picked up automatically because this file sits at the git repo root.
 # Ports must match the `strictPort` values in the apps' vite configs and
 # the server's PORT default.
-api.tinkerbell.localhost: 3000
-web.tinkerbell.localhost: 5173
-portal.tinkerbell.localhost: 5174
-site.tinkerbell.localhost: 5175
+api.rube.localhost: 3000
+web.rube.localhost: 5173
+portal.rube.localhost: 5174
+site.rube.localhost: 5175

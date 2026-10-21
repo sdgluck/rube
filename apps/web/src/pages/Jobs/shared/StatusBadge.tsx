@@ -1,4 +1,4 @@
-import { variantFor } from "@tinkerbell/contracts";
+import { variantFor } from "@rube/contracts";
 import styles from "#pages/Jobs/Jobs.module.css";
 
 /**

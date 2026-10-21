@@ -60,8 +60,7 @@ export default function MigrationBanner() {
         </>
       }
     >
-      Tinkerbell can migrate <strong>{count}</strong> {labelText}-managed collection{count === 1 ? "" : "s"} into
-      Tinkerbell rules.
+      Rube can migrate <strong>{count}</strong> {labelText}-managed collection{count === 1 ? "" : "s"} into Rube rules.
     </Banner>
   );
 }

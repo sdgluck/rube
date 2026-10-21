@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { SEASON_PRESETS } from "@tinkerbell/contracts";
+import { SEASON_PRESETS } from "@rube/contracts";
 import { bucketsFor, matchesBucket } from "./keyword-grouped.ts";
 
 const christmas = () => bucketsFor("seasonal").find((b) => b.key === "seasonal:christmas")!;

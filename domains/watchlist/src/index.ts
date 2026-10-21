@@ -33,7 +33,7 @@
  */
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
-import { token } from "@tinkerbell/container";
+import { token } from "@rube/container";
 import {
   arrExternalId,
   createLogger,
@@ -46,10 +46,10 @@ import {
   type ConfigStore,
   type JobContext,
   type WatchlistArrTarget,
-} from "@tinkerbell/core";
-import { watchlistItems, type Db } from "@tinkerbell/db";
-import { fetchWatchlist, removeFromWatchlist, type WatchlistEntry } from "@tinkerbell/plex";
-import type { EventBus } from "@tinkerbell/ports";
+} from "@rube/core";
+import { watchlistItems, type Db } from "@rube/db";
+import { fetchWatchlist, removeFromWatchlist, type WatchlistEntry } from "@rube/plex";
+import type { EventBus } from "@rube/ports";
 
 const log = createLogger("watchlist");
 
@@ -271,7 +271,7 @@ export function createWatchlist(deps: WatchlistDeps) {
         return `Could not read the Plex library: ${errorMessage(err)}`;
       }
 
-      const { lookupByExternalId, addItem } = await import("@tinkerbell/arr");
+      const { lookupByExternalId, addItem } = await import("@rube/arr");
       let attempts = 0;
       let capped = 0;
 
@@ -382,7 +382,7 @@ export function createWatchlist(deps: WatchlistDeps) {
 
     // ── Has what we asked for arrived? ────────────────────────────────────
     if (pendingArrival.length > 0) {
-      const { findByExternalId } = await import("@tinkerbell/arr");
+      const { findByExternalId } = await import("@rube/arr");
       for (const row of pendingArrival) {
         if (ctx.signal?.aborted) break;
         if (!row.externalId) continue;

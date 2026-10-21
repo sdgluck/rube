@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/tmdb",
+  "name": "@rube/tmdb",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/http": "workspace:*",
+    "@rube/http": "workspace:*",
     "p-queue": "^9.1.0",
     "zod": "^4.3.6"
   },

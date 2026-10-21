@@ -11,7 +11,7 @@
  * a cron fires rather than when the schedule is built — which is what keeps the
  * cycle from recursing.
  */
-import { token } from "@tinkerbell/container";
+import { token } from "@rube/container";
 
 export type JobStarter = (jobId: string) => Promise<unknown>;
 

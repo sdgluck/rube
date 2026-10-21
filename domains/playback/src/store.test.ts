@@ -30,11 +30,11 @@ import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
 import { eq } from "drizzle-orm";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { DbToken, playbackSessions, plexUsers, watchState } from "@tinkerbell/db";
-import { PlaybackToken } from "@tinkerbell/domain.playback";
-import type { PlexSession } from "@tinkerbell/plex";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ConfigStoreToken } from "@rube/core";
+import { DbToken, playbackSessions, plexUsers, watchState } from "@rube/db";
+import { PlaybackToken } from "@rube/domain.playback";
+import type { PlexSession } from "@rube/plex";
 
 const c = createTestContainer();
 after(() => c.dispose());

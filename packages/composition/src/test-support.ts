@@ -10,16 +10,16 @@
  *
  * versus what it replaces — mkdtemp a directory, mutate `process.env.DATA_DIR`,
  * spawn the migrator as a subprocess, then `await import()` the subject in a
- * hand-maintained order so nothing touched `@tinkerbell/db` too early.
+ * hand-maintained order so nothing touched `@rube/db` too early.
  *
  * `overrides` uses `registry.replace`, so the test still exercises the real
  * wiring with specific edges swapped, rather than a parallel graph assembled by
  * hand that can drift from the one that ships.
  */
-import { createContainer, type Registry, type RootContainer } from "@tinkerbell/container";
-import { DbToken } from "@tinkerbell/db";
-import { createTestDb } from "@tinkerbell/db/test-db";
-import { ClockToken, HealthReporterToken, type HealthStatus } from "@tinkerbell/ports";
+import { createContainer, type Registry, type RootContainer } from "@rube/container";
+import { DbToken } from "@rube/db";
+import { createTestDb } from "@rube/db/test-db";
+import { ClockToken, HealthReporterToken, type HealthStatus } from "@rube/ports";
 import { registerCore } from "./core.module.ts";
 import { registerDomains } from "./domains.module.ts";
 import { registerServices } from "./services.ts";

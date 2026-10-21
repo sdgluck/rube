@@ -8,7 +8,7 @@
  * log read exactly the same whether it had ranked anything or not. Every row
  * now says which it was, and the run ends with the tally.
  */
-import { describeSkip, type RankResult, type RecommenderStatus } from "@tinkerbell/domain.recommendations";
+import { describeSkip, type RankResult, type RecommenderStatus } from "@rube/domain.recommendations";
 
 const pct = (n: number, d: number) => `${Math.round((100 * n) / Math.max(d, 1))}%`;
 

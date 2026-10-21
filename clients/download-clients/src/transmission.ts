@@ -8,7 +8,7 @@
  * Like qBittorrent there is no global pause; `torrent-stop` with no ids stops
  * every torrent, which is what Transmission's own "pause all" does.
  */
-import type { DownloadClientItem, DownloadItemState } from "@tinkerbell/contracts";
+import type { DownloadClientItem, DownloadItemState } from "@rube/contracts";
 import { basicAuth, createTransport, expectOk, fraction } from "./http.ts";
 import {
   DownloadClientError,

@@ -9,9 +9,9 @@
  * inline; New For You needed the same thing, and two copies would drift the
  * day one learned a better fallback.
  */
-import type { Services } from "@tinkerbell/composition";
-import { DAY_MS } from "@tinkerbell/core";
-import type { Db } from "@tinkerbell/db";
+import type { Services } from "@rube/composition";
+import { DAY_MS } from "@rube/core";
+import type { Db } from "@rube/db";
 import {
   buildTasteProfile,
   historyUserIds,

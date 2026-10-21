@@ -105,7 +105,7 @@ export async function readImport(opts: ReadImportOptions): Promise<KometaImport>
 
     // ─── Overlays ───────────────────────────────────────────────────────
     //
-    // Mapped rather than merely counted: Tinkerbell has its own overlay system,
+    // Mapped rather than merely counted: Rube has its own overlay system,
     // and the badges somebody chose to show are as much a part of "how my
     // library looks" as the collections are.
     const libraryOverlays: MappedOverlay[] = [];

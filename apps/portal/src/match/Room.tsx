@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { describeMatchFilters } from "@tinkerbell/contracts";
+import { describeMatchFilters } from "@rube/contracts";
 import { portalTrpc, type MatchState } from "../trpc.ts";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
 import Matches from "./Matches.tsx";
@@ -8,7 +8,7 @@ import SwipeDeck from "./SwipeDeck.tsx";
 
 /**
  * One room: the deck, the matches, and who's here. Polls the room every few
- * seconds while it's on screen (see `@tinkerbell/domain.match` for why a poll
+ * seconds while it's on screen (see `@rube/domain.match` for why a poll
  * rather than a socket), and turns what changed between polls into the two
  * things worth interrupting someone for: a person arriving, and a match.
  */

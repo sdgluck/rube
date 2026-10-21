@@ -5,7 +5,7 @@
  * `{ status: false, error: "API Key Incorrect" }`, so every response is
  * checked for that body or a bad key would read as an empty, healthy queue.
  */
-import type { DownloadClientItem, DownloadItemState } from "@tinkerbell/contracts";
+import type { DownloadClientItem, DownloadItemState } from "@rube/contracts";
 import { createTransport, expectOk, num, fraction } from "./http.ts";
 import {
   DownloadClientError,

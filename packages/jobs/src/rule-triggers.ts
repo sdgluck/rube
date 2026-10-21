@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 import { createDeferral } from "./deferral.ts";
 import { createRuleQueue } from "./rule-queue.ts";
 /**
@@ -30,9 +30,9 @@ import { createRuleQueue } from "./rule-queue.ts";
  * open inside its own tick.
  */
 
-import { createLogger, type JobContext } from "@tinkerbell/core";
+import { createLogger, type JobContext } from "@rube/core";
 
-import { isRuleActiveOn, ruleConfigSchema, type RuleTrigger } from "@tinkerbell/contracts";
+import { isRuleActiveOn, ruleConfigSchema, type RuleTrigger } from "@rube/contracts";
 
 const log = createLogger("rule-triggers");
 

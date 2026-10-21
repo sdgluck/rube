@@ -1,9 +1,9 @@
 import { test, after, describe } from "node:test";
 import assert from "node:assert/strict";
 import { eq } from "drizzle-orm";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken, ruleRuns, rules as rulesTable } from "@tinkerbell/db";
-import { parseLogLine } from "@tinkerbell/contracts";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken, ruleRuns, rules as rulesTable } from "@rube/db";
+import { parseLogLine } from "@rube/contracts";
 import { RuleRunsToken } from "./index.ts";
 
 const c = createTestContainer();

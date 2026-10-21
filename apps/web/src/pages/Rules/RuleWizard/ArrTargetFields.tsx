@@ -6,7 +6,7 @@
  * against its own server — a Radarr profile id means nothing on Sonarr, which
  * is exactly the bug a single shared set of fields used to cause.
  */
-import type { ArrService } from "@tinkerbell/contracts";
+import type { ArrService } from "@rube/contracts";
 import SettingsPageLink from "#components/SettingsPageLink";
 import { trpc } from "#/trpc";
 import shared from "#/styles/shared.module.css";

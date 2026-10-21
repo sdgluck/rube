@@ -1,7 +1,7 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
-import { registryImportOverridesSchema } from "@tinkerbell/contracts";
-import { registryUrl, type TagLookup } from "@tinkerbell/domain.registry";
+import { registryImportOverridesSchema } from "@rube/contracts";
+import { registryUrl, type TagLookup } from "@rube/domain.registry";
 
 import { procedure, t, mapNotConfiguredClient } from "./_base.ts";
 

@@ -11,12 +11,12 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { noopCheckpoint, type JobContext } from "@tinkerbell/core";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { DbToken, collectionArtwork, rules } from "@tinkerbell/db";
-import { CollectionsToken } from "@tinkerbell/domain.collections";
+import { noopCheckpoint, type JobContext } from "@rube/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { ConfigStoreToken } from "@rube/core";
+import { DbToken, collectionArtwork, rules } from "@rube/db";
+import { CollectionsToken } from "@rube/domain.collections";
 import { startMockPlex, type MockPlex } from "../../test-support/mock-plex-server.ts";
 import { createCollectionArtCommand } from "./index.ts";
 
@@ -89,7 +89,7 @@ function seedCollections(names: string[]): void {
       ratingKey,
       title,
       sectionId: "1",
-      labels: ["Tinkerbell", `Rule:${RULE_ID}`],
+      labels: ["Rube", `Rule:${RULE_ID}`],
       memberKeys: ITEMS.map((i) => i.ratingKey),
       summary: "",
     });
@@ -99,7 +99,7 @@ function seedCollections(names: string[]): void {
 /**
  * A minimal OpenAI-compatible endpoint.
  *
- * Spoken to over real HTTP through the real `@tinkerbell/llm` client, because
+ * Spoken to over real HTTP through the real `@rube/llm` client, because
  * the property under test is "how many times did we actually call the
  * provider" — and a stubbed client is exactly the thing that would answer that
  * question from the wrong side of the cache.

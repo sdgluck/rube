@@ -10,7 +10,7 @@ import {
   type JobSchedule,
   type ScheduleJob,
   type ScheduleSeverity,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import controls from "#/styles/controls.module.css";
 import { MANUAL_JOB_MIME } from "./Timeline";
 import styles from "./Schedule.module.css";

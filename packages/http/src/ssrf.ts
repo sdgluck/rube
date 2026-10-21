@@ -8,7 +8,7 @@
  * Dev mode (NODE_ENV !== "production") stays permissive because local
  * Plex/Arr/Seerr instances normally live on RFC1918. Production rejects
  * private/loopback/link-local hostnames unless the operator opts in
- * via TINKERBELL_ALLOW_PRIVATE_OUTBOUND=1.
+ * via RUBE_ALLOW_PRIVATE_OUTBOUND=1.
  */
 
 const PRIVATE_HOST_PATTERNS: RegExp[] = [
@@ -88,12 +88,12 @@ export function assertSafeOutboundUrl(url: string | URL, opts: { allowPrivate?: 
   }
 
   const allowPrivate =
-    opts.allowPrivate || process.env.NODE_ENV !== "production" || process.env.TINKERBELL_ALLOW_PRIVATE_OUTBOUND === "1";
+    opts.allowPrivate || process.env.NODE_ENV !== "production" || process.env.RUBE_ALLOW_PRIVATE_OUTBOUND === "1";
 
   if (!allowPrivate && isPrivateHost(parsed.hostname)) {
     throw new UnsafeUrlError(
       `Refusing to fetch private/loopback address ${parsed.hostname}. ` +
-        `Set TINKERBELL_ALLOW_PRIVATE_OUTBOUND=1 to opt in.`,
+        `Set RUBE_ALLOW_PRIVATE_OUTBOUND=1 to opt in.`,
     );
   }
 }

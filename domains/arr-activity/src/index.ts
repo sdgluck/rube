@@ -14,11 +14,11 @@
  */
 
 import { and, desc, eq, inArray, lt } from "drizzle-orm";
-import { arrActivity, type Db } from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
-import { createLogger, errorMessage, type ArrInstance } from "@tinkerbell/core";
-import { createRadarrClient } from "@tinkerbell/radarr";
-import { createSonarrClient } from "@tinkerbell/sonarr";
+import { arrActivity, type Db } from "@rube/db";
+import { token } from "@rube/container";
+import { createLogger, errorMessage, type ArrInstance } from "@rube/core";
+import { createRadarrClient } from "@rube/radarr";
+import { createSonarrClient } from "@rube/sonarr";
 
 const log = createLogger("arr-activity");
 

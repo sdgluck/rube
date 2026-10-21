@@ -54,8 +54,8 @@ let collectionBehaviour: "miss" | "handle" | "throw" = "miss";
 /** The upstream the plex-image proxy will see. */
 let upstream: () => Response = () => new Response("bytes", { headers: { "Content-Type": "image/png" } });
 
-const dist = mkdtempSync(join(tmpdir(), "tinkerbell-dist-"));
-const portalDist = mkdtempSync(join(tmpdir(), "tinkerbell-portal-dist-"));
+const dist = mkdtempSync(join(tmpdir(), "rube-dist-"));
+const portalDist = mkdtempSync(join(tmpdir(), "rube-portal-dist-"));
 
 let adminServer: Server;
 let portalServer: Server;
@@ -171,7 +171,7 @@ describe("the admin gate", () => {
     "/api/plex-image?path=/library/1/thumb",
     "/api/prerolls/upload",
     "/api/portability/export",
-    "/api/backups/tinkerbell-1.db.gz",
+    "/api/backups/rube-1.db.gz",
     "/api/collections/123/poster",
   ];
 
@@ -207,7 +207,7 @@ describe("the admin gate", () => {
   test("the agent API is not behind the cookie gate — it authenticates by key", async () => {
     // An AI client has no Plex session; if the cookie gate ran first, no key
     // could ever be presented. The module refuses keyless calls itself, which
-    // `@tinkerbell/agent-api`'s own tests cover.
+    // `@rube/agent-api`'s own tests cover.
     admin = false;
     for (const path of ["/mcp", "/api/v1", "/api/v1/tools/get_overview"]) {
       const res = await get(adminBase, path);
@@ -356,7 +356,7 @@ describe("static files and the SPA fallback", () => {
     for (const path of ["/../../package.json", "/..%2f..%2fpackage.json", "/assets/../../package.json"]) {
       const res = await get(adminBase, path);
       const body = await res.text();
-      assert.doesNotMatch(body, /"name":\s*"@tinkerbell/, `${path} escaped`);
+      assert.doesNotMatch(body, /"name":\s*"@rube/, `${path} escaped`);
     }
   });
 });
@@ -429,7 +429,7 @@ describe("no CORS", () => {
   // The native app sends no `Origin`, so neither server answers CORS for
   // anyone — including the two origins the old apps used.
   test("no origin gets CORS headers from either server, the retired apps' included", async () => {
-    const origins = ["capacitor://app.tinkerbell", "https://portal.tinkerbell", "https://evil.example"];
+    const origins = ["capacitor://app.rube", "https://portal.rube", "https://evil.example"];
     for (const base of [adminBase, portalBase]) {
       for (const origin of origins) {
         const res = await get(base, "/api/trpc/ping", { headers: { Origin: origin } });

@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import { createImdbCommand } from "../sources/imdb.ts";
 import { indexItemsByImdb } from "#commands/generate/plex-index.ts";
 

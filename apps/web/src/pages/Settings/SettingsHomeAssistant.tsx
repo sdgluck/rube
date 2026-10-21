@@ -23,7 +23,7 @@ const EMPTY_FORM: Form = { enabled: false, url: "", username: "", password: "", 
  *
  * Says up front that it is one-way, because the first thing an HA user looks
  * for is a button to run something — and the answer, deliberately, is that
- * nothing on the broker can make Tinkerbell act.
+ * nothing on the broker can make Rube act.
  */
 export default function SettingsHomeAssistant() {
   const { addToast } = useToast();
@@ -97,10 +97,9 @@ export default function SettingsHomeAssistant() {
 
       <CardSection className={settings.group} titleClassName={settings.groupTitle} title="MQTT">
         <p className={settings.hint}>
-          Tinkerbell publishes its state to your MQTT broker with discovery, so a Tinkerbell device appears in Home
-          Assistant by itself: streams, transcodes, bandwidth, now playing, the current job, failing rules, problems,
-          cleanup due soon, services down and library totals. It only publishes — nothing on the broker can make
-          Tinkerbell do anything.
+          Rube publishes its state to your MQTT broker with discovery, so a Rube device appears in Home Assistant by
+          itself: streams, transcodes, bandwidth, now playing, the current job, failing rules, problems, cleanup due
+          soon, services down and library totals. It only publishes — nothing on the broker can make Rube do anything.
         </p>
 
         <label className={settings.checkRow}>
@@ -148,11 +147,11 @@ export default function SettingsHomeAssistant() {
             <span className={settings.label}>Topic prefix</span>
             <input
               className={settings.input}
-              placeholder="tinkerbell"
+              placeholder="rube"
               value={form.topicPrefix}
               onChange={(e) => set("topicPrefix", e.target.value)}
             />
-            <span className={settings.hint}>Change it to run a second Tinkerbell against the same broker.</span>
+            <span className={settings.hint}>Change it to run a second Rube against the same broker.</span>
           </label>
           <label className={settings.field}>
             <span className={settings.label}>Discovery prefix</span>

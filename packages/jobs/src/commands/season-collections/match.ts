@@ -3,7 +3,7 @@
  * titles belong to a season, in what order, and which existing row is whose.
  * Kept apart from the command so each can be tested without a Plex server.
  */
-import type { TmdbCachedDetails } from "@tinkerbell/db";
+import type { TmdbCachedDetails } from "@rube/db";
 import { z } from "zod";
 import { extractJSON } from "../ai-collection-shared.ts";
 

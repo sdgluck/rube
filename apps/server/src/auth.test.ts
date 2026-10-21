@@ -8,11 +8,11 @@ import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import type { IncomingMessage } from "node:http";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
 import { clientIp, createAuth } from "./auth.ts";
 
-delete process.env.TINKERBELL_DISABLE_AUTH;
+delete process.env.RUBE_DISABLE_AUTH;
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -37,7 +37,7 @@ function request(
 const OWNER_TOKEN = "plex-token-for-tests";
 
 beforeEach(() => {
-  delete process.env.TINKERBELL_DISABLE_AUTH;
+  delete process.env.RUBE_DISABLE_AUTH;
   core.setConfig("admin_auth_enabled", true);
   // Owner resolution is cached in config; the request path never calls out to
   // plex.tv, so seeding it here is exactly what a resolved install looks like.
@@ -104,8 +104,8 @@ describe("isAdminRequest", () => {
     assert.equal(auth.isAdminRequest(request()), true);
   });
 
-  test("TINKERBELL_DISABLE_AUTH bypasses the gate", () => {
-    process.env.TINKERBELL_DISABLE_AUTH = "1";
+  test("RUBE_DISABLE_AUTH bypasses the gate", () => {
+    process.env.RUBE_DISABLE_AUTH = "1";
     assert.equal(auth.isAdminRequest(request()), true);
   });
 });

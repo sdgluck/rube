@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/migrate",
+  "name": "@rube/migrate",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -17,8 +17,8 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/plex-smart-filter": "workspace:*",
+    "@rube/contracts": "workspace:*",
+    "@rube/plex-smart-filter": "workspace:*",
     "yaml": "^2.9.0",
     "zod": "^4.3.6"
   },

@@ -7,8 +7,8 @@
  * would add a pending-plan config slot and a single-writer handoff to protect
  * work that finishes in milliseconds.
  */
-import { type Rule, type Rules } from "@tinkerbell/domain.rules";
-import type { ImportPlan } from "@tinkerbell/contracts";
+import { type Rule, type Rules } from "@rube/domain.rules";
+import type { ImportPlan } from "@rube/contracts";
 import { hashConfig } from "./hash.ts";
 
 export interface ImportOptions {

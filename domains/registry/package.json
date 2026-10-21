@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.registry",
+  "name": "@rube/domain.registry",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,13 +15,13 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/domain.rules": "workspace:*",
-    "@tinkerbell/http": "workspace:*",
-    "@tinkerbell/plex-smart-filter": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/contracts": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
+    "@rube/domain.rules": "workspace:*",
+    "@rube/http": "workspace:*",
+    "@rube/plex-smart-filter": "workspace:*",
     "zod": "^4.3.6"
   },
   "devDependencies": {

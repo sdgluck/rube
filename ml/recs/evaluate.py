@@ -1,5 +1,5 @@
 """
-Does the model beat what Tinkerbell does without it? A model is only worth
+Does the model beat what Rube does without it? A model is only worth
 publishing if this says yes.
 
 The setup mirrors a Plex server rather than a recsys benchmark:
@@ -7,7 +7,7 @@ The setup mirrors a Plex server rather than a recsys benchmark:
 - **Temporal split.** Everything before a cutoff is history, the next weeks are
   what the person actually went on to like. Random splits leak the future.
 - **Held-out people.** Test users are left out of training entirely and folded
-  in from their history, because no Tinkerbell user is in MovieLens either.
+  in from their history, because no Rube user is in MovieLens either.
 - **A sampled library.** Ranking against all 85k movies is not the job; ranking
   a few thousand titles someone happens to own is. Libraries skew popular, so
   they are drawn proportional to sqrt(popularity).

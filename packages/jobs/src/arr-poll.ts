@@ -11,10 +11,10 @@
  * actual queue still proxies live.
  */
 
-import { ServicesToken } from "@tinkerbell/composition";
-import type { JobContext } from "@tinkerbell/core";
-import { createRadarrClient } from "@tinkerbell/radarr";
-import { createSonarrClient } from "@tinkerbell/sonarr";
+import { ServicesToken } from "@rube/composition";
+import type { JobContext } from "@rube/core";
+import { createRadarrClient } from "@rube/radarr";
+import { createSonarrClient } from "@rube/sonarr";
 
 export async function pollArrQueues(ctx: JobContext): Promise<string> {
   const { arr, arrLibrary } = ctx.scope.resolve(ServicesToken);

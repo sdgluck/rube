@@ -10,13 +10,13 @@
  */
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { RulesToken } from "@tinkerbell/domain.rules";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ConfigStoreToken } from "@rube/core";
+import { RulesToken } from "@rube/domain.rules";
 import { OnboardingToken } from "./index.ts";
 
 // This package used to migrate a scratch database by spawning the migrate
-// entrypoint by path, because it doesn't depend on `@tinkerbell/db` and the
+// entrypoint by path, because it doesn't depend on `@rube/db` and the
 // connection opened on import. The container does both, in-process.
 const c = createTestContainer();
 after(() => c.dispose());

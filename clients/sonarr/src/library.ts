@@ -2,8 +2,8 @@
  * The series library, and the episode tree beneath it.
  */
 
-import type { ServarrHttp } from "@tinkerbell/servarr-http";
-import { parseExternalId } from "@tinkerbell/servarr-http";
+import type { ServarrHttp } from "@rube/servarr-http";
+import { parseExternalId } from "@rube/servarr-http";
 import type { SonarrEpisode, SonarrEpisodeFile, SonarrRaw, SonarrSeries } from "./types.ts";
 
 /** As in Radarr: `GET /series` is the whole library in one response. */

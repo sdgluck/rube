@@ -4,7 +4,7 @@
  * Radarr and Plex usually run in separate containers, so one folder has two
  * names: Radarr's `/movies/Heat (1995)` is Plex's `/data/media/movies/Heat
  * (1995)`. Asking Plex to scan the *Arr's path scans nothing, silently. The
- * mapping is never configured anywhere Tinkerbell can read, so it is learnt
+ * mapping is never configured anywhere Rube can read, so it is learnt
  * from an item both sides already agree on: a film from the same root folder
  * that Plex has matched. Its *Arr folder and its Plex folder share the part
  * below the root, and what is left over on the Plex side is the Plex root.

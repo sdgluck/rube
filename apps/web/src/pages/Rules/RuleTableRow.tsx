@@ -21,7 +21,7 @@ import {
   RULE_TRIGGER_NOTES,
   type RuleSchedule,
   type RuleTrigger,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { EMPTY } from "#/format";
 import { trpc } from "#/trpc";
 import { Link, useNavigate } from "react-router-dom";

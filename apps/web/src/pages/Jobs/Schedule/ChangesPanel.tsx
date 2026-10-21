@@ -8,7 +8,7 @@ import {
   type ScheduleJob,
   type SchedulePlan,
   type ScheduleSettings,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import styles from "./Schedule.module.css";
 
 function describe(entry: JobPlanEntry): string {

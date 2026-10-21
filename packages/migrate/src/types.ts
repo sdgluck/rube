@@ -13,7 +13,7 @@ export interface CollectionInput {
 
 /**
  * Buckets covering every Kometa default collection category we know about.
- * Some of these don't yet have a corresponding Tinkerbell rule type — those
+ * Some of these don't yet have a corresponding Rube rule type — those
  * are surfaced under "future" in the migration plan so the user knows what
  * will be supported in a later release.
  */
@@ -95,13 +95,13 @@ export interface PlanDiagnostic {
 }
 
 /**
- * One proposed Tinkerbell rule. Kept in `proposed` if we have a handler
- * available, `future` if the bucket exists but no Tinkerbell rule type
+ * One proposed Rube rule. Kept in `proposed` if we have a handler
+ * available, `future` if the bucket exists but no Rube rule type
  * supports it yet, and `unmappable` if classification couldn't place it.
  */
 export interface PlanItem {
   /**
-   * Synthetic id for UI checkbox state. Not a Tinkerbell rule id.
+   * Synthetic id for UI checkbox state. Not a Rube rule id.
    *
    * Title-scan uses `bucket::sectionId`, which is unique because it *is* the
    * grouping key. YAML items are one-per-definition and need something stable
@@ -184,7 +184,7 @@ export interface MigrationPlan {
 
 export interface PlanOptions {
   /**
-   * Map of bucket kind → Tinkerbell rule type. Lets the server inject the
+   * Map of bucket kind → Rube rule type. Lets the server inject the
    * current set of supported rule types — anything not in the map ends up
    * in `future`. Pure-package side never has to know which rule types
    * exist server-side at any given time.

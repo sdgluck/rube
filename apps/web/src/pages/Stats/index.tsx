@@ -444,9 +444,7 @@ export default function Stats() {
   // "your library is empty" — so say what actually happened instead.
   const coreQueries = [sessionsQuery, overviewQuery, activityQuery, opsQuery];
   if (coreQueries.every((q) => q.isError)) {
-    return (
-      <ErrorState title="Couldn't reach the Tinkerbell server" error={overviewQuery.error} onRetry={handleRefresh} />
-    );
+    return <ErrorState title="Couldn't reach the Rube server" error={overviewQuery.error} onRetry={handleRefresh} />;
   }
 
   return (

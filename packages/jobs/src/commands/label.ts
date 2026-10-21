@@ -1,9 +1,9 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
 
-import { errorMessage } from "@tinkerbell/core";
+import { errorMessage } from "@rube/core";
 
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
 export function createLabelCommand(deps: Pick<Services, "clients" | "config">) {
   const { clients, config } = deps;
@@ -25,7 +25,7 @@ export function createLabelCommand(deps: Pick<Services, "clients" | "config">) {
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell label`);
+    ctx.log(`rube label`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     let machineId: string;
@@ -44,12 +44,12 @@ export function createLabelCommand(deps: Pick<Services, "clients" | "config">) {
       sections = sections.filter((s) => config.sections!.includes(s.title));
     }
 
-    // Phase 1: Add "Tinkerbell" label to all media items
-    ctx.log(`Adding "Tinkerbell" label to all media items...`);
+    // Phase 1: Add "Rube" label to all media items
+    ctx.log(`Adding "Rube" label to all media items...`);
     let totalUpdated = 0;
     for (const section of sections) {
       ctx.log(`Section: ${section.title} (${section.type})`);
-      const updated = await client.addLabelToAllItems(section.key, section.type, "Tinkerbell", (current, total) => {
+      const updated = await client.addLabelToAllItems(section.key, section.type, "Rube", (current, total) => {
         ctx.progress(current, total, `Labelling items in "${section.title}"...`);
       });
       ctx.log(`Updated ${updated} item(s) in "${section.title}"`);
@@ -79,7 +79,7 @@ export function createLabelCommand(deps: Pick<Services, "clients" | "config">) {
     for (const sharing of sharings) {
       ctx.progress(sharings.indexOf(sharing) + 1, sharings.length, `Configuring "${sharing.username}"...`);
 
-      const labels = ["Tinkerbell", `User:${sharing.username}`];
+      const labels = ["Rube", `User:${sharing.username}`];
       ctx.log(`Configuring ${sharing.username}...`);
       ctx.log(`Labels: ${labels.join(", ")}`);
 

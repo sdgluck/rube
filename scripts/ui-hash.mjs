@@ -27,7 +27,7 @@ export const UI_PATHSPEC = [
   "apps/portal/src",
   "apps/portal/index.html",
   "apps/portal/public",
-  "apps/tinkerbell.dev/harness",
+  "apps/rube.fyi/harness",
   ":(exclude)apps/web/src/**/*.test.ts",
   ":(exclude)apps/web/src/**/*.test.tsx",
   ":(exclude)**/*.md",

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { parseLogLine } from "@tinkerbell/contracts";
+import { parseLogLine } from "@rube/contracts";
 import styles from "./RunLog.module.css";
 import { saveFile } from "#lib/download";
 
@@ -11,7 +11,7 @@ import { saveFile } from "#lib/download";
 const ERROR_PATTERN = /error|failed|exception|fatal|panic|ENOENT|ECONNREFUSED/i;
 
 /** Remembered per browser: someone who reads logs with times wants them every time. */
-const TIMES_KEY = "tinkerbell.runlog.timestamps";
+const TIMES_KEY = "rube.runlog.timestamps";
 
 function readShowTimes(): boolean {
   try {

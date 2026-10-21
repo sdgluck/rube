@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 /**
  * The cleanup action: what happens when a rule's ending is "remove this"
  * rather than "make a collection".
@@ -25,22 +25,22 @@ import { type Services } from "@tinkerbell/composition";
  * remove from the sofa, but a rule that matches badly — and matching badly is
  * exactly what the refusals above exist to catch — puts a collection of most
  * of the library in front of the whole household before anyone has agreed to
- * anything. The review surface is Tinkerbell's own Cleanup queue, which costs
+ * anything. The review surface is Rube's own Cleanup queue, which costs
  * the server nothing and can say "streak 1/3" and "held until Friday" in a way
  * a Plex collection never could.
  *
  * The one thing cleanup still writes to Plex is an item label, in `label` mode,
  * on the items themselves — see `applyAction`.
  */
-import { arrExternalId, errorMessage, type JobContext } from "@tinkerbell/core";
-import { isDestructiveMode, type CleanupActionConfig } from "@tinkerbell/contracts";
-import { KILL_SWITCH_REFUSAL, type CleanupCandidate } from "@tinkerbell/domain.cleanup";
+import { arrExternalId, errorMessage, type JobContext } from "@rube/core";
+import { isDestructiveMode, type CleanupActionConfig } from "@rube/contracts";
+import { KILL_SWITCH_REFUSAL, type CleanupCandidate } from "@rube/domain.cleanup";
 
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import type { PlexClient, PlexSection } from "@rube/plex";
 import type { HandlerDeps } from "./types.ts";
 
 /** Applied to the items themselves in `label` mode, so they're findable in Plex. */
-export const CLEANUP_LABEL = "Tinkerbell:Cleanup";
+export const CLEANUP_LABEL = "Rube:Cleanup";
 
 /** Default ceiling on destructive actions across every rule, per rolling day. */
 export const DEFAULT_MAX_DELETES_PER_DAY = 50;
@@ -117,7 +117,7 @@ async function sectionItemTotal(ctx: JobContext, client: PlexClient, sections: P
 
 interface ArrMatch {
   config: { service: "radarr" | "sonarr"; url: string; apiKey: string };
-  record: import("@tinkerbell/arr").ArrRecord;
+  record: import("@rube/arr").ArrRecord;
 }
 
 function pastTense(mode: string): string {
@@ -398,7 +398,7 @@ export const createCleanupCommand = perDeps(function createCleanupCommand(
   async function unmonitorViaArr(deps: HandlerDeps, candidate: CleanupCandidate): Promise<void> {
     const found = await findArrRecords(deps, candidate);
     if (found.length === 0) throw new Error("no matching Radarr/Sonarr record");
-    const { setMonitored } = await import("@tinkerbell/arr");
+    const { setMonitored } = await import("@rube/arr");
     // Every instance holding it. Leaving one still monitoring is the same defect
     // as leaving the record behind — see `findArrRecords`.
     for (const { config, record } of found) await setMonitored(config, record, false);
@@ -414,7 +414,7 @@ export const createCleanupCommand = perDeps(function createCleanupCommand(
     if (action.viaArr) {
       const found = await findArrRecords(deps, candidate);
       if (found.length > 0) {
-        const { deleteRecord } = await import("@tinkerbell/arr");
+        const { deleteRecord } = await import("@rube/arr");
         for (const { config, record } of found) {
           await deleteRecord(config, record, {
             deleteFiles: true,
@@ -463,7 +463,7 @@ export const createCleanupCommand = perDeps(function createCleanupCommand(
     const externalId = arrExternalId({ guids }, service);
     if (!externalId) return [];
 
-    const { findByExternalId } = await import("@tinkerbell/arr");
+    const { findByExternalId } = await import("@rube/arr");
 
     // Every instance of the service, and every one that *holds* the record — not
     // the first. With a split HD/4K setup the same film is frequently in both, and

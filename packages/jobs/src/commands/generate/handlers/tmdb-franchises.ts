@@ -1,4 +1,4 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import { lookupBelongsToCollection } from "#commands/generate/sources/tmdb.ts";
@@ -34,7 +34,7 @@ export function createTmdbFranchisesCommand(deps: Pick<Services, "config">) {
     const apiKey = getConfig("global_tmdb_api_key");
     if (!apiKey) throw new Error("TMDb API key is required. Configure it in Settings.");
 
-    const { fetchCollection } = await import("@tinkerbell/tmdb");
+    const { fetchCollection } = await import("@rube/tmdb");
     // As with popular people, `limit` bounds how many Plex collection-groups we
     // sample (each costs TMDb round-trips), not how many collections we build.
     const limitGroups = Math.min(ruleConfig.limit ?? DEFAULT_GROUPS, MAX_GROUPS);

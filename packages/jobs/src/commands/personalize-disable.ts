@@ -1,12 +1,12 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
-import { errorMessage } from "@tinkerbell/core";
-import { sharingRestrictionBackups } from "@tinkerbell/db";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
+import { errorMessage } from "@rube/core";
+import { sharingRestrictionBackups } from "@rube/db";
 import { eq } from "drizzle-orm";
 
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
-const BASELINE_LABEL = "Tinkerbell";
+const BASELINE_LABEL = "Rube";
 
 export function createPersonalizeDisableCommand(deps: Pick<Services, "clients" | "collections" | "config" | "db">) {
   const { clients, collections, config, db } = deps;
@@ -38,7 +38,7 @@ export function createPersonalizeDisableCommand(deps: Pick<Services, "clients" |
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell personalize-disable`);
+    ctx.log(`rube personalize-disable`);
     const identity = await client.getIdentity();
     ctx.log(`Server: ${identity.friendlyName}`);
 
@@ -95,7 +95,7 @@ export function createPersonalizeDisableCommand(deps: Pick<Services, "clients" |
       }
       ctx.log(`Restored ${restored}/${backups.length} user(s).`);
       if (restored < backups.length) {
-        // Stay "disabling": users still restricted to the Tinkerbell label would
+        // Stay "disabling": users still restricted to the Rube label would
         // lose access to everything once the label comes off below.
         throw new Error(
           `Restored only ${restored} of ${backups.length} user(s) — leaving labels in place. Run it again to finish.`,

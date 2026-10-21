@@ -1,7 +1,7 @@
 """
 MovieLens 32M: the collaborative signal no single Plex server has.
 
-A Tinkerbell install has a handful of viewers; MovieLens has 200k people and
+A Rube install has a handful of viewers; MovieLens has 200k people and
 32M ratings, linked to TMDb ids, which is what lets one shared model mean
 something on every server.
 """
@@ -44,6 +44,6 @@ def load(root: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     movies["genres"] = movies["genres"].map(
         lambda g: [] if g == "(no genres listed)" else g.split("|")
     )
-    # The `tmdb_cache` key shape, so Tinkerbell can join on what it already has.
+    # The `tmdb_cache` key shape, so Rube can join on what it already has.
     movies["key"] = movies["tmdbId"].map(lambda t: None if pd.isna(t) else f"movie:{int(t)}")
     return ratings, movies

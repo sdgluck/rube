@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import type { SchedulePlan } from "@tinkerbell/contracts";
+import type { SchedulePlan } from "@rube/contracts";
 import { draftReducer, initialDraft, isDirty, toMutation, type DraftAction, type DraftState } from "./scheduleDraft.ts";
 
 const BASE: SchedulePlan = {

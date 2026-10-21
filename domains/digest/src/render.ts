@@ -16,7 +16,7 @@
  * handles them, so whenever a public poster source does exist this becomes a
  * one-line change in `build.ts` rather than a change here.
  */
-import type { DigestBlock, RichMessage } from "@tinkerbell/domain.notifications";
+import type { DigestBlock, RichMessage } from "@rube/domain.notifications";
 import type { Digest, DigestItem } from "./build.ts";
 
 export interface RenderOptions {

@@ -21,9 +21,9 @@ interface MaintenanceAction {
 const ACTIONS: MaintenanceAction[] = [
   {
     jobId: "label-undo",
-    title: "Clear Tinkerbell Labels",
-    description: "Removes Tinkerbell labels from every item and collection; sharing is unaffected.",
-    confirmMessage: "Removes the Tinkerbell label from every item in your configured Plex libraries.",
+    title: "Clear Rube Labels",
+    description: "Removes Rube labels from every item and collection; sharing is unaffected.",
+    confirmMessage: "Removes the Rube label from every item in your configured Plex libraries.",
     confirmLabel: "Clear labels",
   },
   {

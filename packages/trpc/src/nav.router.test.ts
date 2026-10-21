@@ -5,10 +5,10 @@
 import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 import { initTRPC } from "@trpc/server";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DAY_MS } from "@tinkerbell/core";
-import { DbToken, jobRuns, jobs } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DAY_MS } from "@rube/core";
+import { DbToken, jobRuns, jobs } from "@rube/db";
 import { createNavRouter } from "./nav.router.ts";
 import type { AdminContext } from "./_base.ts";
 

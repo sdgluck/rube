@@ -8,12 +8,12 @@ import {
   OwnerImmutableError,
   UnknownUserError,
   NotSharedError,
-} from "@tinkerbell/domain.users";
-import { PlexApiError, realSessions } from "@tinkerbell/plex";
+} from "@rube/domain.users";
+import { PlexApiError, realSessions } from "@rube/plex";
 
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { paginationInput } from "./_pagination.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 /**
  * plex.tv says most of what it means through the status code, so a bare
@@ -138,7 +138,7 @@ export function createUsersRouter(deps: Pick<TrpcDeps, "clients" | "config" | "j
     /**
      * Live sessions for one user, filtered from the single server-wide read.
      *
-     * Tinkerbell's own simulated playback is excluded: the stress harness
+     * Rube's own simulated playback is excluded: the stress harness
      * authenticates with the owner's token, so its sessions would otherwise all
      * appear on the owner's user page as films they are watching.
      */

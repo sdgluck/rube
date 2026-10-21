@@ -2,7 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
-import { PLAYLIST_CAPABLE_RULE_TYPES, RULE_TYPE_VALUES } from "@tinkerbell/contracts";
+import { PLAYLIST_CAPABLE_RULE_TYPES, RULE_TYPE_VALUES } from "@rube/contracts";
 
 import { buildYamlPlan } from "./plan.ts";
 import { readImport } from "./read.ts";
@@ -65,7 +65,7 @@ function byName(plan: MigrationPlan, name: string): PlanItem {
 
 describe("mapping tables", () => {
   test("every default maps to a rule type this build actually has", () => {
-    // The defaults table is written from Kometa's docs, not from Tinkerbell's
+    // The defaults table is written from Kometa's docs, not from Rube's
     // handler list, so it is exactly the kind of thing that rots when a rule
     // type is renamed. Catching it here beats catching it as a migration that
     // creates rules no handler can run.
@@ -402,8 +402,8 @@ describe("a defaults-only config", () => {
     assert.ok(plan.unmappable.some((u) => u.title.includes("subgenre")));
   });
 
-  test("but a concept Tinkerbell simply doesn't have isn't listed as a gap", async () => {
-    // Separators exist to pad the Plex library view; Tinkerbell doesn't use
+  test("but a concept Rube simply doesn't have isn't listed as a gap", async () => {
+    // Separators exist to pad the Plex library view; Rube doesn't use
     // them, so nothing was lost. Listing them alongside genuine gaps would
     // pad the not-migrated report with things the user needn't act on.
     const plan = await planFor(loadFixtureFile("defaults-only.yml"));
@@ -488,7 +488,7 @@ describe("a hand-written config", () => {
   });
 
   test("a public Trakt list maps, an account-scoped one doesn't", async () => {
-    // The distinction is load-bearing: Tinkerbell authenticates to Trakt with
+    // The distinction is load-bearing: Rube authenticates to Trakt with
     // a client id, which reads public lists and nothing else. Migrating a
     // watchlist anyway would mint a rule that fails on every single run.
     const plan = await planFor(loadFixtureDir("handwritten"));

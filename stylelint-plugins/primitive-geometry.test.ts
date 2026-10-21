@@ -13,7 +13,7 @@ async function lint(code: string): Promise<string[]> {
   const { results } = await stylelint.lint({
     code,
     codeFilename: FILE,
-    config: { plugins: [primitiveGeometry], rules: { "tinkerbell/primitive-geometry": true } },
+    config: { plugins: [primitiveGeometry], rules: { "rube/primitive-geometry": true } },
   });
   return results[0]!.warnings.map((w) => w.text);
 }

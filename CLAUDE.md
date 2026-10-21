@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-Tinkerbell is a self-hosted Plex companion: rules over your Plex library (plus
+Rube is a self-hosted Plex companion: rules over your Plex library (plus
 IMDb/OMDb/TMDb metadata and Overseerr requests) drive collections, overlays,
 labels, playlists, cleanup and notifications on a schedule. One Node process
 serves the admin SPA, the tRPC API and the end-user portal.
@@ -32,14 +32,14 @@ files by path substring, so `pnpm test domains/` or `pnpm test cleanup` both
 work. A `-`-prefixed argument is forwarded to `node --test`, so
 `pnpm test --test-name-pattern="retention"` selects by test name.
 
-One package's tests: `pnpm --filter @tinkerbell/domain.rules test`.
+One package's tests: `pnpm --filter @rube/domain.rules test`.
 One test file: `node --test --experimental-strip-types path/to/x.test.ts`.
 
 `pnpm` on `PATH` may be v8 in non-interactive shells and will downgrade the
 lockfile — use mise's pnpm 11 binary for installs.
 
 Dev URLs come from localias (`.localias.yaml`): `api.` `web.` `portal.`
-`site.tinkerbell.localhost`. Raw ports 3000/5173/5174/5175 work without it.
+`site.rube.localhost`. Raw ports 3000/5173/5174/5175 work without it.
 
 ## Workspace layout
 
@@ -51,7 +51,7 @@ pnpm workspaces + Turborepo. Four globs, and the order matters:
 - `domains/*` — ~33 business capabilities, one package each
   (`rules`, `collections`, `media`, `users`, `cleanup`, `overlays`, …).
 - `apps/*` — `server`, `web` (admin SPA), `portal` (end-user SPA),
-  `tinkerbell.dev` (marketing site + rule registry + screenshot harness).
+  `rube.fyi` (marketing site + rule registry + screenshot harness).
 
 **Packages resolve each other as raw TypeScript source** —
 `"main": "./src/index.ts"`, no build step, `--experimental-strip-types` at
@@ -59,7 +59,7 @@ runtime. There is no `dist/` to stale out.
 
 Layering is enforced by oxlint `no-restricted-imports`: apps never import each
 other; `packages/**` and `domains/**` never import an app. Web consumes the
-server only through `@tinkerbell/contracts` (values) and `@tinkerbell/trpc`
+server only through `@rube/contracts` (values) and `@rube/trpc`
 (**types only**).
 
 ## The composition root — read this before adding anything
@@ -72,7 +72,7 @@ buildContainer(env, modules) →
   registerCore(r, env)     packages/composition/src/core.module.ts
   registerDomains(r)       packages/composition/src/domains.module.ts
   registerServices(r)      packages/composition/src/services.ts
-  ...modules               e.g. registerJobs from @tinkerbell/jobs
+  ...modules               e.g. registerJobs from @rube/jobs
 ```
 
 `packages/container` is the kernel (~200 lines, zero deps): `token<T>(name)`,
@@ -94,12 +94,12 @@ Key rules:
   provider _when called_, which is how the two genuine cycles
   (events↔notifications, collections↔migration) work. Ports has **no runtime
   imports** beyond the container — a token with a natural owner lives beside
-  its owner (`DbToken` in `@tinkerbell/db`, `ConfigStoreToken` in
-  `@tinkerbell/core`), not here.
+  its owner (`DbToken` in `@rube/db`, `ConfigStoreToken` in
+  `@rube/core`), not here.
 - `packages/composition/src/container.test.ts` **resolves every registered
   token**. A missing wiring edge is a failing test, not a silent no-op. This
   test is the reason the whole DI layer exists — do not weaken it.
-- `perDeps(factory)` (`@tinkerbell/container`) memoises a sub-factory on its
+- `perDeps(factory)` (`@rube/container`) memoises a sub-factory on its
   deps object by identity, so a helper called from two places inside a package
   still yields one instance.
 
@@ -209,7 +209,7 @@ imitation of a native app (that is `native/`'s job):
 - **The document scrolls**, not `.content` — `--sticky-top` is where a sticky
   bar inside a page should stop. Tables keep their columns and scroll sideways
   in `.table-scroll`; `Modal`, menus and popovers are the desktop ones.
-- `:hover` must sit inside `@media (hover: hover)` (`tinkerbell/hover-media`),
+- `:hover` must sit inside `@media (hover: hover)` (`rube/hover-media`),
   and anything a hover reveals needs a `@media (hover: none)` fallback.
 
 The portal (`apps/portal`) is one look on every phone too, but keeps a phone
@@ -339,18 +339,18 @@ one:
 So: no hex or named colours, no `rgb()`/`hsl()`, no literal `border-radius` /
 `font-family` / `*color` — use a token. An unknown `var(--x)` fails. Class names
 that shadow a primitive fail. **Size belongs to the primitive**
-(`tinkerbell/primitive-geometry`): a class composing a button, field or table
+(`rube/primitive-geometry`): a class composing a button, field or table
 may not override its height/padding/font-size/radius, `th`/`td` geometry is the
 table's, a `*Btn`/`*Button` class must compose `btn`, and a clickable thing at a
 literal 24–48px height fails. Use a modifier (`btnSm`, `btnIcon`, `btnLink`,
 `compactTable` for a table inside a card or modal) or add one to `styles/`. Breakpoints must be on the shared scale. Escape
 hatches need a reason comment (`reportDescriptionlessDisables`);
-`pnpm lint:css:report` finds stale ones. `apps/tinkerbell.dev` is exempt — it is
+`pnpm lint:css:report` finds stale ones. `apps/rube.fyi` is exempt — it is
 a separate product with its own palette.
 
 ## HTTP clients
 
-`clients/*` wrap upstream APIs; `@tinkerbell/http` (`httpRequest`,
+`clients/*` wrap upstream APIs; `@rube/http` (`httpRequest`,
 `httpRequestJson`) takes `timeoutMs` and is the preferred route.
 `assertSafeOutboundUrl` (the SSRF guard) is a **no-op unless
 `NODE_ENV=production`** — a test of it has to set that itself.
@@ -367,14 +367,14 @@ screenshot harness.
 
 Three pieces of scaffolding:
 
-- `createTestDb()` — `@tinkerbell/db/test-db`. A throwaway migrated DB in a temp
+- `createTestDb()` — `@rube/db/test-db`. A throwaway migrated DB in a temp
   dir, on disk (WAL and the mmap pragmas are no-ops in `:memory:`).
 - `createTestContainer({ overrides, now })` —
-  `@tinkerbell/composition/test-support`. The **real** graph with named edges
+  `@rube/composition/test-support`. The **real** graph with named edges
   swapped via `registry.replace`. Passing `now` pins `ClockToken` and gives you
   `setNow` / `advance` — that is how you test retention, grace periods, quiet
   hours and schedule catch-up. Always `after(() => c.dispose())`.
-- `@tinkerbell/test-support` — stateful mock Plex and \*Arr servers on real HTTP
+- `@rube/test-support` — stateful mock Plex and \*Arr servers on real HTTP
   (port 0), each with a `journal` and `failNext`. Point code at one with
   `setConfig("global_plex_url", plex.origin)`.
 
@@ -415,7 +415,7 @@ two thirds of that wave's runtime.
 
 - `scripts/check-fetch.mjs` — every `fetch()` under `clients/`, `packages/`,
   `domains/`, `apps/server/` needs an `AbortSignal.timeout(...)` or must go
-  through `@tinkerbell/http`. A deadline-less request wedges the job queue.
+  through `@rube/http`. A deadline-less request wedges the job queue.
 - `scripts/check-nul.mjs` — no raw NUL byte in a source file; write the
   `\u0000` escape instead. A literal NUL makes `grep` and `file(1)` treat the
   whole file as binary and skip it silently.
@@ -469,7 +469,7 @@ about the ones the request leaves open:
 8. **A new rule type?** → `RULE_TYPE_VALUES` in contracts, a `dispatch.ts`
    case, a handler, and the wizard.
 9. **Reaching an upstream API?** → a `clients/*` package with timeouts and
-   health reporting, plus a mock server in `@tinkerbell/test-support` if
+   health reporting, plus a mock server in `@rube/test-support` if
    anything integration-tests against it.
 10. **Anything the user configures and can therefore misconfigure** → it
     belongs in the change log, and probably in the portable export

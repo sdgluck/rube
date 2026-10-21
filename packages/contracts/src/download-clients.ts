@@ -6,7 +6,7 @@
  * the Downloads page renders one table and never branches on which app a row
  * came from.
  *
- * Tinkerbell holds its own connection to each client rather than borrowing the
+ * Rube holds its own connection to each client rather than borrowing the
  * one Radarr and Sonarr have: the *Arrs mask every password and API key in
  * `GET /downloadclient`, so there is nothing usable to borrow.
  */

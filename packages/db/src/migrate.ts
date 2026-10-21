@@ -14,7 +14,7 @@ import { migrate } from "drizzle-orm/better-sqlite3/migrator";
 import { join } from "node:path";
 import { bootstrapPushedDatabase } from "./bootstrap.ts";
 
-const DB_PATH = join(process.env.DATA_DIR || join(import.meta.dirname, "..", "..", ".."), "tinkerbell.db");
+const DB_PATH = join(process.env.DATA_DIR || join(import.meta.dirname, "..", "..", ".."), "rube.db");
 const MIGRATIONS_DIR = join(import.meta.dirname, "..", "drizzle");
 
 const sqlite = new Database(DB_PATH);

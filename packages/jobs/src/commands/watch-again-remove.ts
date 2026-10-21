@@ -4,9 +4,9 @@
  * has the row in it. Like `pibu-remove`, it leaves sharing restrictions alone:
  * they belong to Personalized Home Screens, still on for the other personal rows.
  */
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
-import type { JobContext } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
+import type { JobContext } from "@rube/core";
 import { plexConnection } from "./ai-collection-shared.ts";
 import { WATCH_AGAIN_LABEL } from "./watch-it-again/index.ts";
 
@@ -21,7 +21,7 @@ export function createWatchAgainRemoveCommand(deps: Pick<Services, "clients" | "
     if (!token) throw new Error("Plex token is required. Configure it in Settings.");
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell watch-again-remove`);
+    ctx.log(`rube watch-again-remove`);
     ctx.log(`Server: ${url}`);
 
     const sections = await client.getSections();

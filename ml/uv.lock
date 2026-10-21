@@ -380,7 +380,7 @@ wheels = [
 ]
 
 [[package]]
-name = "tinkerbell-recs"
+name = "rube-recs"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [

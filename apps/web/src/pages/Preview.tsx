@@ -487,7 +487,7 @@ export default function Preview() {
               <Link
                 to={`/collections/${collectionRatingKey}`}
                 className={styles.hubChip}
-                title="Open collection in Tinkerbell"
+                title="Open collection in Rube"
               >
                 Open
               </Link>
@@ -543,7 +543,7 @@ export default function Preview() {
 
         {unpinTarget && (
           <ConfirmModal
-            message={`Unpin “${unpinTarget.title}” from the Plex homepage? Other Tinkerbell-managed pinning rules may re-pin it later.`}
+            message={`Unpin “${unpinTarget.title}” from the Plex homepage? Other Rube-managed pinning rules may re-pin it later.`}
             title="Unpin from homepage?"
             confirmLabel="Unpin"
             danger

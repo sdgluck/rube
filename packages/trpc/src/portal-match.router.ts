@@ -1,5 +1,5 @@
 /**
- * Movie match, on the portal. See `@tinkerbell/domain.match` for what a room is.
+ * Movie match, on the portal. See `@rube/domain.match` for what a room is.
  *
  * Three kinds of caller, and the procedure decides which it takes:
  *
@@ -20,12 +20,12 @@
  */
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { matchCodeSchema, matchFiltersSchema } from "@tinkerbell/contracts";
-import { GUEST_NAME_MAX, MatchError, type Caller } from "@tinkerbell/domain.match";
-import type { PlexClient } from "@tinkerbell/plex";
+import { matchCodeSchema, matchFiltersSchema } from "@rube/contracts";
+import { GUEST_NAME_MAX, MatchError, type Caller } from "@rube/domain.match";
+import type { PlexClient } from "@rube/plex";
 import type { TrpcDeps } from "./deps.ts";
 import type { PortalProcedures } from "./portal.router.ts";
-import { NativePortal } from "@tinkerbell/contracts/native-api";
+import { NativePortal } from "@rube/contracts/native-api";
 
 const room = z.object({ code: matchCodeSchema });
 const invite = z.string().min(1).max(64);

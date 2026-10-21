@@ -21,7 +21,7 @@
 
 import stylelint from "stylelint";
 
-const ruleName = "tinkerbell/breakpoint-scale";
+const ruleName = "rube/breakpoint-scale";
 
 /** Keep in step with the --bp-* tokens in apps/web/src/App.css. */
 export const BREAKPOINTS = [480, 640, 768, 900, 1100];

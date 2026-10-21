@@ -2,14 +2,14 @@
  * The Sonarr client.
  *
  * Structurally parallel to `clients/radarr` and deliberately not sharing code
- * with it beyond `@tinkerbell/servarr-http`. The two apps agree on transport
+ * with it beyond `@rube/servarr-http`. The two apps agree on transport
  * and disagree on nearly everything else — entity depth, monitoring, the
  * quality vocabulary, what the calendar returns — and every one of those
  * disagreements is easier to read here than it would be behind a shared
  * abstraction's `if (service === "sonarr")`.
  */
 
-import { createServarrHttp, createCommands, type ServarrHttpOptions } from "@tinkerbell/servarr-http";
+import { createServarrHttp, createCommands, type ServarrHttpOptions } from "@rube/servarr-http";
 import { createLibrary } from "./library.ts";
 import { createActivity } from "./activity.ts";
 import { createSystem } from "./system.ts";

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { isUiScale } from "@tinkerbell/contracts";
+import { isUiScale } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { hasStoredUiScale, setUiScale } from "#/ui-scale";
 

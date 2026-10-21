@@ -7,8 +7,8 @@
  * locally are reported with `locallyModified` set and are excluded from any
  * bulk apply — the user's own edits outrank ours.
  */
-import { type Rule, type Rules } from "@tinkerbell/domain.rules";
-import type { RegistryUpdate } from "@tinkerbell/contracts";
+import { type Rule, type Rules } from "@rube/domain.rules";
+import type { RegistryUpdate } from "@rube/contracts";
 
 import { hashConfig } from "./hash.ts";
 import { carryOverUserChoices } from "./overrides.ts";

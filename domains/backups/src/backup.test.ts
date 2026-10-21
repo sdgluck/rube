@@ -15,8 +15,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import Database from "better-sqlite3";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ConfigStoreToken } from "@tinkerbell/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ConfigStoreToken } from "@rube/core";
 import { BackupsToken } from "./index.ts";
 
 const c = createTestContainer();
@@ -26,7 +26,7 @@ const { runBackup, listBackups } = c.resolve(BackupsToken);
 let dir: string;
 
 before(async () => {
-  dir = await mkdtemp(join(tmpdir(), "tinkerbell-backup-test-"));
+  dir = await mkdtemp(join(tmpdir(), "rube-backup-test-"));
   setConfig("backup_dir", dir);
   setConfig("backup_keep_count", 3);
 });

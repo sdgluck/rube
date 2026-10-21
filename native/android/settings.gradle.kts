@@ -17,7 +17,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "tinkerbell"
+rootProject.name = "rube"
 
 include(":core:model")
 include(":core:api")

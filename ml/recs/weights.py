@@ -2,7 +2,7 @@
 How much one title says about someone's taste — a port of `titleWeight` in
 packages/jobs/src/commands/we-think-youd-like/profile.ts.
 
-The eval has to score what Tinkerbell will actually ship, so the history a
+The eval has to score what Rube will actually ship, so the history a
 taste vector is built from is weighted exactly as the app weighs a person's
 plays. MovieLens has ratings where Plex has completion, so the rating stands in
 for `completionFactor`: a high rating is a finished title, a low one an

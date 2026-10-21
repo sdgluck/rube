@@ -17,19 +17,19 @@
  *    inline here, because nothing could reach them.
  */
 
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 import { randomUUID } from "node:crypto";
-import { createLogger, errorMessage } from "@tinkerbell/core";
+import { createLogger, errorMessage } from "@rube/core";
 import { fork, type ChildProcess } from "node:child_process";
 import { join } from "node:path";
 import { eq, desc, sql } from "drizzle-orm";
 import { z } from "zod";
-import { stressTestRuns } from "@tinkerbell/db";
-import type { PlexClient, PlexMediaDetail, PlexSession } from "@tinkerbell/plex";
-import { SYNTHETIC_CLIENT_PREFIX, syntheticSessions } from "@tinkerbell/plex";
+import { stressTestRuns } from "@rube/db";
+import type { PlexClient, PlexMediaDetail, PlexSession } from "@rube/plex";
+import { SYNTHETIC_CLIENT_PREFIX, syntheticSessions } from "@rube/plex";
 
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext } from "@rube/core";
 import { isMasterPlaylist, resolveSegmentUrls, resolveVariantUrl } from "./hls.ts";
 import { assessStep } from "./assess.ts";
 import {
@@ -178,7 +178,7 @@ export interface StressTestResult {
  * The prefix stamped on every simulated player, so the run can find its own
  * sessions among everyone else's.
  *
- * Defined in `@tinkerbell/plex` rather than here, because it is now load-bearing
+ * Defined in `@rube/plex` rather than here, because it is now load-bearing
  * in the other direction too: the poller, the stats router and the bandwidth
  * test all use it to *exclude* these sessions from what they report, and those
  * live below this package. See `clients/plex/src/synthetic.ts`.

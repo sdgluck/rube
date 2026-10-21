@@ -18,13 +18,13 @@ import {
   parseRelativeDate,
   SMART_FILTER_FIELD_DEFS,
   type SmartFilterFieldKind,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import {
   isLocalField,
   type SmartFilterGroup,
   type SmartFilterLeaf,
   type SmartFilterNode,
-} from "@tinkerbell/plex-smart-filter";
+} from "@rube/plex-smart-filter";
 
 /** What the model is asked to return. Two levels deep, which is all a sentence needs. */
 export interface DraftLeaf {

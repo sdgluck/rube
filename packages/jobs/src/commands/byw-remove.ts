@@ -1,8 +1,8 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
-import { errorMessage } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
+import { errorMessage } from "@rube/core";
 
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
 const BYW_LABEL = "BecauseYouWatched";
 
@@ -16,10 +16,10 @@ export function createBywRemoveCommand(deps: Pick<Services, "clients" | "collect
    * Tear down all Because You Watched state on Plex:
    *   1. Delete every collection labelled "BecauseYouWatched" across configured sections.
    *   2. Clear the sharing restrictions on every shared user so they no longer see
-   *      a stale Tinkerbell allow-list once the per-user collections are gone.
+   *      a stale Rube allow-list once the per-user collections are gone.
    *
-   * Does NOT touch item-level Tinkerbell labels — those are managed by the
-   * separate "Clear Tinkerbell Labels" job.
+   * Does NOT touch item-level Rube labels — those are managed by the
+   * separate "Clear Rube Labels" job.
    */
   async function run(ctx: JobContext, config: CommonJobConfig): Promise<void> {
     const PLEX_URL = getConfig("global_plex_url") || process.env.PLEX_URL || "http://localhost:32400";
@@ -36,7 +36,7 @@ export function createBywRemoveCommand(deps: Pick<Services, "clients" | "collect
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell byw-remove`);
+    ctx.log(`rube byw-remove`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     const identity = await client.getIdentity();

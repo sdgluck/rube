@@ -1,10 +1,10 @@
-# Tinkerbell
+# Rube
 
 > [!WARNING]
-> Tinkerbell is in beta. Expect rough edges and changes between releases, and
+> Rube is in beta. Expect rough edges and changes between releases, and
 > keep [backups](#backups) before upgrading.
 
-Tinkerbell runs rules over your Plex library and turns them into collections,
+Rube runs rules over your Plex library and turns them into collections,
 playlists, poster overlays and cleanup. Everyone you share with gets their own
 home screen, with rows picked from what they watch, and a portal where they sign
 in with Plex to set their tastes. Groups can swipe through your films to agree
@@ -72,12 +72,12 @@ on one.
 ### Docker
 
 ```sh
-docker run -d --name tinkerbell \
+docker run -d --name rube \
   -v /path/to/config:/config \
   -v /path/to/prerolls:/prerolls \
   -p 3000:3000 -p 3100:3100 \
   -e PUID=99 -e PGID=100 -e TZ=Europe/London \
-  ghcr.io/sdgluck/tinkerbell:latest
+  ghcr.io/sdgluck/rube:latest
 ```
 
 | Item        | Value                                                    |
@@ -91,22 +91,22 @@ docker run -d --name tinkerbell \
 | `PUID/PGID` | Owner of `/config`. Default `99:100`                     |
 | `TZ`        | Timezone for schedules. Jobs → Schedule can override it  |
 
-To build the image yourself: `docker build -t tinkerbell .`
+To build the image yourself: `docker build -t rube .`
 
 ### Unraid
 
 1. Download the template:
 
    ```sh
-   wget -O /boot/config/plugins/dockerMan/templates-user/my-Tinkerbell.xml \
-     https://raw.githubusercontent.com/sdgluck/tinkerbell/master/unraid/tinkerbell.xml
+   wget -O /boot/config/plugins/dockerMan/templates-user/my-Rube.xml \
+     https://raw.githubusercontent.com/sdgluck/rube/master/unraid/rube.xml
    ```
 
-2. Go to **Docker → Add Container** and choose `Tinkerbell` under
+2. Go to **Docker → Add Container** and choose `Rube` under
    _User templates_.
 3. Check the paths and click **Apply**.
 
-Defaults: `/config` → `/mnt/user/appdata/tinkerbell`, `/prerolls` →
+Defaults: `/config` → `/mnt/user/appdata/rube`, `/prerolls` →
 `/mnt/user/prerolls` (map the same host path into Plex).
 
 ## Security
@@ -118,7 +118,7 @@ that, only the Plex account that owns your server can sign in.
 
 - Sessions last 7 days and renew while you use the app.
 - The user portal has its own separate sign-in.
-- **Locked out?** Set `TINKERBELL_DISABLE_AUTH=1` and restart. Remove it once
+- **Locked out?** Set `RUBE_DISABLE_AUTH=1` and restart. Remove it once
   you're back in.
 
 ### Network
@@ -145,7 +145,7 @@ The people you share your server with sign in to the portal with their Plex
 account, in any browser. It runs on its own port (`3100`), separate from the
 admin app, and only while a portal feature is on. There they can:
 
-- see the collections Tinkerbell built for them, and press **Not for me** on any
+- see the collections Rube built for them, and press **Not for me** on any
   that miss;
 - set their tastes, which steer their personal collections;
 - see what's leaving soon;
@@ -205,7 +205,7 @@ Limits:
 
 ## Ready-made collections
 
-Collections Tinkerbell builds for you, besides the ones your rules make. Most
+Collections Rube builds for you, besides the ones your rules make. Most
 are per user, built from what each person watches; the last two are one per
 library.
 
@@ -215,7 +215,7 @@ Each user gets one "We Think You'd Like" collection in each library. The AI
 picks it from their taste over the whole history window, not from the last few
 things they watched. Install it from **Jobs**. It runs weekly.
 
-- The taste comes from Tinkerbell's own playback history: genres, eras and
+- The taste comes from Rube's own playback history: genres, eras and
   ratings of what each person watches, weighted toward what they finish and
   watched recently. A film they gave up on early counts against its genres.
 - Nothing they have already played is picked. A user's portal preferences
@@ -256,7 +256,7 @@ Limits:
 
 - It needs Personalized Home Screens and recorded watch history. On a new
   install, run **Import Plex Watch History** first.
-- It reads Tinkerbell's own playback history, so playback retention limits how
+- It reads Rube's own playback history, so playback retention limits how
   far back **Given up after** can reach.
 
 ### Finish the franchise
@@ -322,7 +322,7 @@ no AI.
 Limits:
 
 - It needs Personalized Home Screens and recorded watch history. Most of
-  what it looks back over happened before Tinkerbell, so run **Import Plex
+  what it looks back over happened before Rube, so run **Import Plex
   Watch History** once.
 - Films only.
 
@@ -464,7 +464,7 @@ Limits:
 play was a transcode, or there were none. Films added in the last 30 days are
 left out, and so is any film with a play whose details weren't recorded.
 
-Radarr doesn't downgrade a film by itself, so Tinkerbell runs the swap:
+Radarr doesn't downgrade a film by itself, so Rube runs the swap:
 
 1. Sets the 1080p quality profile you picked.
 2. Searches for a 1080p release, one film at a time.
@@ -481,11 +481,11 @@ Replacement Failed" are available as notifications.
 A preroll is a short video that Plex plays before a movie. Prerolls need Plex
 Pass.
 
-1. Mount the same folder into both Tinkerbell and Plex:
+1. Mount the same folder into both Rube and Plex:
 
    ```yaml
    services:
-     tinkerbell:
+     rube:
        volumes:
          - ./prerolls:/prerolls
      plex:
@@ -499,7 +499,7 @@ Pass.
 
 Videos that Plex can't play directly are converted to H.264/AAC MP4. The Docker
 image includes `ffmpeg`; outside Docker, install it yourself. Set
-`PREROLLS_DIR` to change where Tinkerbell keeps prerolls.
+`PREROLLS_DIR` to change where Rube keeps prerolls.
 
 #### Portal preroll
 
@@ -509,16 +509,16 @@ plays alongside your other prerolls.
 
 ## Integrations
 
-Ways for other tools to read Tinkerbell.
+Ways for other tools to read Rube.
 
 ### API and MCP
 
-AI assistants and scripts can read a Tinkerbell instance through a read-only
+AI assistants and scripts can read a Rube instance through a read-only
 API. Create a key under **Settings → API & MCP**; the page shows the exact
 command to connect.
 
 - **MCP** at `http://<host>:3000/mcp` (Streamable HTTP). For Claude Code:
-  `claude mcp add --transport http tinkerbell http://<host>:3000/mcp --header "Authorization: Bearer <key>"`
+  `claude mcp add --transport http rube http://<host>:3000/mcp --header "Authorization: Bearer <key>"`
 - **JSON over HTTP** at `/api/v1/tools/<tool>` — `GET` with query parameters
   or `POST` with a JSON body. `/api/v1` lists the tools and
   `/api/v1/openapi.json` describes them.
@@ -533,20 +533,20 @@ command to connect.
 
 ### Home Assistant
 
-Tinkerbell can publish its state to an MQTT broker with Home Assistant
+Rube can publish its state to an MQTT broker with Home Assistant
 discovery. Turn it on under **Settings → Home Assistant** with the broker's
 address (the Mosquitto add-on listens on `mqtt://<ha-host>:1883`).
 
-- A **Tinkerbell** device appears in Home Assistant by itself, with streams,
+- A **Rube** device appears in Home Assistant by itself, with streams,
   transcodes, stream bandwidth, now playing (each session is an attribute),
   the current job, a "working" sensor, failing rules, problems, cleanup due
   soon, services down, library totals and the version.
-- It is publish-only. Tinkerbell never subscribes to anything, so nothing on
+- It is publish-only. Rube never subscribes to anything, so nothing on
   the broker can make it act.
 - State updates within 30 seconds of a change. Messages are retained, so a
   restarted Home Assistant gets the current state straight away. While
-  Tinkerbell is stopped, its entities show as unavailable.
-- Change the topic prefix to run a second Tinkerbell against the same broker.
+  Rube is stopped, its entities show as unavailable.
+- Change the topic prefix to run a second Rube against the same broker.
   The entities under the old prefix are removed.
 
 ## Operations
@@ -564,15 +564,15 @@ backup folder on a mounted volume.
 To restore:
 
 1. Stop the container.
-2. Unzip the backup: `gunzip tinkerbell-20260820T033000.db.gz`
-3. In your data folder, replace `tinkerbell.db` with the unzipped file. Delete
-   `tinkerbell.db-wal` and `tinkerbell.db-shm` if they exist.
+2. Unzip the backup: `gunzip rube-20260820T033000.db.gz`
+3. In your data folder, replace `rube.db` with the unzipped file. Delete
+   `rube.db-wal` and `rube.db-shm` if they exist.
 4. Start the container.
 
 #### Export and import
 
 Export saves your rules, job schedules, overlay presets and settings to a JSON
-file that another Tinkerbell can import.
+file that another Rube can import.
 
 - Passwords and API keys are left out unless you tick the box to include them.
 - Import shows a preview first. Items that differ from yours keep your version
@@ -585,7 +585,7 @@ logged with its old value and who made it. See **Settings → Change History**, 
 **Change history** in a rule's menu to restore an older version. Secrets are
 hidden, and entries are kept for 180 days.
 
-The **Changes** page is different: it lists what Tinkerbell did to Plex.
+The **Changes** page is different: it lists what Rube did to Plex.
 
 ### Stress test
 

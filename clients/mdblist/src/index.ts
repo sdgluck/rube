@@ -13,7 +13,7 @@
  * run in `running` forever and blocked the whole queue behind it.
  */
 
-import { httpRequestJson, HttpError } from "@tinkerbell/http";
+import { httpRequestJson, HttpError } from "@rube/http";
 
 const MDBLIST_TIMEOUT_MS = 20_000;
 const DEFAULT_BASE_URL = "https://api.mdblist.com";

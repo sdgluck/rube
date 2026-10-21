@@ -15,7 +15,7 @@
  * `if (service === …)` buried in a shared method.
  */
 
-import { httpRequest, HttpError } from "@tinkerbell/http";
+import { httpRequest, HttpError } from "@rube/http";
 
 /** How long a normal call may take. Long-running reads override per call. */
 const DEFAULT_TIMEOUT_MS = 15_000;

@@ -1,8 +1,8 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import { isAbsolute, join, relative } from "node:path";
 
-import { collections, migrationImports, plexSections, type Db } from "@tinkerbell/db";
-import { PLAYLIST_CAPABLE_RULE_TYPES, RULE_TYPE_VALUES } from "@tinkerbell/contracts";
+import { collections, migrationImports, plexSections, type Db } from "@rube/db";
+import { PLAYLIST_CAPABLE_RULE_TYPES, RULE_TYPE_VALUES } from "@rube/contracts";
 import {
   buildYamlPlan,
   bundleLoader,
@@ -11,15 +11,15 @@ import {
   type ImportFile,
   type MappedOverlay,
   type MetadataOverride,
-} from "@tinkerbell/migrate/kometa-yaml";
-import type { MigrationPlan } from "@tinkerbell/migrate";
+} from "@rube/migrate/kometa-yaml";
+import type { MigrationPlan } from "@rube/migrate";
 import { and, desc, eq } from "drizzle-orm";
 import type { BuildPlanInput, ProviderRuntime, ProviderScanResult } from "../runtime.ts";
 
 /**
  * The Kometa YAML importer's server half.
  *
- * Everything impure lives here so `@tinkerbell/migrate/kometa-yaml` can stay a
+ * Everything impure lives here so `@rube/migrate/kometa-yaml` can stay a
  * pure function of `{path, text}[]` — reading the bundle out of the database,
  * reading a directory off disk when the user points at one, joining Kometa's
  * library names onto real Plex sections, and matching a definition to the
@@ -42,7 +42,7 @@ export interface KometaYamlDeps {
   /**
    * Whether reading a config directory off the server's own filesystem is
    * allowed. Off for hosted installs, where the server's disk isn't the
-   * user's. Local installs want it on: Kometa and Tinkerbell usually share a
+   * user's. Local installs want it on: Kometa and Rube usually share a
    * volume mount, and pointing at `/config` is the closest thing to the
    * one-click migration this whole feature is aiming at.
    */

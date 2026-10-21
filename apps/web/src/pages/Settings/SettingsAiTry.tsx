@@ -15,8 +15,8 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "@tinkerbell/trpc";
-import { BYW_DEFAULTS } from "@tinkerbell/contracts";
+import type { AppRouter } from "@rube/trpc";
+import { BYW_DEFAULTS } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import styles from "./Settings.module.css";

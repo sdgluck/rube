@@ -31,12 +31,12 @@ Every app serves on a fixed port, and
 [localias](https://github.com/peterldowns/localias) proxies a named HTTPS
 hostname onto each:
 
-| URL                                   | App                             | Port   |
-| ------------------------------------- | ------------------------------- | ------ |
-| `https://api.tinkerbell.localhost`    | server                          | `3000` |
-| `https://web.tinkerbell.localhost`    | web (admin UI)                  | `5173` |
-| `https://portal.tinkerbell.localhost` | portal                          | `5174` |
-| `https://site.tinkerbell.localhost`   | tinkerbell.dev (marketing site) | `5175` |
+| URL                             | App                       | Port   |
+| ------------------------------- | ------------------------- | ------ |
+| `https://api.rube.localhost`    | server                    | `3000` |
+| `https://web.rube.localhost`    | web (admin UI)            | `5173` |
+| `https://portal.rube.localhost` | portal                    | `5174` |
+| `https://site.rube.localhost`   | rube.fyi (marketing site) | `5175` |
 
 The mapping lives in `.localias.yaml` at the repo root; edit it and re-run
 `pnpm proxy:up` to apply. localias manages `/etc/hosts` and a local root
@@ -51,7 +51,7 @@ carries on, and the apps remain reachable on their raw ports.
 
 ## Database
 
-The dev database lives at `tinkerbell.db` (SQLite). Schema changes go through
+The dev database lives at `rube.db` (SQLite). Schema changes go through
 the Drizzle CLI — never hand-edit the journal or the generated SQL:
 
 ```sh
@@ -92,19 +92,19 @@ extractable logic and leave rendering to the screenshot harness.
 
 Three pieces of scaffolding do most of the work:
 
-- **`createTestDb()`** (`@tinkerbell/db/test-db`) — a throwaway, fully migrated
+- **`createTestDb()`** (`@rube/db/test-db`) — a throwaway, fully migrated
   database in a temp directory. On disk rather than `:memory:`, because WAL and
   the mmap pragmas are no-ops in memory and a test that passes against a
   different storage mode than production is worth less than the milliseconds it
   saves.
 - **`createTestContainer({ overrides, now })`**
-  (`@tinkerbell/composition/test-support`) — the **real** DI graph on that
+  (`@rube/composition/test-support`) — the **real** DI graph on that
   database. `overrides` uses `registry.replace`, so a test exercises the wiring
   that ships with named edges swapped rather than a parallel graph assembled by
   hand. Passing `now` replaces `ClockToken` with a fixed clock and gives the
   container `setNow`/`advance`, which is how a retention or grace-period test
   moves time instead of writing rows into the past.
-- **`@tinkerbell/test-support`** — stateful Plex and \*Arr servers speaking real
+- **`@rube/test-support`** — stateful Plex and \*Arr servers speaking real
   HTTP on port 0, each with a `journal` of what it was asked to do, plus
   `failNext` for asserting that a mutation is _not_ retried. Point the code at
   one by writing its origin into config: `setConfig("global_plex_url",
@@ -127,7 +127,7 @@ has to set that itself.
 - `scripts/check-fetch.mjs` fails on any `fetch()` without a timeout under
   `clients/`, `packages/`, `domains/` or `apps/server/`. A request with no
   deadline is the easiest way to wedge the job queue — the run never finishes,
-  so nothing else runs either. Route new calls through `@tinkerbell/http`
+  so nothing else runs either. Route new calls through `@rube/http`
   (which takes `timeoutMs`), or add an `AbortSignal.timeout()`.
 - `scripts/check-nul.mjs` fails on a raw NUL byte in a source file. NUL is a
   fine delimiter, but written literally it makes `grep` and `file(1)` treat the
@@ -155,12 +155,12 @@ admin app's responsive layout, with the sidebar as a drawer. One switch helps
 when iterating locally (never commit its output):
 
 ```sh
-TB_CAPTURE_ONLY=settings,rules pnpm --filter @tinkerbell/tinkerbell.dev capture   # just these shots
+TB_CAPTURE_ONLY=settings,rules pnpm --filter @rube/rube.fyi capture   # just these shots
 ```
 
 ## Native apps
 
-One app per platform, both `dev.tinkerbell.app` with the `tinkerbell://` link
+One app per platform, both `fyi.rube.app` with the `rube://` link
 scheme: SwiftUI in `native/ios` and Jetpack Compose in `native/android`. They
 call the same `/api/trpc` endpoints the SPAs do, as plain JSON (queries are
 GET with `?input=`, mutations POST), and hold two independent connections, one
@@ -174,10 +174,10 @@ pnpm native:codegen      # regenerate the Swift and Kotlin models
 iOS (Xcode 26, iOS 26):
 
 ```sh
-open native/ios/Tinkerbell.xcodeproj
-swift test --package-path native/ios/Packages/TinkerbellKit
+open native/ios/Rube.xcodeproj
+swift test --package-path native/ios/Packages/RubeKit
 # UI tests, against a running native:dev-server:
-xcodebuild test -project native/ios/Tinkerbell.xcodeproj -scheme Tinkerbell \
+xcodebuild test -project native/ios/Rube.xcodeproj -scheme Rube \
   -destination 'platform=iOS Simulator,name=iPhone 17'
 ```
 

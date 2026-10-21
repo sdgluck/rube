@@ -1,5 +1,5 @@
-import { HEALTH_SERVICES } from "@tinkerbell/domain.health";
-import type { configSchema } from "@tinkerbell/core";
+import { HEALTH_SERVICES } from "@rube/domain.health";
+import type { configSchema } from "@rube/core";
 import type { z } from "zod";
 
 type ConfigMap = Partial<z.infer<typeof configSchema>>;
@@ -78,7 +78,7 @@ export interface OnboardingStep {
   label: string;
   /**
    * Required steps gate the wizard's Next button and decide whether setup
-   * counts as complete. Plex is the only one — everything else Tinkerbell can
+   * counts as complete. Plex is the only one — everything else Rube can
    * run without, and pretending otherwise would make the flow a wall rather
    * than a guide.
    */

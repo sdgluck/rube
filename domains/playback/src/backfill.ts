@@ -15,8 +15,8 @@
  */
 import { and, eq, gte, lte, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
-import { playbackSessions, watchState, type Db } from "@tinkerbell/db";
-import type { PlexHistoryItem } from "@tinkerbell/plex";
+import { playbackSessions, watchState, type Db } from "@rube/db";
+import type { PlexHistoryItem } from "@rube/plex";
 
 export const BACKFILL_SOURCE = "plex-history";
 

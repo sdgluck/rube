@@ -12,7 +12,7 @@ import type { PlexItem } from "./types.ts";
  *    the sequence is usually the whole point ("watch these in this order").
  *    Every function here preserves the order it's given.
  *  - **They can't be labelled.** Collections carry `Rule:<id>`, which is how
- *    Tinkerbell knows what it owns. Playlists have no labels, so ownership is
+ *    Rube knows what it owns. Playlists have no labels, so ownership is
  *    tracked locally and mirrored into the summary as a fallback.
  *
  * The second is why nothing here deletes and recreates. A playlist's rating key

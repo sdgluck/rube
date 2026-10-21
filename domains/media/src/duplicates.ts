@@ -14,7 +14,7 @@
  * and no round trip to the server.
  */
 import { and, desc, eq, gt, isNotNull, sql } from "drizzle-orm";
-import { mediaItems, type Db } from "@tinkerbell/db";
+import { mediaItems, type Db } from "@rube/db";
 
 export interface DuplicateItem {
   ratingKey: string;

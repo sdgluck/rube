@@ -1,4 +1,4 @@
-import { httpRequest, HttpError } from "@tinkerbell/http";
+import { httpRequest, HttpError } from "@rube/http";
 
 /** Overseerr's media status: 4 is partially available (some requested seasons), 5 available. */
 export const SEERR_PARTIALLY_AVAILABLE = 4;

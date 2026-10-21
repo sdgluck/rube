@@ -9,7 +9,7 @@
 
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { customFormatSchemaFixture, qualityProfileSchemaFixture } from "@tinkerbell/test-support";
+import { customFormatSchemaFixture, qualityProfileSchemaFixture } from "@rube/test-support";
 import {
   CUSTOM_FORMATS,
   type CustomFormatDef,

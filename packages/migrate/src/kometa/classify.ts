@@ -105,7 +105,7 @@ export function classifyOne(collection: CollectionInput): { bucket: BucketKind |
   // explicit lookup so "Marvel Studios" / "United Kingdom" / etc. don't
   // get pulled in. Directors without an explicit "(Director)" suffix
   // unfortunately fall here too — there's no purely-textual signal to
-  // distinguish; the Tinkerbell `actors` rule will still pick them up
+  // distinguish; the Rube `actors` rule will still pick them up
   // via TMDb when run.
   if (PERSON_NAME_RE.test(title)) return { bucket: "actor" };
 

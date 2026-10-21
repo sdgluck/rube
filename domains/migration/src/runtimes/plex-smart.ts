@@ -1,12 +1,12 @@
-import { collections, type Db } from "@tinkerbell/db";
+import { collections, type Db } from "@rube/db";
 import {
   buildPlexSmartPlan,
   detectSmartCollections,
   type CollectionInput,
   type MigrationPlan,
   type SmartCollectionInput,
-} from "@tinkerbell/migrate";
-import { isTinkerbellOwned, summariseBySection, type ProviderRuntime, type ProviderScanResult } from "../runtime.ts";
+} from "@rube/migrate";
+import { isRubeOwned, summariseBySection, type ProviderRuntime, type ProviderScanResult } from "../runtime.ts";
 
 export interface PlexSmartDeps {
   db: Db;
@@ -59,7 +59,7 @@ export function createPlexSmart(deps: PlexSmartDeps) {
    */
   function rejectClaimedByOthers(inputs: SmartCollectionInput[]): SmartCollectionInput[] {
     const others = otherProviders().filter((p) => p.id !== PLEX_SMART_RUNTIME.id);
-    return inputs.filter((c) => !isTinkerbellOwned(c) && !others.some((p) => p.claims(c)));
+    return inputs.filter((c) => !isRubeOwned(c) && !others.some((p) => p.claims(c)));
   }
 
   const PLEX_SMART_RUNTIME: ProviderRuntime = {

@@ -1,5 +1,5 @@
 import { fieldKind, type SmartFilterFieldKind } from "./smart-filter-fields.ts";
-import type { SmartFilterOp } from "@tinkerbell/plex-smart-filter";
+import type { SmartFilterOp } from "@rube/plex-smart-filter";
 
 /**
  * Operator labels, in English, per field kind.

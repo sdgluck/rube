@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 /**
  * Where a smart filter's items went.
  *
@@ -16,7 +16,7 @@ import { type Services } from "@tinkerbell/composition";
  * nightly pass over rules that are working.
  */
 
-import { SECTION_TYPE_MAP, type PlexClient, type PlexSection } from "@tinkerbell/plex";
+import { SECTION_TYPE_MAP, type PlexClient, type PlexSection } from "@rube/plex";
 import {
   emitSmartFilterTree,
   splitLocalLeaves,
@@ -24,10 +24,10 @@ import {
   type SmartFilterLeaf,
   type SmartFilterNode,
   type SmartFilterOp,
-} from "@tinkerbell/plex-smart-filter";
-import { describeCondition } from "@tinkerbell/contracts";
-import { evaluateLocal } from "@tinkerbell/domain.playback";
-import type { JobContext } from "@tinkerbell/core";
+} from "@rube/plex-smart-filter";
+import { describeCondition } from "@rube/contracts";
+import { evaluateLocal } from "@rube/domain.playback";
+import type { JobContext } from "@rube/core";
 
 export interface FunnelStep {
   /** The clause as a sentence fragment — "Genre is Horror". */

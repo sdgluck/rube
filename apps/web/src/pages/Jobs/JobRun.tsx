@@ -92,7 +92,7 @@ export default function JobRun() {
             <span>{run.message}</span>
           </>
         )}
-        {/* "Tinkerbell gave up on this run" and "the command threw" are
+        {/* "Rube gave up on this run" and "the command threw" are
             different facts, and only the first one comes with a caveat: a
             command job runs in a worker thread we cannot actually interrupt,
             so a watchdog failure means the row is final and the work might

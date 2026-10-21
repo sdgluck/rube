@@ -1,9 +1,9 @@
 import { join } from "node:path";
 
 /**
- * Tinkerbell's own storage root — `tinkerbell.db`, `sidequest.sqlite`, the
+ * Rube's own storage root — `rube.db`, `sidequest.sqlite`, the
  * poster cache. Docker sets `DATA_DIR=/config`; outside a container we fall
- * back to the repo root, matching how `@tinkerbell/db` resolves it.
+ * back to the repo root, matching how `@rube/db` resolves it.
  */
 export function dataDir(): string {
   return process.env.DATA_DIR || join(import.meta.dirname, "..", "..", "..");

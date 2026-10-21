@@ -1,6 +1,6 @@
 import { createContext, useContext } from "react";
 import type { inferRouterOutputs } from "@trpc/server";
-import type { AppRouter } from "@tinkerbell/trpc";
+import type { AppRouter } from "@rube/trpc";
 
 export type UserDetailData = inferRouterOutputs<AppRouter>["users"]["get"];
 

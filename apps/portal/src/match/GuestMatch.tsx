@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { describeMatchFilters } from "@tinkerbell/contracts";
+import { describeMatchFilters } from "@rube/contracts";
 import { portalTrpc } from "../trpc.ts";
 import BrandHeader, { type Branding } from "../components/BrandHeader.tsx";
 import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";

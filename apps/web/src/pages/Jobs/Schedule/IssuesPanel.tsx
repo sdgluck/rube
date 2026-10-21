@@ -1,5 +1,5 @@
 import { AlertCircle, AlertTriangle, CheckCircle2, Info } from "lucide-react";
-import type { ScheduleFix, ScheduleIssue, ScheduleSeverity } from "@tinkerbell/contracts";
+import type { ScheduleFix, ScheduleIssue, ScheduleSeverity } from "@rube/contracts";
 import controls from "#/styles/controls.module.css";
 import styles from "./Schedule.module.css";
 

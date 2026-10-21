@@ -12,9 +12,9 @@
  * one. It is still resolved from the container rather than imported, so a test
  * can hand a command a bag with three domains faked and the rest real.
  */
-import { token } from "@tinkerbell/container";
-import type { Registry, Scope } from "@tinkerbell/container";
-import { DbToken, type Db } from "@tinkerbell/db";
+import { token } from "@rube/container";
+import type { Registry, Scope } from "@rube/container";
+import { DbToken, type Db } from "@rube/db";
 import {
   AdminAuthToken,
   ArrInstancesToken,
@@ -33,49 +33,49 @@ import {
   type Preferences,
   type Sessions,
   type Sharing,
-} from "@tinkerbell/core";
-import type { PosterCache } from "@tinkerbell/posters";
+} from "@rube/core";
+import type { PosterCache } from "@rube/posters";
 
-import { AiUsageToken, type AiUsage } from "@tinkerbell/domain.ai-usage";
-import { ApiKeysToken, type ApiKeys } from "@tinkerbell/domain.api-keys";
-import { BackupsToken, type Backups } from "@tinkerbell/domain.backups";
-import { BandwidthToken, type Bandwidth } from "@tinkerbell/domain.bandwidth";
-import { ChangesToken, type Changes } from "@tinkerbell/domain.changes";
-import { ArrActivityToken, type ArrActivity } from "@tinkerbell/domain.arr-activity";
-import { ArrLibraryToken, type ArrLibrary } from "@tinkerbell/domain.arr-library";
-import { ArrSettingsToken, type ArrSettings } from "@tinkerbell/domain.arr-settings";
-import { ConfigHistoryToken, type ConfigHistory } from "@tinkerbell/domain.config-history";
-import { CleanupToken, type Cleanup } from "@tinkerbell/domain.cleanup";
-import { CollectionsToken, type Collections } from "@tinkerbell/domain.collections";
-import { DigestToken, type Digests } from "@tinkerbell/domain.digest";
-import { DownloadClientsToken, type DownloadClients } from "@tinkerbell/domain.download-clients";
-import { EventsToken, type Events } from "@tinkerbell/domain.events";
-import { HealthToken, type Health } from "@tinkerbell/domain.health";
-import { MediaToken, type Media } from "@tinkerbell/domain.media";
-import { MetadataToken, type Metadata } from "@tinkerbell/domain.metadata";
-import { MetadataOverridesToken, type MetadataOverrides } from "@tinkerbell/domain.metadata-overrides";
-import { PlaylistsToken, type Playlists } from "@tinkerbell/domain.playlists";
-import { PortabilityToken, type Portability } from "@tinkerbell/domain.portability";
-import { MigrationToken, type Migration } from "@tinkerbell/domain.migration";
-import { MatchToken, type Match } from "@tinkerbell/domain.match";
-import { NotificationsToken, type Notifications } from "@tinkerbell/domain.notifications";
-import { OnboardingToken, type Onboarding } from "@tinkerbell/domain.onboarding";
-import { OverlaysToken, type Overlays } from "@tinkerbell/domain.overlays";
-import { PlaybackToken, type Playback } from "@tinkerbell/domain.playback";
-import { PrerollsToken, type Prerolls } from "@tinkerbell/domain.prerolls";
-import { ProblemsToken, type Problems } from "@tinkerbell/domain.problems";
-import { QualitySwapsToken, type QualitySwaps } from "@tinkerbell/domain.quality-swaps";
-import { RecommendationsToken, type Recommendations } from "@tinkerbell/domain.recommendations";
-import { RegistryToken, type Registry as RuleRegistry } from "@tinkerbell/domain.registry";
-import { RuleHistoryToken, type RuleHistory } from "@tinkerbell/domain.rule-history";
-import { RuleDraftsToken, type RuleDrafts } from "@tinkerbell/domain.rule-drafts";
-import { RuleRunsToken, type RuleRuns } from "@tinkerbell/domain.rule-runs";
-import { RulesToken, type Rules } from "@tinkerbell/domain.rules";
-import { SearchToken, type Search } from "@tinkerbell/domain.search";
-import { SectionsToken, type Sections } from "@tinkerbell/domain.sections";
-import { StatsToken, type Stats } from "@tinkerbell/domain.stats";
-import { UsersToken, type Users } from "@tinkerbell/domain.users";
-import { WatchlistToken, type Watchlist } from "@tinkerbell/domain.watchlist";
+import { AiUsageToken, type AiUsage } from "@rube/domain.ai-usage";
+import { ApiKeysToken, type ApiKeys } from "@rube/domain.api-keys";
+import { BackupsToken, type Backups } from "@rube/domain.backups";
+import { BandwidthToken, type Bandwidth } from "@rube/domain.bandwidth";
+import { ChangesToken, type Changes } from "@rube/domain.changes";
+import { ArrActivityToken, type ArrActivity } from "@rube/domain.arr-activity";
+import { ArrLibraryToken, type ArrLibrary } from "@rube/domain.arr-library";
+import { ArrSettingsToken, type ArrSettings } from "@rube/domain.arr-settings";
+import { ConfigHistoryToken, type ConfigHistory } from "@rube/domain.config-history";
+import { CleanupToken, type Cleanup } from "@rube/domain.cleanup";
+import { CollectionsToken, type Collections } from "@rube/domain.collections";
+import { DigestToken, type Digests } from "@rube/domain.digest";
+import { DownloadClientsToken, type DownloadClients } from "@rube/domain.download-clients";
+import { EventsToken, type Events } from "@rube/domain.events";
+import { HealthToken, type Health } from "@rube/domain.health";
+import { MediaToken, type Media } from "@rube/domain.media";
+import { MetadataToken, type Metadata } from "@rube/domain.metadata";
+import { MetadataOverridesToken, type MetadataOverrides } from "@rube/domain.metadata-overrides";
+import { PlaylistsToken, type Playlists } from "@rube/domain.playlists";
+import { PortabilityToken, type Portability } from "@rube/domain.portability";
+import { MigrationToken, type Migration } from "@rube/domain.migration";
+import { MatchToken, type Match } from "@rube/domain.match";
+import { NotificationsToken, type Notifications } from "@rube/domain.notifications";
+import { OnboardingToken, type Onboarding } from "@rube/domain.onboarding";
+import { OverlaysToken, type Overlays } from "@rube/domain.overlays";
+import { PlaybackToken, type Playback } from "@rube/domain.playback";
+import { PrerollsToken, type Prerolls } from "@rube/domain.prerolls";
+import { ProblemsToken, type Problems } from "@rube/domain.problems";
+import { QualitySwapsToken, type QualitySwaps } from "@rube/domain.quality-swaps";
+import { RecommendationsToken, type Recommendations } from "@rube/domain.recommendations";
+import { RegistryToken, type Registry as RuleRegistry } from "@rube/domain.registry";
+import { RuleHistoryToken, type RuleHistory } from "@rube/domain.rule-history";
+import { RuleDraftsToken, type RuleDrafts } from "@rube/domain.rule-drafts";
+import { RuleRunsToken, type RuleRuns } from "@rube/domain.rule-runs";
+import { RulesToken, type Rules } from "@rube/domain.rules";
+import { SearchToken, type Search } from "@rube/domain.search";
+import { SectionsToken, type Sections } from "@rube/domain.sections";
+import { StatsToken, type Stats } from "@rube/domain.stats";
+import { UsersToken, type Users } from "@rube/domain.users";
+import { WatchlistToken, type Watchlist } from "@rube/domain.watchlist";
 
 export interface Services {
   /**

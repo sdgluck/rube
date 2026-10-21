@@ -5,7 +5,7 @@ import type { MetadataOverride } from "./metadata.ts";
 /**
  * The Kometa config format, as much of it as the importer needs to see.
  *
- * These types describe Kometa's *input*, not Tinkerbell's output. They stay
+ * These types describe Kometa's *input*, not Rube's output. They stay
  * deliberately loose — `unknown` rather than a modelled union — anywhere the
  * real format is open-ended, because Kometa accepts a great deal that we only
  * need to recognise well enough to report on. Guessing a tighter shape than
@@ -76,7 +76,7 @@ export interface KometaConfig {
 
 /**
  * One collection definition, after templates have been expanded and before
- * anything Tinkerbell-shaped has been decided.
+ * anything Rube-shaped has been decided.
  *
  * `builders` and `settings` are split because they answer different
  * questions: builders decide *which items*, settings decide *what the

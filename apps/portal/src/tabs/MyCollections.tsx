@@ -6,7 +6,7 @@ import { EmptyState, ErrorState, RowsSkeleton } from "../components/States.tsx";
 const UNDO_MS = 4000;
 
 /**
- * What Tinkerbell built for this person, and the one-tap way to say it was
+ * What Rube built for this person, and the one-tap way to say it was
  * wrong.
  *
  * The portal used to be a form with no feedback: you rated fourteen genres,

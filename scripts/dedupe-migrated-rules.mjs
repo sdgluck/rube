@@ -3,7 +3,7 @@
  * One-off repair for rules duplicated by the Plex Smart migration provider.
  *
  * Before v0.16.2, that provider adopted *every* smart collection in Plex,
- * including the ones Tinkerbell generated itself. Running the migration
+ * including the ones Rube generated itself. Running the migration
  * therefore minted a second rule for each generated collection: same name
  * (collections are named after their rule), equivalent config, disabled, and
  * never run. This deletes those copies.
@@ -25,7 +25,7 @@ import { createRequire } from "node:module";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
 
-// better-sqlite3 is a dependency of @tinkerbell/db, and pnpm does not hoist it
+// better-sqlite3 is a dependency of @rube/db, and pnpm does not hoist it
 // to the root node_modules — so resolve from the package that owns it rather
 // than from wherever this script happens to have been dropped.
 const REQUIRE_BASES = ["/app/packages/db/", join(process.cwd(), "packages/db/"), process.cwd() + "/"];
@@ -39,14 +39,14 @@ for (const base of REQUIRE_BASES) {
 if (!Database) {
   console.error(
     "Could not load better-sqlite3.\n" +
-      "  Run this inside the Tinkerbell container, e.g.\n" +
-      "    docker exec -w /app tinkerbell node /app/dedupe-migrated-rules.mjs",
+      "  Run this inside the Rube container, e.g.\n" +
+      "    docker exec -w /app rube node /app/dedupe-migrated-rules.mjs",
   );
   process.exit(1);
 }
 
 const APPLY = process.argv.includes("--apply");
-const DB_PATH = join(process.env.DATA_DIR || "/config", "tinkerbell.db");
+const DB_PATH = join(process.env.DATA_DIR || "/config", "rube.db");
 
 if (!existsSync(DB_PATH)) {
   console.error(`No database at ${DB_PATH}. Set DATA_DIR if yours lives elsewhere.`);

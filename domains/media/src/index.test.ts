@@ -7,10 +7,10 @@
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { events, mediaItems } from "@tinkerbell/db";
-import { MediaToken } from "@tinkerbell/domain.media";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { events, mediaItems } from "@rube/db";
+import { MediaToken } from "@rube/domain.media";
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -18,7 +18,7 @@ after(() => c.dispose());
 const db = c.resolve(DbToken);
 const { syncMedia, getStorageBySection, getLocalMediaItems, listLabels, setItemLabels } = c.resolve(MediaToken);
 
-const { createPlexClient } = await import("@tinkerbell/plex");
+const { createPlexClient } = await import("@rube/plex");
 
 type PlexClient = ReturnType<typeof createPlexClient>;
 

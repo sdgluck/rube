@@ -10,9 +10,9 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { pipeline } from "node:stream/promises";
-import { createLogger, errorMessage } from "@tinkerbell/core";
-import type { Services } from "@tinkerbell/composition";
-import type { Jobs } from "@tinkerbell/jobs";
+import { createLogger, errorMessage } from "@rube/core";
+import type { Services } from "@rube/composition";
+import type { Jobs } from "@rube/jobs";
 import {
   UnsupportedFormatError,
   UploadTooLargeError,
@@ -21,7 +21,7 @@ import {
   processedPath,
   thumbPath,
   writeIncoming,
-} from "@tinkerbell/domain.prerolls";
+} from "@rube/domain.prerolls";
 import { resolvePrerollId } from "./security.ts";
 
 const log = createLogger("prerolls");

@@ -1,12 +1,12 @@
 import { createServer } from "node:http";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
-import { createTrpc } from "@tinkerbell/trpc";
-import { createAgentApi } from "@tinkerbell/agent-api";
-import { createHomeAssistant, HOME_ASSISTANT_TICK_MS } from "@tinkerbell/home-assistant";
-import { buildContainer, ServicesToken } from "@tinkerbell/composition";
-import { JobsToken, registerJobs, stopSidequest, stopStressTest } from "@tinkerbell/jobs";
-import { authDisabledByEnv, createLogger, errorMessage, startAuthDisabledWarning } from "@tinkerbell/core";
+import { createTrpc } from "@rube/trpc";
+import { createAgentApi } from "@rube/agent-api";
+import { createHomeAssistant, HOME_ASSISTANT_TICK_MS } from "@rube/home-assistant";
+import { buildContainer, ServicesToken } from "@rube/composition";
+import { JobsToken, registerJobs, stopSidequest, stopStressTest } from "@rube/jobs";
+import { authDisabledByEnv, createLogger, errorMessage, startAuthDisabledWarning } from "@rube/core";
 import { createAuth } from "./auth.ts";
 import { createAdminHandler, createPortalHandler } from "./handlers.ts";
 import { createCollectionRoutes } from "./collections.ts";
@@ -19,7 +19,7 @@ const log = createLogger("server");
 /**
  * This build's version, read from the package the server ships as.
  *
- * Stamped into an export so a bundle says which Tinkerbell wrote it — the
+ * Stamped into an export so a bundle says which Rube wrote it — the
  * first question anybody asks about a file that won't import. The release
  * script keeps every workspace package's version in step, so this is the
  * app version rather than one package's.
@@ -76,12 +76,12 @@ const HOST = process.env.HOST || "127.0.0.1";
 // this one to the host.
 const USER_PORT = parseInt(process.env.USER_PORT || "3100", 10);
 const USER_HOST = process.env.USER_HOST || HOST;
-// The address to print at boot. `api.tinkerbell.localhost` is the localias
+// The address to print at boot. `api.rube.localhost` is the localias
 // proxy from `pnpm dev` and resolves nowhere else, so it is dev-only — in a
 // container it sent people to a hostname their browser can't resolve. A
 // wildcard bind isn't a dialable host either, so report loopback for those.
 function listenUrl(): string {
-  if (process.env.NODE_ENV !== "production") return "https://api.tinkerbell.localhost";
+  if (process.env.NODE_ENV !== "production") return "https://api.rube.localhost";
   const host = HOST === "0.0.0.0" || HOST === "::" ? "localhost" : HOST;
   return `http://${host.includes(":") ? `[${host}]` : host}:${PORT}`;
 }
@@ -170,7 +170,7 @@ async function main() {
       // reachable from the network with nothing checking who's calling.
       log.warn(
         `Listening on ${HOST}: every tRPC mutation is reachable without authentication` +
-          (authDisabledByEnv() ? " (TINKERBELL_DISABLE_AUTH is set)" : "") +
+          (authDisabledByEnv() ? " (RUBE_DISABLE_AUTH is set)" : "") +
           `. Only expose this port to networks you trust, or enable admin authentication in the app.`,
       );
     }

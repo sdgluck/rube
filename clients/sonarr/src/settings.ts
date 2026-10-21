@@ -8,7 +8,7 @@
  * lives above this, in `domains/arr-settings`.
  */
 
-import type { ServarrHttp, ServarrProvider } from "@tinkerbell/servarr-http";
+import type { ServarrHttp, ServarrProvider } from "@rube/servarr-http";
 import type {
   SonarrCustomFormat,
   SonarrCustomFormatSpecification,

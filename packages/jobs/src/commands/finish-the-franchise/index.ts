@@ -22,14 +22,14 @@
  *    imported Plex history, so playback retention can't make someone's
  *    progress through a series vanish.
  */
-import { FRANCHISE_DEFAULTS } from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { DAY_MS, displayTitle, errorMessage } from "@tinkerbell/core";
-import type { FranchiseJobConfig, JobContext } from "@tinkerbell/core";
-import { mediaItems } from "@tinkerbell/db";
-import { createPlexClient, type PlexSection } from "@tinkerbell/plex";
-import { ClockToken } from "@tinkerbell/ports";
-import { fetchCollection, type TmdbCollection, type TmdbConfig } from "@tinkerbell/tmdb";
+import { FRANCHISE_DEFAULTS } from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { DAY_MS, displayTitle, errorMessage } from "@rube/core";
+import type { FranchiseJobConfig, JobContext } from "@rube/core";
+import { mediaItems } from "@rube/db";
+import { createPlexClient, type PlexSection } from "@rube/plex";
+import { ClockToken } from "@rube/ports";
+import { fetchCollection, type TmdbCollection, type TmdbConfig } from "@rube/tmdb";
 import { and, asc, eq, inArray, isNotNull } from "drizzle-orm";
 import { plexConnection, resolveTargetSections } from "../ai-collection-shared.ts";
 import { createTmdbMetadataCommand } from "../generate/tmdb-metadata.ts";
@@ -104,7 +104,7 @@ export function createFinishTheFranchiseCommand(
     if (users.length === 0) throw noUsersError(allowlist);
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell finish-the-franchise`);
+    ctx.log(`rube finish-the-franchise`);
     ctx.log(`Server: ${url}`);
     const machineId = (await client.getIdentity()).machineIdentifier;
     const writer = createPersonalRowWriter({

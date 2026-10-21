@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 /**
  * The Jobs → Schedule page's server half: everything it needs in one read,
  * and every edit it makes in one write.
@@ -16,7 +16,7 @@ import { type Services } from "@tinkerbell/composition";
  */
 import { eq } from "drizzle-orm";
 import { Cron } from "croner";
-import { jobs } from "@tinkerbell/db";
+import { jobs } from "@rube/db";
 import {
   hasBlockingIssues,
   isAlwaysOnJob,
@@ -30,8 +30,8 @@ import {
   type ScheduleLane,
   type SchedulePlan,
   type ScheduleSettings,
-} from "@tinkerbell/contracts";
-import { createLogger } from "@tinkerbell/core";
+} from "@rube/contracts";
+import { createLogger } from "@rube/core";
 import { COMMANDS, isCommandName } from "./commands/catalog.ts";
 import { DEFAULT_JOBS, JobUpdateError } from "./runner.ts";
 import { FEATURE_TEMPLATES } from "./features.ts";

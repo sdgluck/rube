@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 import { createCleanupCommand } from "./cleanup.ts";
 import { createMetadataCommand } from "./metadata.ts";
 import { createFinalizeCommand } from "./finalize.ts";
@@ -17,11 +17,11 @@ import { createListSourceCommand } from "./handlers/list-source.ts";
 import { createSmartFilterCommand } from "./handlers/smart-filter.ts";
 import { createPlaylistCommand } from "./playlist.ts";
 import { createStaticListCommand } from "./handlers/static-list.ts";
-import type { PlexSection } from "@tinkerbell/plex";
-import { DEFAULT_PIN_ROTATION, producesManyCollections, ruleAction } from "@tinkerbell/contracts";
+import type { PlexSection } from "@rube/plex";
+import { DEFAULT_PIN_ROTATION, producesManyCollections, ruleAction } from "@rube/contracts";
 import { type CleanupBudget } from "./cleanup.ts";
 import { type MetadataBudget } from "./metadata.ts";
-import { type HistoricalCollection } from "@tinkerbell/domain.rule-history";
+import { type HistoricalCollection } from "@rube/domain.rule-history";
 
 import { COMMIT_CONCURRENCY } from "./finalize.ts";
 import { producedKey, readExistingCollections, reconcilePins, type PinnableCollection } from "./reconcile.ts";
@@ -167,7 +167,7 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
 
     const outcome = await runHandlerWithCleanup(deps, action, budget, handler);
     // A cleanup rule builds no collections at all — the queue lives in
-    // Tinkerbell, and the Rules table shows queued/actioned counts instead.
+    // Rube, and the Rules table shows queued/actioned counts instead.
     return { lastCollectionKey: null, collectionCount: 0, itemCount: outcome.matched };
   }
 

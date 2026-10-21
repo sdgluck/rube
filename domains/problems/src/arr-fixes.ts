@@ -15,12 +15,12 @@
  *   activity sync.
  */
 import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
-import { arrMovies, arrSeries, mediaItems, showChecks, type Db } from "@tinkerbell/db";
-import { MINUTE_MS, type ArrInstance } from "@tinkerbell/core";
-import type { ArrIssue } from "@tinkerbell/domain.arr-library";
-import type { PlexClient } from "@tinkerbell/plex";
-import { createRadarrClient } from "@tinkerbell/radarr";
-import { createSonarrClient } from "@tinkerbell/sonarr";
+import { arrMovies, arrSeries, mediaItems, showChecks, type Db } from "@rube/db";
+import { MINUTE_MS, type ArrInstance } from "@rube/core";
+import type { ArrIssue } from "@rube/domain.arr-library";
+import type { PlexClient } from "@rube/plex";
+import { createRadarrClient } from "@rube/radarr";
+import { createSonarrClient } from "@rube/sonarr";
 import { folderOf, learnPlexRoot, toPlexPath } from "./arr-paths.ts";
 import { showFolder } from "./ordering.ts";
 

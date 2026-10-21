@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 /**
  * The metadata action: what happens when a rule's ending is "fix these fields"
  * rather than "make a collection".
@@ -24,17 +24,17 @@ import { type Services } from "@tinkerbell/composition";
  * match what the run then does.
  */
 import { randomUUID } from "node:crypto";
-import { DAY_MS, errorMessage, type JobContext } from "@tinkerbell/core";
+import { DAY_MS, errorMessage, type JobContext } from "@rube/core";
 import {
   expandTemplate,
   IMPLAUSIBLE_METADATA_FRACTION,
   METADATA_RULE_TAG_FIELDS,
   metadataActionIsEmpty,
   type MetadataActionConfig,
-} from "@tinkerbell/contracts";
-import { type MetadataSnapshot } from "@tinkerbell/domain.metadata";
+} from "@rube/contracts";
+import { type MetadataSnapshot } from "@rube/domain.metadata";
 
-import type { ItemFields, MetadataField, PlexClient, PlexSection } from "@tinkerbell/plex";
+import type { ItemFields, MetadataField, PlexClient, PlexSection } from "@rube/plex";
 import type { HandlerDeps } from "./types.ts";
 
 /** Default ceiling on field writes across every metadata rule, per rolling day. */

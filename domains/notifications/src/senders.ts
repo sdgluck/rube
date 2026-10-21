@@ -9,9 +9,9 @@
  * has, and the rich fields are additions to it.
  */
 
-import { assertSafeOutboundUrl } from "@tinkerbell/http";
+import { assertSafeOutboundUrl } from "@rube/http";
 import { flattenMessage, type RichMessage } from "./types.ts";
-import { type ConfigStore } from "@tinkerbell/core";
+import { type ConfigStore } from "@rube/core";
 
 const TIMEOUT_MS = 10_000;
 

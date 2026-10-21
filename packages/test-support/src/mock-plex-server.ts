@@ -889,7 +889,7 @@ export function startMockPlex(opts: {
           ratingKey: s.ratingKey,
           title: items.get(s.ratingKey)?.title ?? "",
           type: "movie",
-          Player: { title: "Tinkerbell Stress Test", machineIdentifier: s.clientId, product: "tinkerbell-stress" },
+          Player: { title: "Rube Stress Test", machineIdentifier: s.clientId, product: "rube-stress" },
           Session: { id: s.clientId, bandwidth: playback.bandwidth },
           TranscodeSession: { speed, videoDecision: "transcode" },
         })),

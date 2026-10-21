@@ -1,4 +1,4 @@
-import type { BadgeStyle, OverlayType } from "@tinkerbell/contracts";
+import type { BadgeStyle, OverlayType } from "@rube/contracts";
 import { COLOR_PRESETS, OVERLAY_CATALOG } from "./constants";
 
 export function getPlaceholderValue(type: string): string {

@@ -8,7 +8,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
 import { shuffleSectionHubs } from "./index.ts";
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import type { PlexClient, PlexSection } from "@rube/plex";
 
 const SECTION: PlexSection = { key: "1", title: "Films", type: "movie" };
 

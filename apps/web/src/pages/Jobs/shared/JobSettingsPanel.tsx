@@ -7,7 +7,7 @@
  * (one change-history row, one validation pass on the server).
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { fieldsFor, jobScheduleMeta } from "@tinkerbell/contracts";
+import { fieldsFor, jobScheduleMeta } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import type { Job } from "#pages/Jobs/types";

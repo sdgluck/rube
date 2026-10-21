@@ -15,7 +15,7 @@ import {
   type SchedulePlan,
   type ScheduleSeverity,
   type ScheduleSettings,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import PageShell, { StatusChip } from "#components/PageShell";

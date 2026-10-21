@@ -9,11 +9,11 @@ import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { eq } from "drizzle-orm";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { DbToken, changeLog, jobRuns, jobs } from "@tinkerbell/db";
-import { buildPreset, planFromContext } from "@tinkerbell/contracts";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { ConfigStoreToken } from "@rube/core";
+import { DbToken, changeLog, jobRuns, jobs } from "@rube/db";
+import { buildPreset, planFromContext } from "@rube/contracts";
 import { createRunner, JobUpdateError } from "./runner.ts";
 import { cronJobs } from "./schedule.ts";
 import { createSchedulePlan, JobScheduleConflictError } from "./schedule-plan.ts";

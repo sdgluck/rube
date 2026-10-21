@@ -6,7 +6,7 @@
  * button already does. Destructive ones confirm first.
  */
 import { useState } from "react";
-import { variantsForJob, type VariantSpec } from "@tinkerbell/contracts";
+import { variantsForJob, type VariantSpec } from "@rube/contracts";
 import DropdownButton from "#components/DropdownButton";
 import ConfirmModal from "#components/ConfirmModal";
 import styles from "#pages/Jobs/Jobs.module.css";

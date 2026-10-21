@@ -6,12 +6,12 @@ import { classify } from "./collections-sweep.ts";
 import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
+import { createTestContainer } from "@rube/composition/test-support";
 
 const c = createTestContainer();
 after(() => c.dispose());
 
-// The module reaches @tinkerbell/db transitively (via domain.collections),
+// The module reaches @rube/db transitively (via domain.collections),
 // which opens its connection at import time.
 
 type Candidate = Parameters<typeof classify>[0][number];

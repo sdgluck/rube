@@ -10,18 +10,18 @@
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import type { z } from "zod";
-import { NATIVE_PROCEDURES, type NativeRouter } from "@tinkerbell/contracts/native-api";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
-import { createTrpc } from "@tinkerbell/trpc";
+import { NATIVE_PROCEDURES, type NativeRouter } from "@rube/contracts/native-api";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { JobsToken, registerJobs } from "@rube/jobs";
+import { createTrpc } from "@rube/trpc";
 import { emitKotlin, emitSwift, type ProcedureSource } from "./collect.ts";
 
 const ROOT = join(import.meta.dirname, "..", "..", "..");
 
 export const TARGETS = {
-  swift: join(ROOT, "native/ios/Packages/TinkerbellKit/Sources/TinkerbellModels/Generated/API.swift"),
-  kotlin: join(ROOT, "native/android/core/model/src/main/kotlin/dev/tinkerbell/model/generated/Api.kt"),
+  swift: join(ROOT, "native/ios/Packages/RubeKit/Sources/RubeModels/Generated/API.swift"),
+  kotlin: join(ROOT, "native/android/core/model/src/main/kotlin/fyi/rube/model/generated/Api.kt"),
 };
 
 interface Def {

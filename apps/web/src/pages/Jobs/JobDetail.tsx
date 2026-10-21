@@ -1,5 +1,5 @@
 import { Link, useParams } from "react-router-dom";
-import { isFeatureId, jobPresentation } from "@tinkerbell/contracts";
+import { isFeatureId, jobPresentation } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { DetailSkeleton } from "#components/Skeleton";
 import ErrorState from "#components/ErrorState";

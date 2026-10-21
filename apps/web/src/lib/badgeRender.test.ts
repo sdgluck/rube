@@ -22,7 +22,7 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import type { BadgeStyle, ColorPreset, OverlayPosition, OverlayType } from "@tinkerbell/contracts";
+import type { BadgeStyle, ColorPreset, OverlayPosition, OverlayType } from "@rube/contracts";
 import { calculatePosition as serverCalculatePosition } from "../../../../packages/overlays/src/position.ts";
 import {
   getBadgeColors as serverAutoColors,

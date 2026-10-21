@@ -1,9 +1,9 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
-import { DAY_MS } from "@tinkerbell/core";
+import { DAY_MS } from "@rube/core";
 
 import { t, procedure } from "./_base.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 export function createCleanupRouter(deps: Pick<TrpcDeps, "cleanup">) {
   const { cleanup } = deps;

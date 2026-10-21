@@ -1,4 +1,4 @@
-import { parseSmartFilterUri } from "@tinkerbell/plex-smart-filter";
+import { parseSmartFilterUri } from "@rube/plex-smart-filter";
 import type { CollectionInput, MigrationPlan, PlanItem, UnmappableEntry } from "../types.ts";
 
 /**
@@ -23,7 +23,7 @@ export function detectSmartCollections(collections: SmartCollectionInput[]): Sma
  * round-trip individually. Each item carries the `smart_filter` bucket
  * kind so downstream code can recognise these as filter-style imports
  * rather than category-grouped ones. The parser/emitter live in
- * `@tinkerbell/plex-smart-filter` so the same code runs at import,
+ * `@rube/plex-smart-filter` so the same code runs at import,
  * runtime, and in the rule wizard.
  */
 export function buildPlexSmartPlan(collections: SmartCollectionInput[]): MigrationPlan {
@@ -64,7 +64,7 @@ export function buildPlexSmartPlan(collections: SmartCollectionInput[]): Migrati
       },
       // Every clause round-tripped (the `unsupported` branch above bailed
       // otherwise), so the selection is faithful. What changes is the kind of
-      // collection: Tinkerbell's smart_filter handler materialises members on
+      // collection: Rube's smart_filter handler materialises members on
       // each run rather than handing Plex a live filter, so the collection
       // stops updating by itself between runs.
       confidence: "close",
@@ -72,7 +72,7 @@ export function buildPlexSmartPlan(collections: SmartCollectionInput[]): Migrati
         {
           code: "smart-becomes-static",
           message:
-            "Tinkerbell rebuilds this collection on each run instead of leaving Plex a live smart filter, so membership updates on the rule's schedule rather than instantly.",
+            "Rube rebuilds this collection on each run instead of leaving Plex a live smart filter, so membership updates on the rule's schedule rather than instantly.",
         },
       ],
       origin: { kind: "title-scan", definition: c.title },

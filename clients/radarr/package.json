@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/radarr",
+  "name": "@rube/radarr",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,7 +15,7 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/servarr-http": "workspace:*"
+    "@rube/servarr-http": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

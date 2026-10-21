@@ -1,6 +1,6 @@
-import { DIGEST_DEFAULTS } from "@tinkerbell/contracts";
-import { perDeps } from "@tinkerbell/container";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { DIGEST_DEFAULTS } from "@rube/contracts";
+import { perDeps } from "@rube/container";
+import { ServicesToken, type Services } from "@rube/composition";
 /**
  * The digest run: build, then deliver, then record.
  *
@@ -16,16 +16,10 @@ import { ServicesToken, type Services } from "@tinkerbell/composition";
  * automated newsletter worse than no newsletter.
  */
 import { eq } from "drizzle-orm";
-import { plexUsers } from "@tinkerbell/db";
-import { errorMessage, type DigestJobConfig, type JobContext } from "@tinkerbell/core";
-import {
-  isDigestEmpty,
-  renderDigest,
-  SERVER_WIDE_USER_ID,
-  type DeliveryKey,
-  type Digest,
-} from "@tinkerbell/domain.digest";
-import { SmtpNotConfiguredError, type RichMessage } from "@tinkerbell/domain.notifications";
+import { plexUsers } from "@rube/db";
+import { errorMessage, type DigestJobConfig, type JobContext } from "@rube/core";
+import { isDigestEmpty, renderDigest, SERVER_WIDE_USER_ID, type DeliveryKey, type Digest } from "@rube/domain.digest";
+import { SmtpNotConfiguredError, type RichMessage } from "@rube/domain.notifications";
 
 /**
  * The event id services subscribe to in order to receive the digest. Never
@@ -61,7 +55,7 @@ export const createDigestCommand = perDeps(function createDigestCommand(
     const minAddedItems = config.minAddedItems ?? DEFAULT_MIN_ADDED_ITEMS;
     const serverName = getConfig("portal_branding")?.title || undefined;
 
-    ctx.log("tinkerbell digest");
+    ctx.log("rube digest");
 
     let sent = 0;
     let skipped = 0;

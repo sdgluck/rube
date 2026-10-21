@@ -17,7 +17,7 @@ import {
   PORTAL_PREROLL_HEADLINE_MAX,
   PORTAL_PREROLL_MESSAGE_MAX,
   type PortalPrerollCardInput,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import Banner from "#components/Banner";

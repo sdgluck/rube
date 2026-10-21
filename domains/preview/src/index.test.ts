@@ -29,8 +29,8 @@ import {
   isPersonalProgressHub,
   itemPassesLabelFilter,
   parseLabelFilter,
-} from "@tinkerbell/domain.preview";
-import type { PlexClient } from "@tinkerbell/plex";
+} from "@rube/domain.preview";
+import type { PlexClient } from "@rube/plex";
 
 const item = (over: Partial<Record<string, unknown>> = {}) =>
   ({
@@ -62,7 +62,7 @@ describe("parseLabelFilter", () => {
   });
 
   test("a comma is OR — any value within a clause matches", () => {
-    assert.deepEqual(parseLabelFilter("label=Tinkerbell,User:sam"), [["Tinkerbell", "User:sam"]]);
+    assert.deepEqual(parseLabelFilter("label=Rube,User:sam"), [["Rube", "User:sam"]]);
   });
 
   test("a pipe separates clauses, and only label clauses filter by label", () => {
@@ -71,8 +71,8 @@ describe("parseLabelFilter", () => {
   });
 
   test("the old pipe-separated form admits only its first label, as Plex does", () => {
-    // What Tinkerbell wrote until 2026-10: the user saw `Tinkerbell` only.
-    assert.deepEqual(parseLabelFilter("label=Tinkerbell|User:sam"), [["Tinkerbell"]]);
+    // What Rube wrote until 2026-10: the user saw `Rube` only.
+    assert.deepEqual(parseLabelFilter("label=Rube|User:sam"), [["Rube"]]);
   });
 
   test("only the first `=` is treated as the clause separator", () => {
@@ -193,7 +193,7 @@ describe("getPreviewForUser", () => {
           {
             userId: 7,
             librarySectionIds: [1],
-            filterMovies: "label=Tinkerbell",
+            filterMovies: "label=Rube",
             filterTelevision: "",
             accessToken: "t",
           },

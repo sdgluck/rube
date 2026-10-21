@@ -3,17 +3,17 @@
  * do it (`sync-recently-added` every 15 minutes, `sync-media` nightly) against
  * the mock Plex.
  *
- * With personalization on, a shared user sees only `label=Tinkerbell` items, and
+ * With personalization on, a shared user sees only `label=Rube` items, and
  * nothing labelled anything added after the enable job ran, so a new show was
  * invisible to every shared user until someone pressed Reconcile.
  */
 import { describe, it, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { ConfigStoreToken, noopCheckpoint, type JobContext } from "@tinkerbell/core";
-import { startMockPlex, type MockPlex } from "@tinkerbell/test-support";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { ConfigStoreToken, noopCheckpoint, type JobContext } from "@rube/core";
+import { startMockPlex, type MockPlex } from "@rube/test-support";
 
 import { createSyncMediaCommand } from "../commands/sync-media.ts";
 import { createInternalJobs } from "../internal-jobs.ts";
@@ -33,7 +33,7 @@ beforeEach(async () => {
   plex = await startMockPlex({
     sections: SECTIONS,
     items: [
-      { ratingKey: "1", title: "Labelled Earlier", sectionId: "1", guids: [], labels: ["Tinkerbell"] },
+      { ratingKey: "1", title: "Labelled Earlier", sectionId: "1", guids: [], labels: ["Rube"] },
       { ratingKey: "2", title: "New Arrival", sectionId: "1", guids: [], labels: ["Disney+ Movies"] },
     ],
   });
@@ -62,12 +62,12 @@ describe("sync-media personalization labels", () => {
     const { ctx, log } = testContext();
     await run(ctx, {});
 
-    assert.deepEqual(plex.items.get("2")!.labels, ["Disney+ Movies", "Tinkerbell"]);
+    assert.deepEqual(plex.items.get("2")!.labels, ["Disney+ Movies", "Rube"]);
     assert.deepEqual(
       plex.journal.labelWriteRequests.map((r) => r.ids),
       [["2"]],
     );
-    assert.ok(log.includes('Personalization labels: 1 new item(s) labelled "Tinkerbell" so shared users can see them'));
+    assert.ok(log.includes('Personalization labels: 1 new item(s) labelled "Rube" so shared users can see them'));
   });
 
   it("says so when everything is already labelled", async () => {

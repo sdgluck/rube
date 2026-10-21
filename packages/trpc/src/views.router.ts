@@ -15,7 +15,7 @@ import type { TrpcDeps } from "./deps.ts";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
-import { savedViews } from "@tinkerbell/db";
+import { savedViews } from "@rube/db";
 import { t, procedure } from "./_base.ts";
 
 /**

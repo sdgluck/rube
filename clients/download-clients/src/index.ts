@@ -6,9 +6,9 @@
  * string, JSON-RPC with basic auth, form posts with a cookie, a CSRF
  * handshake, JSON-RPC with a cookie *and* a daemon connection — and the
  * differences are the whole job. What they share is the shape of the answer,
- * which is declared once in `@tinkerbell/contracts`.
+ * which is declared once in `@rube/contracts`.
  */
-import { DOWNLOAD_CLIENT_META, type DownloadClientItem } from "@tinkerbell/contracts";
+import { DOWNLOAD_CLIENT_META, type DownloadClientItem } from "@rube/contracts";
 import { createDelugeClient } from "./deluge.ts";
 import { createNzbgetClient } from "./nzbget.ts";
 import { createQbittorrentClient } from "./qbittorrent.ts";

@@ -23,7 +23,7 @@ interface SourceStepProps {
  * Where the Kometa config comes from.
  *
  * The server-path option is first because it's the only one that's genuinely
- * one click: Kometa and Tinkerbell are usually the same box with the same
+ * one click: Kometa and Rube are usually the same box with the same
  * volume mounts, so `/config` is already right there. Uploading is the fallback
  * for split setups, and pasting covers the large group of people whose entire
  * config is forty lines of `default:` entries.

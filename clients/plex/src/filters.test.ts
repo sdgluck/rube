@@ -16,34 +16,31 @@ import {
  */
 describe("share filter strings", () => {
   it("reads a single clause with comma-separated values", () => {
-    assert.deepEqual(getFilterClause("label=Tinkerbell,User:sam", "label"), ["Tinkerbell", "User:sam"]);
+    assert.deepEqual(getFilterClause("label=Rube,User:sam", "label"), ["Rube", "User:sam"]);
   });
 
   it("separates clauses on the pipe", () => {
-    const raw = "contentRating=PG,PG-13|label=Tinkerbell,User:sam";
+    const raw = "contentRating=PG,PG-13|label=Rube,User:sam";
     assert.deepEqual(getFilterClause(raw, "contentRating"), ["PG", "PG-13"]);
-    assert.deepEqual(getFilterClause(raw, "label"), ["Tinkerbell", "User:sam"]);
+    assert.deepEqual(getFilterClause(raw, "label"), ["Rube", "User:sam"]);
   });
 
   // The form this repo used to write. Plex enforces only the first label, so
   // reading it any other way would hide the drift from reconcile.
   it("reads the old pipe-separated label form as Plex enforces it", () => {
-    assert.deepEqual(getFilterClause("label=Tinkerbell|User:sam", "label"), ["Tinkerbell"]);
-    assert.equal(
-      setFilterClause("label=Tinkerbell|User:sam", "label", ["Tinkerbell", "User:sam"]),
-      "label=Tinkerbell,User:sam",
-    );
+    assert.deepEqual(getFilterClause("label=Rube|User:sam", "label"), ["Rube"]);
+    assert.equal(setFilterClause("label=Rube|User:sam", "label", ["Rube", "User:sam"]), "label=Rube,User:sam");
   });
 
   it("round-trips", () => {
-    const raw = "contentRating=PG,PG-13|label=Tinkerbell,User:sam";
+    const raw = "contentRating=PG,PG-13|label=Rube,User:sam";
     assert.equal(composeShareFilter(parseShareFilter(raw)), raw);
   });
 
   it("keeps an exclusion clause apart from an inclusion one", () => {
-    const raw = "label!=Kids|label=Tinkerbell";
+    const raw = "label!=Kids|label=Rube";
     assert.deepEqual(getFilterClause(raw, "label!"), ["Kids"]);
-    assert.deepEqual(getFilterClause(raw, "label"), ["Tinkerbell"]);
+    assert.deepEqual(getFilterClause(raw, "label"), ["Rube"]);
     assert.equal(composeShareFilter(parseShareFilter(raw)), raw);
   });
 
@@ -54,10 +51,10 @@ describe("share filter strings", () => {
   });
 
   it("replaces one clause and leaves the other exactly as it found it", () => {
-    const before = "contentRating=PG|label=Tinkerbell,User:sam";
+    const before = "contentRating=PG|label=Rube,User:sam";
     const after = setFilterClause(before, "contentRating", ["PG-13", "R"]);
-    assert.equal(after, "contentRating=PG-13,R|label=Tinkerbell,User:sam");
-    assert.deepEqual(getFilterClause(after, "label"), ["Tinkerbell", "User:sam"]);
+    assert.equal(after, "contentRating=PG-13,R|label=Rube,User:sam");
+    assert.deepEqual(getFilterClause(after, "label"), ["Rube", "User:sam"]);
   });
 
   it("adds a clause that wasn't there", () => {

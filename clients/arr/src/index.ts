@@ -1,4 +1,4 @@
-import { httpRequest, HttpError } from "@tinkerbell/http";
+import { httpRequest, HttpError } from "@rube/http";
 
 export type ArrService = "radarr" | "sonarr";
 

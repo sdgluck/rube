@@ -1,4 +1,4 @@
-import { isDeferrable } from "@tinkerbell/jobs";
+import { isDeferrable } from "@rube/jobs";
 /**
  * Rule work started by the server used to ignore the two settings that exist to
  * keep heavy work away from a stream.
@@ -17,11 +17,11 @@ import { isDeferrable } from "@tinkerbell/jobs";
 import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { playbackSessions } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { playbackSessions } from "@rube/db";
 import { createDeferral } from "./deferral.ts";
 
 const c = createTestContainer();

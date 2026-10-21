@@ -9,12 +9,12 @@
  */
 import assert from "node:assert/strict";
 import { after, beforeEach, test } from "node:test";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, rules } from "@tinkerbell/db";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
-import type { MqttConnection, MqttSettings } from "@tinkerbell/mqtt";
-import { createTrpc } from "@tinkerbell/trpc";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, rules } from "@rube/db";
+import { JobsToken, registerJobs } from "@rube/jobs";
+import type { MqttConnection, MqttSettings } from "@rube/mqtt";
+import { createTrpc } from "@rube/trpc";
 import { createHomeAssistant, discoveryPayload, ENTITIES, topicsFor } from "./index.ts";
 
 const c = createTestContainer({ overrides: registerJobs });
@@ -64,7 +64,7 @@ function publisher() {
   });
 }
 
-const stateMessages = () => broker.published.filter((m) => m.topic === "tinkerbell/state");
+const stateMessages = () => broker.published.filter((m) => m.topic === "rube/state");
 
 test("discovery for every entity, then online, then the state", async () => {
   c.resolve(DbToken)
@@ -75,11 +75,11 @@ test("discovery for every entity, then online, then the state", async () => {
   await ha.tick();
 
   assert.equal(broker.connects.length, 1);
-  assert.deepEqual(broker.connects[0].will, { topic: "tinkerbell/availability", payload: "offline" });
+  assert.deepEqual(broker.connects[0].will, { topic: "rube/availability", payload: "offline" });
   const discovery = broker.published.filter((m) => m.topic.startsWith("homeassistant/"));
   assert.equal(discovery.length, ENTITIES.length);
-  for (const m of discovery) assert.equal(JSON.parse(m.payload).state_topic, "tinkerbell/state");
-  assert.ok(broker.published.some((m) => m.topic === "tinkerbell/availability" && m.payload === "online"));
+  for (const m of discovery) assert.equal(JSON.parse(m.payload).state_topic, "rube/state");
+  assert.ok(broker.published.some((m) => m.topic === "rube/availability" && m.payload === "online"));
 
   const [state] = stateMessages();
   const snapshot = JSON.parse(state.payload);
@@ -105,11 +105,11 @@ test("moving the topic prefix removes the old entities before reconnecting", asy
   mqtt = { ...mqtt!, topicPrefix: "media" };
   await ha.tick();
 
-  const retracted = broker.published.filter((m) => m.topic.includes("/tinkerbell/") && m.payload === "");
+  const retracted = broker.published.filter((m) => m.topic.includes("/rube/") && m.payload === "");
   assert.equal(retracted.length, ENTITIES.length);
-  assert.ok(broker.published.some((m) => m.topic === "tinkerbell/availability" && m.payload === "offline"));
+  assert.ok(broker.published.some((m) => m.topic === "rube/availability" && m.payload === "offline"));
   assert.equal(broker.connects.length, 2);
-  assert.equal(broker.connects[1].clientId, "tinkerbell-media");
+  assert.equal(broker.connects[1].clientId, "rube-media");
   assert.ok(broker.published.some((m) => m.topic === "media/state"));
 });
 

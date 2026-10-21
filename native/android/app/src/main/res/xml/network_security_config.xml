@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  Cleartext is allowed because Tinkerbell is self-hosted: most servers are a
+  Cleartext is allowed because Rube is self-hosted: most servers are a
   box on the LAN at http://192.168.x.y:3000 with no certificate, and refusing
   plain HTTP would make the app unusable for them. The app says so instead:
   the connect screen and Settings flag an address that is plain HTTP *off*

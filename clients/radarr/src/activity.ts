@@ -8,7 +8,7 @@
  * but reads still come straight from Radarr so a page is never behind.
  */
 
-import type { ServarrCommand, ServarrHttp } from "@tinkerbell/servarr-http";
+import type { ServarrCommand, ServarrHttp } from "@rube/servarr-http";
 import type {
   RadarrBlocklistItem,
   RadarrHistoryRecord,

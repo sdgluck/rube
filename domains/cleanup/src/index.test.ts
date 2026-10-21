@@ -8,9 +8,9 @@ import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { eq } from "drizzle-orm";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
 import {
   cleanupCandidates,
   cleanupKeepVotes,
@@ -20,8 +20,8 @@ import {
   jobRuns,
   jobs,
   rules,
-} from "@tinkerbell/db";
-import { CleanupToken } from "@tinkerbell/domain.cleanup";
+} from "@rube/db";
+import { CleanupToken } from "@rube/domain.cleanup";
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -375,7 +375,7 @@ describe("queuedCandidates", () => {
  * never touch, so the cases that matter are the ones where it could silently
  * fail open: a due item slipping through, a per-run limit filled entirely by
  * protected rows, and a collection rebuilt under a new rating key — which is
- * what Tinkerbell's own rules do to their collections nightly.
+ * what Rube's own rules do to their collections nightly.
  */
 function seedCollection(ratingKey: string, title: string, memberKeys: string[]): void {
   db.insert(collections)

@@ -25,7 +25,7 @@
  * across different fields — falls back to a restatement rather than inventing
  * prose that might not mean what the filter means.
  */
-import type { SmartFilterNode, SmartFilterOp } from "@tinkerbell/plex-smart-filter";
+import type { SmartFilterNode, SmartFilterOp } from "@rube/plex-smart-filter";
 import { fieldDef, fieldKind, fieldLabel } from "./smart-filter-fields.ts";
 import {
   formatDateValue,
@@ -222,7 +222,7 @@ function fragmentFor(clause: Clause, opts: NarrateOptions): Fragment {
 
     // Both "last played" fields answer the same question about different
     // people: Plex's is scoped to whichever token asked (the server owner),
-    // Tinkerbell's spans every user. The wording has to say which.
+    // Rube's spans every user. The wording has to say which.
     case "lastViewedAt":
       return lastPlayedPhrase(clause, "last played") ?? generic(clause, opts);
     case "tb.lastPlayedAt":

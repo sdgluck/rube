@@ -7,7 +7,7 @@ const ENABLE_JOB = "personalize-enable";
 const DISABLE_JOB = "personalize-disable";
 
 /** Must match `BASELINE_LABEL` in the personalize-enable job. */
-const BASELINE_LABEL = "Tinkerbell";
+const BASELINE_LABEL = "Rube";
 
 /**
  * Items per second when no labelling pass has been timed on this server yet.

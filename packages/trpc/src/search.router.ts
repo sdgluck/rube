@@ -1,6 +1,6 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
-import { SEARCH_KINDS } from "@tinkerbell/domain.search";
+import { SEARCH_KINDS } from "@rube/domain.search";
 import { t, procedure } from "./_base.ts";
 
 export function createSearchRouter(deps: Pick<TrpcDeps, "search">) {

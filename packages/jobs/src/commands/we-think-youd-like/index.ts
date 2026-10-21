@@ -27,22 +27,16 @@
  * thousands. Without an AI provider the shortlist *is* the row, which is what
  * lets this run on a server with no AI at all.
  */
-import { WTYL_DEFAULTS } from "@tinkerbell/contracts";
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createLlmClient, estimateTokens, type LlmConfig } from "@tinkerbell/llm";
-import {
-  displayTitle,
-  errorMessage,
-  personalRowTitle,
-  preferencesPromptBlock,
-  type UserPreferences,
-} from "@tinkerbell/core";
-import { LlmBudgetExceededError } from "@tinkerbell/domain.ai-usage";
-import { createPlexClient, type PlexClient, type PlexItem, type PlexSection } from "@tinkerbell/plex";
+import { WTYL_DEFAULTS } from "@rube/contracts";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createLlmClient, estimateTokens, type LlmConfig } from "@rube/llm";
+import { displayTitle, errorMessage, personalRowTitle, preferencesPromptBlock, type UserPreferences } from "@rube/core";
+import { LlmBudgetExceededError } from "@rube/domain.ai-usage";
+import { createPlexClient, type PlexClient, type PlexItem, type PlexSection } from "@rube/plex";
 import { z } from "zod";
 import { asc, eq } from "drizzle-orm";
-import { mediaItems, plexUsers } from "@tinkerbell/db";
-import type { JobContext, WtylJobConfig } from "@tinkerbell/core";
+import { mediaItems, plexUsers } from "@rube/db";
+import type { JobContext, WtylJobConfig } from "@rube/core";
 import {
   extractJSON,
   itemLabel,
@@ -56,7 +50,7 @@ import {
   personalRowPin,
   repairPersonalRow,
 } from "../../personalize/personal-row.ts";
-import { describeSkip } from "@tinkerbell/domain.recommendations";
+import { describeSkip } from "@rube/domain.recommendations";
 import { createRecommenderLog, topTitles } from "../recommender-log.ts";
 import {
   buildTasteProfile,
@@ -483,7 +477,7 @@ export function createWeThinkYoudLikeCommand(
     }
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell we-think-youd-like`);
+    ctx.log(`rube we-think-youd-like`);
     ctx.log(`Server: ${url}`);
     const identity = await client.getIdentity();
     const machineId = identity.machineIdentifier;

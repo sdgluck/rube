@@ -1,6 +1,6 @@
-import type { Services } from "@tinkerbell/composition";
-import { errorMessage } from "@tinkerbell/core";
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import type { Services } from "@rube/composition";
+import { errorMessage } from "@rube/core";
+import type { PlexClient, PlexSection } from "@rube/plex";
 
 import { BASELINE_LABEL } from "./reconcile.ts";
 
@@ -8,7 +8,7 @@ import { BASELINE_LABEL } from "./reconcile.ts";
  * Give new arrivals the personalization label.
  *
  * With personalization on, every shared user's filter is
- * `label=Tinkerbell,User:<them>`, so an item without the baseline label is
+ * `label=Rube,User:<them>`, so an item without the baseline label is
  * invisible to all of them. Only the enable job and its Reconcile button used
  * to label anything, and neither runs on a schedule, so every film and show
  * added after the last reconcile stayed hidden until someone noticed and
@@ -18,7 +18,7 @@ import { BASELINE_LABEL } from "./reconcile.ts";
  * label current. The nightly `sync-media` call is a backstop. `sync-media`
  * itself isn't run more often because it walks every library in full, and the
  * overnight chain is timed around it. Labelling alone is cheap:
- * `addLabelToAllItems` asks Plex for `label!=Tinkerbell`, so on an up-to-date
+ * `addLabelToAllItems` asks Plex for `label!=Rube`, so on an up-to-date
  * library it costs one empty listing per section.
  *
  * Skipped while enabling (that job is already labelling) and while disabling

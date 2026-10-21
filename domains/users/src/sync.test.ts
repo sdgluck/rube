@@ -22,11 +22,11 @@
 import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { CollectionsReaderToken } from "@tinkerbell/ports";
-import { DbToken, plexInvites, plexUserShares, plexUsers } from "@tinkerbell/db";
-import { UsersToken } from "@tinkerbell/domain.users";
-import type { PlexClient } from "@tinkerbell/plex";
+import { createTestContainer } from "@rube/composition/test-support";
+import { CollectionsReaderToken } from "@rube/ports";
+import { DbToken, plexInvites, plexUserShares, plexUsers } from "@rube/db";
+import { UsersToken } from "@rube/domain.users";
+import type { PlexClient } from "@rube/plex";
 
 /** Collections drive the `User:<name>` label counts. */
 let collections: Array<{ labels: string[] }> = [];
@@ -231,7 +231,7 @@ describe("degrading rather than emptying", () => {
 describe("enrichment", () => {
   test("counts a user's personal collections from their label", async () => {
     collections = [
-      { labels: ["User:sam", "Tinkerbell"] },
+      { labels: ["User:sam", "Rube"] },
       { labels: ["User:sam"] },
       { labels: ["User:kim"] },
       { labels: [] },

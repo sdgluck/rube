@@ -7,18 +7,18 @@
  * in-process. It used to take a hand-written `mkdtempSync` + `DATA_DIR` +
  * `execFileSync(migrate.ts)` preamble and a `before` hook full of dynamic
  * imports, purely because the connection opened the moment anything imported
- * `@tinkerbell/db`.
+ * `@rube/db`.
  */
 import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { eq } from "drizzle-orm";
-import { plexSessions } from "@tinkerbell/db";
-import { createTestDb } from "@tinkerbell/db/test-db";
+import { plexSessions } from "@rube/db";
+import { createTestDb } from "@rube/db/test-db";
 import { createConfigStore } from "./config.ts";
 import { createSessions, parseBearerToken, sessionMaxAgeSeconds } from "./sessions.ts";
 
-const testDb = createTestDb("tinkerbell-sessions-test-");
+const testDb = createTestDb("rube-sessions-test-");
 after(testDb.dispose);
 
 const db = testDb.db;

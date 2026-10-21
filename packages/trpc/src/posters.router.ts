@@ -8,14 +8,14 @@ import {
   resolveKometaUrl,
   fetchPosterUrl,
   indexAssetDirectory,
-} from "@tinkerbell/posters";
-import { errorMessage } from "@tinkerbell/core";
+} from "@rube/posters";
+import { errorMessage } from "@rube/core";
 import {
   presentationConfigSchema,
   resolvePosterTemplate,
   resolveCollectionSummary,
   templatedCollectionSummary,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 
 import { procedure, t, mapNotConfiguredClient } from "./_base.ts";
 

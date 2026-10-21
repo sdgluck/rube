@@ -2,8 +2,8 @@
  * Whose request is whose, when it arrived, and whether they've got to it yet.
  * Apart from the command so each decision is testable without Overseerr.
  */
-import { playbackSessions, watchState, type Db } from "@tinkerbell/db";
-import { SEERR_AVAILABLE, SEERR_PARTIALLY_AVAILABLE, type SeerrRequest } from "@tinkerbell/seerr";
+import { playbackSessions, watchState, type Db } from "@rube/db";
+import { SEERR_AVAILABLE, SEERR_PARTIALLY_AVAILABLE, type SeerrRequest } from "@rube/seerr";
 import { and, gte, inArray } from "drizzle-orm";
 
 /** Watched this far through counts as seen — the line the other personal rows draw. */

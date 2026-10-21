@@ -1,11 +1,11 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { createLlmClient, listModels } from "@tinkerbell/llm";
-import { errorMessage, REDACTED_SECRET, type ConfigKey } from "@tinkerbell/core";
-import { testArrConnection } from "@tinkerbell/domain.health";
-import { testMqtt } from "@tinkerbell/mqtt";
-import { EVENT_TYPES, NOTIFICATION_SERVICES } from "@tinkerbell/domain.notifications";
+import { createLlmClient, listModels } from "@rube/llm";
+import { errorMessage, REDACTED_SECRET, type ConfigKey } from "@rube/core";
+import { testArrConnection } from "@rube/domain.health";
+import { testMqtt } from "@rube/mqtt";
+import { EVENT_TYPES, NOTIFICATION_SERVICES } from "@rube/domain.notifications";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 import { createAdminAuthRouter } from "./admin-auth.router.ts";
 import { createPortalRouter } from "./portal.router.ts";
@@ -224,7 +224,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     testSeerr: procedure.input(z.object({ url: z.string(), api_key: z.string() })).mutation(async ({ input }) => {
       const api_key = unredact(input.api_key, "global_seerr_api_key");
       try {
-        const { testSeerrConnection } = await import("@tinkerbell/seerr");
+        const { testSeerrConnection } = await import("@rube/seerr");
         const data = await testSeerrConnection(input.url, api_key);
         reportHealth("Seerr", "ok", `Connected — ${data.total} total requests`);
         return { total: data.total };
@@ -238,7 +238,7 @@ const appRouterFor = (deps: TrpcDeps) => {
     testTmdb: procedure.input(z.object({ api_key: z.string() })).mutation(async ({ input }) => {
       const api_key = unredact(input.api_key, "global_tmdb_api_key");
       try {
-        const { testTmdbKey } = await import("@tinkerbell/tmdb");
+        const { testTmdbKey } = await import("@rube/tmdb");
         const data = await testTmdbKey(api_key);
         reportHealth("TMDb", "ok", `Test query OK — ${data.sample}`);
         return { sample: data.sample };
@@ -344,8 +344,8 @@ const appRouterFor = (deps: TrpcDeps) => {
         try {
           await sendNotification(
             input.service as (typeof NOTIFICATION_SERVICES)[number],
-            "Tinkerbell",
-            "Test notification from Tinkerbell",
+            "Rube",
+            "Test notification from Rube",
           );
           reportHealth(healthName, "ok", "Test notification sent");
           return { sent: true as const };

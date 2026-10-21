@@ -4,9 +4,9 @@
  */
 import { describe, it, after } from "node:test";
 import assert from "node:assert/strict";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { ConfigStoreToken } from "@tinkerbell/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { ConfigStoreToken } from "@rube/core";
 import { createReadiness } from "./readiness.ts";
 
 const c = createTestContainer();

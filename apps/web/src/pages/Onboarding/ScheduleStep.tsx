@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { describeSchedule, parseSchedule, RECOMMENDED_SCHEDULE_SETTINGS } from "@tinkerbell/contracts";
+import { describeSchedule, parseSchedule, RECOMMENDED_SCHEDULE_SETTINGS } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import { timezoneOptions } from "#lib/timezones";
@@ -45,7 +45,7 @@ export default function ScheduleStep({ cfg }: { cfg: Record<string, unknown> }) 
 
   return (
     <div className={styles.stepBody}>
-      <h2 className={styles.stepTitle}>When should Tinkerbell work?</h2>
+      <h2 className={styles.stepTitle}>When should Rube work?</h2>
       <label className={styles.field}>
         <span className={styles.fieldLabel}>Timezone</span>
         <select className={controls.select} value={timezone} onChange={(e) => setTimezone(e.target.value)}>

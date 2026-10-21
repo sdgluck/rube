@@ -10,12 +10,12 @@
 import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { EventBusToken } from "@tinkerbell/ports";
-import { DbToken } from "@tinkerbell/db";
-import { events, jobRuns, jobs } from "@tinkerbell/db";
-import { parseLogLine } from "@tinkerbell/contracts";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { EventBusToken } from "@rube/ports";
+import { DbToken } from "@rube/db";
+import { events, jobRuns, jobs } from "@rube/db";
+import { parseLogLine } from "@rube/contracts";
 import { createRunner } from "../runner.ts";
 import { createCheckpoint } from "../checkpoint.ts";
 
@@ -42,7 +42,7 @@ const RUN_ID = "test-run";
 /** Stubbed for every test; `shuffle` is arbitrary — nothing here is shuffle-specific. */
 const COMMAND = "shuffle" as const;
 
-type CommandFn = (ctx: import("@tinkerbell/core").JobContext, config: never) => Promise<void>;
+type CommandFn = (ctx: import("@rube/core").JobContext, config: never) => Promise<void>;
 
 const realLoad = COMMANDS[COMMAND].load;
 
@@ -298,7 +298,7 @@ describe("the cross-domain edges inside a worker", () => {
    * The bug this whole seam exists to prevent.
    *
    * A Sidequest worker thread runs none of `apps/server`, and these four edges
-   * used to be module-level `let`s in `@tinkerbell/core` that each defaulted to
+   * used to be module-level `let`s in `@rube/core` that each defaulted to
    * a no-op. Nothing in the worker assigned them, so a job's notification
    * suppression traces, health reports, post-sync provider rescans and per-user
    * collection counts all silently did nothing — no error, no log line.
@@ -321,7 +321,7 @@ describe("the cross-domain edges inside a worker", () => {
     // The property that replaces "remember to call registerCoreHooks()": a
     // container built without the health domain does not quietly report health
     // to nobody, it refuses to hand out a reporter at all.
-    const { createContainer } = await import("@tinkerbell/container");
+    const { createContainer } = await import("@rube/container");
     const bare = createContainer(() => {});
     assert.throws(() => bare.resolve(EventBusToken), /No registration for "events.bus"/);
     await bare.dispose();

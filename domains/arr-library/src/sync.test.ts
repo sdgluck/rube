@@ -1,11 +1,11 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { createServer, type IncomingMessage, type ServerResponse, type Server } from "node:http";
-import { createTestDb, type TestDb } from "@tinkerbell/db/test-db";
-import { arrMovies, arrQualityProfiles, arrSeries, arrSyncState, mediaItems } from "@tinkerbell/db";
+import { createTestDb, type TestDb } from "@rube/db/test-db";
+import { arrMovies, arrQualityProfiles, arrSeries, arrSyncState, mediaItems } from "@rube/db";
 import { eq } from "drizzle-orm";
 import { createArrLibrary } from "./index.ts";
-import type { ArrInstance } from "@tinkerbell/core";
+import type { ArrInstance } from "@rube/core";
 
 /** A mock Radarr serving whatever the test hands it. */
 function mockArr(payloads: Record<string, unknown>) {

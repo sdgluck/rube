@@ -2,7 +2,7 @@ import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { CHANGE_KINDS } from "@tinkerbell/domain.changes";
+import { CHANGE_KINDS } from "@rube/domain.changes";
 
 import { t, procedure } from "./_base.ts";
 
@@ -15,7 +15,7 @@ export function createChangesRouter(deps: Pick<TrpcDeps, "changes" | "config" | 
 
   const changesRouter = t.router({
     /**
-     * Everything Tinkerbell has done to the library, newest first.
+     * Everything Rube has done to the library, newest first.
      *
      * A read-model over five existing tables rather than a sixth ledger — see
      * `domains/changes`. Each source is capped at `limit` and the merge re-cut,

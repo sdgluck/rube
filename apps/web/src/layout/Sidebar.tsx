@@ -228,7 +228,7 @@ export default function Sidebar({ onOpenPalette, inert }: SidebarProps) {
     <aside className="sidebar" id="app-drawer" inert={inert}>
       <h1 className="sidebar-title">
         <img src="/favicon.svg" alt="" className="sidebar-mark" width={22} height={22} />
-        Tinkerbell
+        Rube
         {IS_BETA && (
           <Link to="/settings/changelog" className="version-pill" title={`v${VERSION} — view changelog`}>
             beta

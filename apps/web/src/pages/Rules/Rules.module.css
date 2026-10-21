@@ -94,7 +94,7 @@
 /* Compound selector beats `.detailRow td` (specificity 0,1,1) so the dark
    Plex canvas wins over the generic detail-row background. */
 td.previewBlockCell {
-  /* stylelint-disable-next-line tinkerbell/primitive-geometry -- an expansion row: the cell is a frame for the canvas, not a data cell */
+  /* stylelint-disable-next-line rube/primitive-geometry -- an expansion row: the cell is a frame for the canvas, not a data cell */
   padding: 0 !important;
   background: var(--sidebar);
   color: var(--on-dark);
@@ -743,7 +743,7 @@ td.previewBlockCell {
 
 .detailRow td {
   background: var(--surface, transparent);
-  /* stylelint-disable-next-line tinkerbell/primitive-geometry -- an expansion row: the panel inside sets its own padding */
+  /* stylelint-disable-next-line rube/primitive-geometry -- an expansion row: the panel inside sets its own padding */
   padding: 0;
 }
 
@@ -875,7 +875,7 @@ td.previewBlockCell {
 @media (min-width: 769px) {
   .tableBleedRight th,
   .tableBleedRight td {
-    /* stylelint-disable-next-line tinkerbell/primitive-geometry -- the gutter only, row height untouched; eleven columns don't fit at 16px */
+    /* stylelint-disable-next-line rube/primitive-geometry -- the gutter only, row height untouched; eleven columns don't fit at 16px */
     padding: 0 1rem;
   }
 

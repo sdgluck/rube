@@ -1,4 +1,4 @@
-import { errorMessage } from "@tinkerbell/core";
+import { errorMessage } from "@rube/core";
 
 /**
  * TMDb exposes a movie's parent collection (franchise) on the /movie/{id}

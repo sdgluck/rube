@@ -9,9 +9,9 @@
  */
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { DOWNLOAD_CLIENT_KINDS } from "@tinkerbell/contracts";
-import { errorMessage } from "@tinkerbell/core";
-import { downloadClientHealthName, UnknownDownloadClientError } from "@tinkerbell/domain.download-clients";
+import { DOWNLOAD_CLIENT_KINDS } from "@rube/contracts";
+import { errorMessage } from "@rube/core";
+import { downloadClientHealthName, UnknownDownloadClientError } from "@rube/domain.download-clients";
 import type { TrpcDeps } from "./deps.ts";
 import { t, procedure } from "./_base.ts";
 

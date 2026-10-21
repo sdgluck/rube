@@ -1,4 +1,4 @@
-import type { DownloadClientItem, DownloadClientKind, DownloadClientStatus } from "@tinkerbell/contracts";
+import type { DownloadClientItem, DownloadClientKind, DownloadClientStatus } from "@rube/contracts";
 
 export interface DownloadClientConfig {
   kind: DownloadClientKind;

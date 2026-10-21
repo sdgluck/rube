@@ -195,7 +195,7 @@
 }
 
 /* Underline rather than a colour swap on hover: a label chip already carries a
-   palette that says which *kind* of label it is — Tinkerbell's own, a user's,
+   palette that says which *kind* of label it is — Rube's own, a user's,
    or a plain one — and repainting it under the pointer would trade that for a
    cue the underline gives without spending any colour. */
 .labelChipLink {

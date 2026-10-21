@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.watchlist",
+  "name": "@rube/domain.watchlist",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,16 +15,16 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/arr": "workspace:*",
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/plex": "workspace:*",
-    "@tinkerbell/ports": "workspace:*",
+    "@rube/arr": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
+    "@rube/plex": "workspace:*",
+    "@rube/ports": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
-    "@tinkerbell/composition": "workspace:*",
+    "@rube/composition": "workspace:*",
     "better-sqlite3": "^12.6.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^25.2.3",

@@ -8,7 +8,7 @@
  * junk, prefer the known-good groups, and break ties on source and HDR. Every
  * regex has match/miss examples, checked in `arr-quality.test.ts`.
  *
- * **Names match TRaSH's exactly, with no Tinkerbell prefix.** Someone who
+ * **Names match TRaSH's exactly, with no Rube prefix.** Someone who
  * already ran Recyclarr has a `BR-DISK` format, and the planner adopts it by
  * name rather than creating a second one that would double-score every
  * release.

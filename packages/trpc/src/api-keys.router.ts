@@ -1,7 +1,7 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { API_KEY_NAME_MAX } from "@tinkerbell/domain.api-keys";
+import { API_KEY_NAME_MAX } from "@rube/domain.api-keys";
 
 import { t, procedure } from "./_base.ts";
 

@@ -1,7 +1,7 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
-import { DAY_MS, HOUR_MS } from "@tinkerbell/core";
-import { MAX_TRANSFER_BYTES } from "@tinkerbell/domain.bandwidth";
+import { DAY_MS, HOUR_MS } from "@rube/core";
+import { MAX_TRANSFER_BYTES } from "@rube/domain.bandwidth";
 
 import { t, procedure } from "./_base.ts";
 

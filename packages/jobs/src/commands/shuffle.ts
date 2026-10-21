@@ -1,8 +1,8 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
 
-import { shuffleSectionHubs } from "@tinkerbell/domain.shuffle-hubs";
-import type { JobContext, CommonJobConfig } from "@tinkerbell/core";
+import { shuffleSectionHubs } from "@rube/domain.shuffle-hubs";
+import type { JobContext, CommonJobConfig } from "@rube/core";
 
 export function createShuffleCommand(deps: Pick<Services, "clients" | "config">) {
   const { clients, config } = deps;
@@ -24,7 +24,7 @@ export function createShuffleCommand(deps: Pick<Services, "clients" | "config">)
       onHealth: plexHealthCallback,
     });
 
-    ctx.log(`tinkerbell shuffle`);
+    ctx.log(`rube shuffle`);
     ctx.log(`Server: ${PLEX_URL}`);
 
     const identity = await client.getIdentity();

@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { and, eq, isNull } from "drizzle-orm";
-import { metadataOverrides, type Db } from "@tinkerbell/db";
-import { token } from "@tinkerbell/container";
+import { metadataOverrides, type Db } from "@rube/db";
+import { token } from "@rube/container";
 
 /**
  * Per-item metadata overrides: the edits somebody made by hand, kept so they

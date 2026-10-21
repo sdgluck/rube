@@ -15,8 +15,8 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 
-import { METADATA_FIELDS, METADATA_TAG_FIELDS, type MetadataField, type MetadataTagField } from "@tinkerbell/plex";
-import { type MetadataSnapshot } from "@tinkerbell/domain.metadata";
+import { METADATA_FIELDS, METADATA_TAG_FIELDS, type MetadataField, type MetadataTagField } from "@rube/plex";
+import { type MetadataSnapshot } from "@rube/domain.metadata";
 
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 
@@ -270,7 +270,7 @@ export function createMetadataRouter(deps: Pick<TrpcDeps, "clients" | "config" |
     /** The daily ceiling's spend, counted exactly as the run budget counts it. */
     capUsage: procedure.query(() => ({ used: metadata.writesInLastDay() })),
 
-    /** Every metadata write Tinkerbell has made, grouped by the run that made it. */
+    /** Every metadata write Rube has made, grouped by the run that made it. */
     batches: procedure
       .input(
         z.object({ limit: z.number().int().min(1).max(200).default(50), ruleId: z.string().optional() }).optional(),

@@ -1,6 +1,6 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import { createTmdbMetadataCommand } from "../tmdb-metadata.ts";
-import type { TmdbCachedDetails } from "@tinkerbell/db";
+import type { TmdbCachedDetails } from "@rube/db";
 
 import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 

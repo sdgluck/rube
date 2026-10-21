@@ -1,7 +1,7 @@
 /**
  * Email, the ninth service.
  *
- * Every other destination Tinkerbell supports is chat or push — all of them
+ * Every other destination Rube supports is chat or push — all of them
  * reach the admin, none of them reach the people who actually watch the
  * library. A weekly newsletter belongs in email, and its absence is the single
  * most conspicuous gap next to Tautulli.
@@ -20,7 +20,7 @@
 import { createTransport, type Transporter } from "nodemailer";
 
 import { flattenMessage, type RichMessage } from "./types.ts";
-import { type ConfigStore } from "@tinkerbell/core";
+import { type ConfigStore } from "@rube/core";
 
 const TIMEOUT_MS = 20_000;
 
@@ -117,7 +117,7 @@ export function renderEmailHtml(message: RichMessage): string {
         ${blocks}
         <tr>
           <td style="padding:28px 0 0 0;font:400 12px/1.5 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:${MUTED};">
-            Sent by Tinkerbell. To change how often you get this — or to stop getting it — open the user portal and edit your notification preferences.
+            Sent by Rube. To change how often you get this — or to stop getting it — open the user portal and edit your notification preferences.
           </td>
         </tr>
       </table>

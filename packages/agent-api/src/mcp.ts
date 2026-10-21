@@ -23,7 +23,7 @@ import { TOOLS, TOOLS_BY_NAME, type ToolContext } from "./tools.ts";
 export const SUPPORTED_PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"] as const;
 
 const INSTRUCTIONS =
-  "Tinkerbell runs rules over a Plex library to build collections, playlists, labels, overlays, metadata " +
+  "Rube runs rules over a Plex library to build collections, playlists, labels, overlays, metadata " +
   "changes and cleanup, on a schedule. These tools are read-only. Start with get_overview; use search to " +
   "turn a name into the id or rating key other tools take; get_rule_run and get_job_run carry logs.";
 
@@ -88,7 +88,7 @@ export async function handleRpcMessage(
         result: {
           protocolVersion,
           capabilities: { tools: { listChanged: false } },
-          serverInfo: { name: "tinkerbell", title: "Tinkerbell", version: serverInfo.version },
+          serverInfo: { name: "rube", title: "Rube", version: serverInfo.version },
           instructions: INSTRUCTIONS,
         },
       };

@@ -1,12 +1,6 @@
 import { DEFAULT_JOBS, buildEngineConfig } from "./runner.ts";
-import {
-  ALWAYS_ON_JOB_IDS,
-  FEATURE_IDS,
-  isAlwaysOnJob,
-  JOB_PRESENTATION,
-  validateJobConfig,
-} from "@tinkerbell/contracts";
-import { FEATURE_TEMPLATES } from "@tinkerbell/jobs";
+import { ALWAYS_ON_JOB_IDS, FEATURE_IDS, isAlwaysOnJob, JOB_PRESENTATION, validateJobConfig } from "@rube/contracts";
+import { FEATURE_TEMPLATES } from "@rube/jobs";
 /**
  * The concurrency-sensitive parts of the runner: the start guard, retention,
  * cancellation, the watchdog, and the engine config. These are precisely the
@@ -15,10 +9,10 @@ import { FEATURE_TEMPLATES } from "@tinkerbell/jobs";
 import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { jobRuns, jobs } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { jobRuns, jobs } from "@rube/db";
 import { createRunner } from "./runner.ts";
 import { createInternalJobs } from "./internal-jobs.ts";
 

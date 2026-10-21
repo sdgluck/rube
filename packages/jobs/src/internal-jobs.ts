@@ -1,12 +1,12 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 import { createRegistryUpdates } from "./registry-updates.ts";
 import { createRuleSchedules } from "./rule-schedules.ts";
 import { createRuleTriggers } from "./rule-triggers.ts";
 import { createSeerrPoll } from "./seerr-poll.ts";
 import { pollArrQueues } from "./arr-poll.ts";
 import { labelNewArrivals } from "./personalize/label-new-arrivals.ts";
-import { createPlexClient } from "@tinkerbell/plex";
+import { createPlexClient } from "@rube/plex";
 /**
  * Internal jobs run in-process rather than through the Sidequest command
  * pattern — they are short, purely local, and not worth a worker thread.
@@ -16,15 +16,15 @@ import { createPlexClient } from "@tinkerbell/plex";
  * job. Each returns the line that becomes the run's `message` and final `log`.
  */
 import { and, lt, notInArray } from "drizzle-orm";
-import { DAY_MS, MINUTE_MS, type JobContext } from "@tinkerbell/core";
-import { jobRuns } from "@tinkerbell/db";
-import { formatFileSize } from "@tinkerbell/contracts";
+import { DAY_MS, MINUTE_MS, type JobContext } from "@rube/core";
+import { jobRuns } from "@rube/db";
+import { formatFileSize } from "@rube/contracts";
 
-import { DEFAULT_RETENTION_DAYS as METADATA_DEFAULT_RETENTION_DAYS } from "@tinkerbell/domain.metadata";
+import { DEFAULT_RETENTION_DAYS as METADATA_DEFAULT_RETENTION_DAYS } from "@rube/domain.metadata";
 
-import { DEFAULT_HISTORY_RETENTION_DAYS } from "@tinkerbell/domain.config-history";
+import { DEFAULT_HISTORY_RETENTION_DAYS } from "@rube/domain.config-history";
 
-import { RULE_RUN_RETENTION_MS } from "@tinkerbell/domain.rule-runs";
+import { RULE_RUN_RETENTION_MS } from "@rube/domain.rule-runs";
 
 import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
 import { JOB_RUN_RETENTION_MS } from "./limits.ts";

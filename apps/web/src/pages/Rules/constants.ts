@@ -1,5 +1,5 @@
-import type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
-import { describeCondition, RULE_TRIGGERS } from "@tinkerbell/contracts";
+import type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode } from "@rube/plex-smart-filter";
+import { describeCondition, RULE_TRIGGERS } from "@rube/contracts";
 import { type RuleFormState, DEFAULT_ARR_FORM } from "#pages/Rules/RuleWizard";
 import {
   DEFAULT_OUTCOME_FORM,
@@ -117,7 +117,7 @@ export const SEERR_FILTER_LABELS: Record<string, string> = Object.fromEntries(
  * Rule types that exist and run, but which the wizard doesn't offer.
  *
  * `static_list` is the only one: it's created by the Kometa migration to adopt
- * a collection Tinkerbell has no builder for, and there's nothing useful a
+ * a collection Rube has no builder for, and there's nothing useful a
  * person could do with it from a blank wizard — you'd be typing out a list of
  * films by hand. It still needs a label, because it appears in the rules table
  * like any other rule and "static_list" is not a name.
@@ -301,7 +301,7 @@ export function scheduleFromConfig(schedule: unknown): ScheduleFormState {
     activeFrom: activeFrom || DEFAULT_SCHEDULE_FORM.activeFrom,
     activeTo: activeTo || DEFAULT_SCHEDULE_FORM.activeTo,
     // Filtered against the known set rather than trusted: a rule imported from
-    // a registry pack built against a newer Tinkerbell can name a trigger this
+    // a registry pack built against a newer Rube can name a trigger this
     // build has never heard of, and an unknown checkbox is not a checkbox.
     triggers: RULE_TRIGGERS.filter((t) => triggers.includes(t)),
     afterRules,

@@ -9,7 +9,7 @@
  * the item is still with the client, the client's word wins.
  *
  * Better still is asking the client directly. Where a download client is
- * configured in Tinkerbell, the row is joined to the client's own item by
+ * configured in Rube, the row is joined to the client's own item by
  * download id, and that item's state — fresher than the *Arr's, which polls
  * its clients on its own schedule — is what the row shows.
  */
@@ -18,7 +18,7 @@ import {
   type DownloadClientItem,
   type DownloadClientOverview,
   type DownloadItemState,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import type { StatusChipTone } from "#components/PageShell";
 
 export interface QueueStateInput {

@@ -7,10 +7,10 @@ import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { initTRPC, TRPCError } from "@trpc/server";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, jobs } from "@tinkerbell/db";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, jobs } from "@rube/db";
+import { JobsToken, registerJobs } from "@rube/jobs";
 import { createTrpc } from "./index.ts";
 import type { AdminContext } from "./_base.ts";
 
@@ -33,7 +33,7 @@ function caller() {
     session: undefined,
     resHeaders: new Headers(),
     secure: false,
-    origin: "http://admin.tinkerbell.test",
+    origin: "http://admin.rube.test",
     ip: "test",
     authRequired: false,
   } as unknown as AdminContext;

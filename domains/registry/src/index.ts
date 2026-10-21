@@ -7,9 +7,9 @@
  * exports. The four halves that read config or write rules are factories.
  * `fetch` is built first because the other three read the catalogue through it.
  */
-import { token } from "@tinkerbell/container";
-import type { ConfigStore } from "@tinkerbell/core";
-import type { Rules } from "@tinkerbell/domain.rules";
+import { token } from "@rube/container";
+import type { ConfigStore } from "@rube/core";
+import type { Rules } from "@rube/domain.rules";
 import { createFetch, registryUrl } from "./fetch.ts";
 import { createPlan } from "./plan.ts";
 import { createImport } from "./import.ts";

@@ -108,22 +108,22 @@ export default {
        back to their literals on the Registry page for months. */
     "csstools/value-no-unknown-custom-properties": [true, { importFrom: TOKEN_FILES }],
 
-    "tinkerbell/no-shadowed-primitive": true,
+    "rube/no-shadowed-primitive": true,
 
     /* Composing a primitive and then re-sizing it is how the squashed tables
        and 30px buttons got in. Sizes live in styles/; pages pick a modifier. */
-    "tinkerbell/primitive-geometry": true,
+    "rube/primitive-geometry": true,
 
     /* One responsive scale rather than a breakpoint per panel. */
-    "tinkerbell/breakpoint-scale": true,
+    "rube/breakpoint-scale": true,
 
     /* Lengths are rem so Settings → Appearance can scale the whole app from
        the root font size. A px length is one that doesn't move with it. */
-    "tinkerbell/no-px": true,
+    "rube/no-px": true,
 
     /* A tap leaves :hover applied on a touchscreen, so hover styles stuck in
        the phone apps. See stylelint-plugins/hover-media.mjs. */
-    "tinkerbell/hover-media": true,
+    "rube/hover-media": true,
   },
 
   overrides: [
@@ -147,18 +147,18 @@ export default {
          components, no import path to the app's tokens or primitives. Every
          rule here would be measuring it against a design system it isn't part
          of. It is linted as CSS, not as this app. */
-      files: ["apps/tinkerbell.dev/**/*.css"],
+      files: ["apps/rube.fyi/**/*.css"],
       rules: {
         "color-no-hex": null,
         "color-named": null,
         "function-disallowed-list": null,
         "scale-unlimited/declaration-strict-value": null,
         "csstools/value-no-unknown-custom-properties": null,
-        "tinkerbell/no-shadowed-primitive": null,
-        "tinkerbell/breakpoint-scale": null,
-        "tinkerbell/primitive-geometry": null,
-        "tinkerbell/no-px": null,
-        "tinkerbell/hover-media": null,
+        "rube/no-shadowed-primitive": null,
+        "rube/breakpoint-scale": null,
+        "rube/primitive-geometry": null,
+        "rube/no-px": null,
+        "rube/hover-media": null,
       },
     },
     {
@@ -176,11 +176,11 @@ export default {
       rules: {
         "csstools/value-no-unknown-custom-properties": [true, { importFrom: PORTAL_TOKEN_FILES }],
         "scale-unlimited/declaration-strict-value": null,
-        "tinkerbell/no-shadowed-primitive": null,
-        "tinkerbell/primitive-geometry": null,
+        "rube/no-shadowed-primitive": null,
+        "rube/primitive-geometry": null,
         /* The portal has no interface-size setting and no rem root of its
            own; its px are not opting out of anything. */
-        "tinkerbell/no-px": null,
+        "rube/no-px": null,
       },
     },
   ],

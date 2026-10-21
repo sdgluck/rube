@@ -6,14 +6,14 @@
 import { describe, test, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { JobsToken, registerJobs } from "@rube/jobs";
 import { createTrpc } from "./index.ts";
 import { t } from "./_base.ts";
 import { createHandshakes } from "./handshake.ts";
 
-delete process.env.TINKERBELL_DISABLE_AUTH;
+delete process.env.RUBE_DISABLE_AUTH;
 
 const c = createTestContainer({ overrides: registerJobs });
 after(() => c.dispose());
@@ -39,7 +39,7 @@ beforeEach(() => {
 
 function adminContext(headers: Record<string, string> = {}) {
   return createAdminContext({
-    req: new Request("http://tinkerbell.test/api/trpc", { headers }),
+    req: new Request("http://rube.test/api/trpc", { headers }),
     resHeaders: new Headers(),
   });
 }
@@ -65,7 +65,7 @@ describe("bearer sessions", () => {
     // `plexUserExists` gates the portal; without a synced user there's no session.
     const raw = createPlexSession(42, "owner", "portal");
     const ctx = createPortalContext({
-      req: new Request("http://tinkerbell.test/api/trpc", { headers: { authorization: `Bearer ${raw}` } }),
+      req: new Request("http://rube.test/api/trpc", { headers: { authorization: `Bearer ${raw}` } }),
       resHeaders: new Headers(),
     });
     assert.equal(ctx.rawToken, raw);
@@ -76,11 +76,11 @@ describe("auth.server", () => {
   test("each router names itself, so the app can tell the two ports apart", async () => {
     const admin = await t.createCallerFactory(appRouter)(adminContext()).auth.server();
     const portalCaller = portalRouter.createCaller(
-      createPortalContext({ req: new Request("http://tinkerbell.test/api/trpc"), resHeaders: new Headers() }),
+      createPortalContext({ req: new Request("http://rube.test/api/trpc"), resHeaders: new Headers() }),
     );
     const portal = await portalCaller.auth.server();
-    assert.equal(admin.product, "tinkerbell-admin");
-    assert.equal(portal.product, "tinkerbell-portal");
+    assert.equal(admin.product, "rube-admin");
+    assert.equal(portal.product, "rube-portal");
     assert.match(admin.version, /^\d+\.\d+\.\d+/);
   });
 });

@@ -6,7 +6,7 @@
  * default if a later release changes it; a stored copy of today's default
  * would silently pin the job to it.
  */
-import type { FieldSpec } from "@tinkerbell/contracts";
+import type { FieldSpec } from "@rube/contracts";
 
 export type Draft = Record<string, unknown>;
 

@@ -9,9 +9,9 @@
  * Every section, not only the job's own: a library taken out of its settings
  * since a row was made still has the row in it.
  */
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
-import type { JobContext } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
+import type { JobContext } from "@rube/core";
 import { plexConnection } from "./ai-collection-shared.ts";
 import { SEASON_LABEL } from "./season-collections/match.ts";
 
@@ -26,7 +26,7 @@ export function createSeasonRemoveCommand(deps: Pick<Services, "clients" | "coll
     if (!token) throw new Error("Plex token is required. Configure it in Settings.");
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell season-remove`);
+    ctx.log(`rube season-remove`);
     ctx.log(`Server: ${url}`);
 
     const sections = await client.getSections();

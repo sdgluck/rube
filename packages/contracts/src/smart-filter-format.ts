@@ -1,5 +1,5 @@
 import { fieldDef, fieldKind, fieldLabel } from "./smart-filter-fields.ts";
-import type { SmartFilterOp } from "@tinkerbell/plex-smart-filter";
+import type { SmartFilterOp } from "@rube/plex-smart-filter";
 import { formatResolution, formatRuntime } from "./value-format.ts";
 import { opLabel } from "./smart-filter-ops.ts";
 

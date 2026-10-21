@@ -11,14 +11,14 @@
 import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
 import { setTimeout } from "node:timers/promises";
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext } from "@rube/core";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken } from "@tinkerbell/core";
-import { config, rules } from "@tinkerbell/db";
-import { noopCheckpoint } from "@tinkerbell/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken } from "@rube/core";
+import { config, rules } from "@rube/db";
+import { noopCheckpoint } from "@rube/core";
 import { createLlmCommand } from "./ai/llm.ts";
 import { createGenerateCommand } from "./index.ts";
 

@@ -102,9 +102,9 @@ export const SMART_FILTER_FIELD_DEFS: readonly SmartFilterFieldDef[] = [
   { field: "titleSort", label: "Title", kind: "string", advanced: true },
   { field: "summary", label: "Summary", kind: "string" },
 
-  // ─── Local — evaluated against Tinkerbell's own `watch_state` ─────────────
+  // ─── Local — evaluated against Rube's own `watch_state` ─────────────
   //
-  // Plex answers view state for whichever token asked, and Tinkerbell asks with
+  // Plex answers view state for whichever token asked, and Rube asks with
   // the server owner's. `unwatched=1` above therefore means "the owner hasn't
   // watched it", which on a family server is almost never the question anyone
   // wants answered. These fields ask it properly, across every user, and are

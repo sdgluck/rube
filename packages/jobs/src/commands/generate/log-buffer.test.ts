@@ -1,7 +1,7 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import { noopCheckpoint, type JobContext } from "@tinkerbell/core";
-import { parseLogLine, stampLog } from "@tinkerbell/contracts";
+import { noopCheckpoint, type JobContext } from "@rube/core";
+import { parseLogLine, stampLog } from "@rube/contracts";
 import { bufferLog } from "./log-buffer.ts";
 
 describe("bufferLog", () => {

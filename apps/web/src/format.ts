@@ -14,12 +14,12 @@
 
 /**
  * `EMPTY`, `formatRuntime` and `formatResolution` live in
- * `@tinkerbell/contracts` because the shared smart-filter formatter needs them
+ * `@rube/contracts` because the shared smart-filter formatter needs them
  * and the server can't import from here. Re-exported so every page keeps
  * importing them from the one module it always has.
  */
-export { EMPTY, formatFileSize, formatResolution, formatRuntime } from "@tinkerbell/contracts";
-import { EMPTY } from "@tinkerbell/contracts";
+export { EMPTY, formatFileSize, formatResolution, formatRuntime } from "@rube/contracts";
+import { EMPTY } from "@rube/contracts";
 
 // ─── Durations ──────────────────────────────────────────────────────────────
 

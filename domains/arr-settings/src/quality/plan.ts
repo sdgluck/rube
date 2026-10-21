@@ -31,8 +31,8 @@ import {
   type CustomFormatSpecDef,
   type QualityPreset,
   type SizeLimit,
-} from "@tinkerbell/contracts";
-import { diffSnapshots, type FieldChange } from "@tinkerbell/domain.config-history";
+} from "@rube/contracts";
+import { diffSnapshots, type FieldChange } from "@rube/domain.config-history";
 import type { LiveQuality, WireCustomFormat, WireDefinition, WireProfile, WireProfileItem, WireSpec } from "./wire.ts";
 
 /** Scored this low, a format is never grabbed: the presets' minimum is 0. */
@@ -148,14 +148,14 @@ export interface SizeRow {
 
 /** The per-profile size format's name. One per profile, so it can carry that profile's ceiling. */
 export function sizeFormatName(profileName: string): string {
-  return `Size (Tinkerbell: ${profileName})`;
+  return `Size (Rube: ${profileName})`;
 }
 
-const SIZE_FORMAT_PREFIX = "Size (Tinkerbell: ";
+const SIZE_FORMAT_PREFIX = "Size (Rube: ";
 
 const LIBRARY_NAMES = new Set<string>(CUSTOM_FORMATS.map((f) => f.name));
 
-/** Formats whose score in a managed profile Tinkerbell decides. */
+/** Formats whose score in a managed profile Rube decides. */
 function isOwnedFormat(name: string): boolean {
   return LIBRARY_NAMES.has(name) || name.startsWith(SIZE_FORMAT_PREFIX);
 }
@@ -533,7 +533,7 @@ function planDefinitions(input: PlanInput, targetId: number | null, warnings: st
   if (unmanaged > 0) {
     warnings.push(
       `Size limits are instance-wide. They also apply to ${unmanaged} profile${unmanaged === 1 ? "" : "s"} ` +
-        `Tinkerbell does not manage.`,
+        `Rube does not manage.`,
     );
   }
 

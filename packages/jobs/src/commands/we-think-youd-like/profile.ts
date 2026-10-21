@@ -1,5 +1,5 @@
 /**
- * A person's taste, read from what Tinkerbell has seen them watch.
+ * A person's taste, read from what Rube has seen them watch.
  *
  * The arithmetic happens here rather than in the prompt on purpose. Handing a
  * model three hundred raw plays and asking it to "work out their taste" is a
@@ -14,7 +14,7 @@
  * same as one watched twice.
  */
 import { and, gte, inArray, sql } from "drizzle-orm";
-import { mediaItems, playbackSessions, watchState, type Db } from "@tinkerbell/db";
+import { mediaItems, playbackSessions, watchState, type Db } from "@rube/db";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 

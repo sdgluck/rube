@@ -2,7 +2,7 @@
  * Plex API client factory.
  *
  * Usage:
- *   import { createPlexClient, SECTION_TYPE_MAP } from "@tinkerbell/plex";
+ *   import { createPlexClient, SECTION_TYPE_MAP } from "@rube/plex";
  *   const client = createPlexClient({ url, token });
  */
 

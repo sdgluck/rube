@@ -22,10 +22,10 @@
  */
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { narrateSmartFilter, ruleConfigSchema } from "@tinkerbell/contracts";
-import { CHANGE_KINDS } from "@tinkerbell/domain.changes";
-import { SEARCH_KINDS } from "@tinkerbell/domain.search";
-import type { Trpc } from "@tinkerbell/trpc";
+import { narrateSmartFilter, ruleConfigSchema } from "@rube/contracts";
+import { CHANGE_KINDS } from "@rube/domain.changes";
+import { SEARCH_KINDS } from "@rube/domain.search";
+import type { Trpc } from "@rube/trpc";
 
 export type AppCaller = ReturnType<Trpc["createCaller"]>;
 
@@ -128,7 +128,7 @@ export const TOOLS: AgentTool[] = [
     name: "get_overview",
     title: "Instance overview",
     description:
-      "Start here. A one-call summary of this Tinkerbell instance: version, service health, rule counts and " +
+      "Start here. A one-call summary of this Rube instance: version, service health, rule counts and " +
       "which rules last failed, what is running now, scheduled starts being held back, the most recent job " +
       "failure, and library totals. Use the more specific tools to drill into anything it mentions.",
     input: z.object({}),
@@ -444,7 +444,7 @@ export const TOOLS: AgentTool[] = [
     name: "list_collections",
     title: "List collections",
     description:
-      "Plex collections from Tinkerbell's local index, with item counts and labels. A label of the form " +
+      "Plex collections from Rube's local index, with item counts and labels. A label of the form " +
       "`Rule:<id>` names the rule that builds the collection. Filter by section, rule or label, or search by title. " +
       "Each row's `performance` counts plays of its titles since they joined it, over `performanceWindow`; " +
       "sort by `plays` or `lastPlayedAt` to find collections nobody watches.",
@@ -561,7 +561,7 @@ export const TOOLS: AgentTool[] = [
     name: "list_changes",
     title: "List library changes",
     description:
-      "What Tinkerbell has done to the Plex library, newest first: items added to and removed from " +
+      "What Rube has done to the Plex library, newest first: items added to and removed from " +
       "collections, metadata written, cleanup actions, rule edits and overlays applied.",
     input: z.object({
       kinds: z.array(z.enum(CHANGE_KINDS)).optional(),

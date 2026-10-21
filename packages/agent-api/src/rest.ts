@@ -80,10 +80,10 @@ export function openApiDocument(opts: { origin: string; version: string }): unkn
   return {
     openapi: "3.1.0",
     info: {
-      title: "Tinkerbell agent API",
+      title: "Rube agent API",
       version: opts.version,
       description:
-        "Read-only access to a Tinkerbell instance. The same tools are served over MCP at /mcp. " +
+        "Read-only access to a Rube instance. The same tools are served over MCP at /mcp. " +
         "Authenticate with `Authorization: Bearer <key>`; create keys in Settings → API & MCP.",
     },
     servers: [{ url: opts.origin }],

@@ -13,8 +13,8 @@
 
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { sizeLimitSchema } from "@tinkerbell/contracts";
-import { ApplyError, PlanConflictError, PlanError } from "@tinkerbell/domain.arr-settings";
+import { sizeLimitSchema } from "@rube/contracts";
+import { ApplyError, PlanConflictError, PlanError } from "@rube/domain.arr-settings";
 import type { TrpcDeps } from "../deps.ts";
 import { t, procedure } from "../_base.ts";
 import { upstream } from "./_shared.ts";

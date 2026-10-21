@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { httpRequest, HttpError } from "@tinkerbell/http";
+import { httpRequest, HttpError } from "@rube/http";
 
 /**
  * IMDb chart and list fetching, via the public (anonymous, undocumented)

@@ -1,4 +1,4 @@
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 import type { TrpcDeps } from "./deps.ts";
 /**
  * Admin authentication: the Sign-in-with-Plex handshake for the admin app,
@@ -10,8 +10,8 @@ import type { TrpcDeps } from "./deps.ts";
  */
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { authDisabledByEnv, createLogger, OwnerUnresolvedError, parseBearerToken } from "@tinkerbell/core";
-import { buildPlexAuthUrl, checkPlexPin, createPlexPin, getPlexAccount } from "@tinkerbell/plex";
+import { authDisabledByEnv, createLogger, OwnerUnresolvedError, parseBearerToken } from "@rube/core";
+import { buildPlexAuthUrl, checkPlexPin, createPlexPin, getPlexAccount } from "@rube/plex";
 
 import { t, publicProcedure, procedure, type AdminContext } from "./_base.ts";
 import {
@@ -28,7 +28,7 @@ import { isBrowserRequest, refuseBrowser } from "./browser-request.ts";
 import { exchangeAccount } from "./exchange-account.ts";
 import { createHandshakes } from "./handshake.ts";
 import { serverInfo } from "./server-info.ts";
-import { NativeAdmin } from "@tinkerbell/contracts/native-api";
+import { NativeAdmin } from "@rube/contracts/native-api";
 
 /** A plex.tv user token the native app obtained by running the PIN flow itself. */
 const exchangeInput = z.object({ plexToken: z.string().min(1).max(256) });
@@ -239,11 +239,11 @@ export const createAdminAuthRouter = perDeps(function createAdminAuthRouter(deps
     }),
 
     /**
-     * "Is this a Tinkerbell admin server, and which release?" — the native
+     * "Is this a Rube admin server, and which release?" — the native
      * app's server picker asks before anything else. See `server-info.ts`.
      */
     server: publicProcedure.output(NativeAdmin.AuthServerOutput).query(() => ({
-      ...serverInfo("tinkerbell-admin"),
+      ...serverInfo("rube-admin"),
       // Whether the app needs to sign in at all — with auth off it shows a
       // standing "admin is open" warning instead of a sign-in button.
       authRequired: adminAuthRequired(),

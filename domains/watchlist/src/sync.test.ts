@@ -14,9 +14,9 @@
 import { describe, it, beforeEach, afterEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ConfigStoreToken, noopCheckpoint, type JobContext } from "@tinkerbell/core";
-import { DbToken, watchlistItems } from "@tinkerbell/db";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ConfigStoreToken, noopCheckpoint, type JobContext } from "@rube/core";
+import { DbToken, watchlistItems } from "@rube/db";
 
 import { WatchlistToken } from "./index.ts";
 

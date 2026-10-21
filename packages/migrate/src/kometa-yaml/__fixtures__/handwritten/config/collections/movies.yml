@@ -68,7 +68,7 @@ collections:
   From Trakt:
     trakt_list: https://trakt.tv/users/someone/lists/watchlist
 
-  # Account-scoped, so it needs a Trakt sign-in Tinkerbell doesn't do.
+  # Account-scoped, so it needs a Trakt sign-in Rube doesn't do.
   My Trakt Watchlist:
     trakt_watchlist: movies
 

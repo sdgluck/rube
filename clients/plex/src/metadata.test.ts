@@ -64,7 +64,7 @@ const ITEM = {
   studio: "Warner Bros.",
   year: 1999,
   Genre: [{ tag: "Action" }, { tag: "Sci-Fi" }],
-  Label: [{ tag: "Tinkerbell" }],
+  Label: [{ tag: "Rube" }],
   Field: [{ name: "titleSort", locked: true }],
 };
 
@@ -92,7 +92,7 @@ describe("item metadata", () => {
       // callers comparing "1999" against 1999 would rewrite the field forever.
       assert.equal(fields.fields.year, "1999");
       assert.deepEqual(fields.tags.genre, ["Action", "Sci-Fi"]);
-      assert.deepEqual(fields.tags.label, ["Tinkerbell"]);
+      assert.deepEqual(fields.tags.label, ["Rube"]);
       assert.deepEqual(fields.locked, ["titleSort"]);
     });
 

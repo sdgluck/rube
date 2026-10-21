@@ -1,5 +1,5 @@
-import { perDeps } from "@tinkerbell/container";
-import { type Services } from "@tinkerbell/composition";
+import { perDeps } from "@rube/container";
+import { type Services } from "@rube/composition";
 
 export const createImdbCommand = perDeps(function createImdbCommand(deps: Pick<Services, "clients">) {
   const { clients } = deps;

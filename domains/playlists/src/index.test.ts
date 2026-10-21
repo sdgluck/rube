@@ -1,5 +1,5 @@
 /**
- * This table *is* the record of which playlists Tinkerbell owns — Plex
+ * This table *is* the record of which playlists Rube owns — Plex
  * playlists cannot carry a `Rule:<id>` label, so unlike every other entity
  * there is no source of truth to re-derive it from. That makes two properties
  * worth pinning:
@@ -18,9 +18,9 @@ import assert from "node:assert/strict";
 import { after, beforeEach, describe, test } from "node:test";
 
 import { eq } from "drizzle-orm";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken, managedPlaylists, rules } from "@tinkerbell/db";
-import { PlaylistsToken } from "@tinkerbell/domain.playlists";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken, managedPlaylists, rules } from "@rube/db";
+import { PlaylistsToken } from "@rube/domain.playlists";
 
 const c = createTestContainer();
 after(() => c.dispose());

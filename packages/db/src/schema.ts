@@ -238,7 +238,7 @@ export const rules = sqliteTable("rules", {
     .notNull()
     .default({}),
   /**
-   * Provenance for rules imported from the public registry (tinkerbell.dev).
+   * Provenance for rules imported from the public registry (rube.fyi).
    * All null for hand-made rules.
    *
    * `registryConfigHash` is the hash of the config *as imported*, after tag
@@ -552,7 +552,7 @@ export const jobRuns = sqliteTable(
      *
      * The distinction is not cosmetic: a watchdog failure means the run may
      * still be executing inside a worker thread we cannot interrupt, and it
-     * reads in the UI as "Tinkerbell gave up on it", not "your rule is wrong".
+     * reads in the UI as "Rube gave up on it", not "your rule is wrong".
      * Previously this was only recoverable by grepping the log for
      * `[watchdog]`.
      */
@@ -625,7 +625,7 @@ export const overlayOriginals = sqliteTable(
 );
 
 /**
- * What Tinkerbell has written onto a generated collection's *presentation* —
+ * What Rube has written onto a generated collection's *presentation* —
  * its summary and its poster — and what it found there first.
  *
  * Keyed by `(ruleId, collectionName)` rather than by rating key, for the same
@@ -669,7 +669,7 @@ export const collectionArtwork = sqliteTable(
      */
     posterLockedAt: integer("poster_locked_at"),
     /**
-     * Whether the collection already had artwork before Tinkerbell first
+     * Whether the collection already had artwork before Rube first
      * uploaded to it, and where. A collection used to be recreated every run,
      * which made "revert" mostly mean "stop uploading"; now that one usually
      * survives, there is genuinely something to put back — and the affordance
@@ -942,7 +942,7 @@ export const plexUserShares = sqliteTable("plex_user_shares", {
   allowTuners: integer("allow_tuners").notNull().default(0),
   allowChannels: integer("allow_channels").notNull().default(0),
   allowCameraUpload: integer("allow_camera_upload").notNull().default(0),
-  /** Verbatim plex.tv filter strings — `contentRating=PG|label=Tinkerbell`. */
+  /** Verbatim plex.tv filter strings — `contentRating=PG|label=Rube`. */
   filterMovies: text("filter_movies").notNull().default(""),
   filterTelevision: text("filter_television").notNull().default(""),
   filterMusic: text("filter_music").notNull().default(""),
@@ -979,7 +979,7 @@ export const sharingRestrictionBackups = sqliteTable("sharing_restriction_backup
 });
 
 // Per-user personalization preferences (loved/liked/hated genres etc.). The
-// JSON blob is validated by `userPreferencesSchema` in @tinkerbell/core;
+// JSON blob is validated by `userPreferencesSchema` in @rube/core;
 // keyed by Plex user id to match `plex_users.userId`.
 export const userPreferences = sqliteTable("user_preferences", {
   userId: integer("user_id").primaryKey(),
@@ -1416,7 +1416,7 @@ export const cleanupCandidates = sqliteTable(
  * - `item` — one rating key.
  * - `collection` — every member of a collection, matched on title so the
  *   protection survives the collection being rebuilt with a new rating key,
- *   which is exactly what Tinkerbell's own rules do to it nightly.
+ *   which is exactly what Rube's own rules do to it nightly.
  *
  * Protection by Plex *label* is the obvious third and is deliberately absent:
  * item labels are not in the local index, so it could only be answered by
@@ -1506,7 +1506,7 @@ export const digestDeliveries = sqliteTable(
 );
 
 /**
- * Every metadata field Tinkerbell has written to a Plex item, and what it
+ * Every metadata field Rube has written to a Plex item, and what it
  * found there first.
  *
  * `overlay_originals` establishes the pattern — snapshot before mutate — and
@@ -1621,7 +1621,7 @@ export const migrationImports = sqliteTable(
  * This exists because of migration, but it isn't only for migration. Kometa's
  * `metadata_files` are the least reproducible thing in a config — a collection
  * can be rebuilt from a rule, but nobody is retyping four hundred summaries —
- * and the only honest way to migrate them was to give Tinkerbell somewhere to
+ * and the only honest way to migrate them was to give Rube somewhere to
  * put them.
  *
  * Two decisions worth stating:
@@ -1671,7 +1671,7 @@ export const metadataOverrides = sqliteTable(
 );
 
 /**
- * Playlists Tinkerbell built, and which rule owns each one.
+ * Playlists Rube built, and which rule owns each one.
  *
  * Collections carry a `Rule:<id>` label, which is how every other part of this
  * app knows what it owns. **Playlists cannot be labelled** — Plex has no such
@@ -1703,10 +1703,10 @@ export const managedPlaylists = sqliteTable(
 /**
  * How the things you configured came to be the way they are.
  *
- * Every other ledger in this schema records what Tinkerbell did to *Plex* —
+ * Every other ledger in this schema records what Rube did to *Plex* —
  * collection membership in `rule_run_changes`, metadata writes in
  * `metadata_originals`, deletions in `cleanup_candidates`, overlay burn-ins in
- * `overlay_originals`. None of them records what *you* did to Tinkerbell. A
+ * `overlay_originals`. None of them records what *you* did to Rube. A
  * rule edited at 2am that starts producing nonsense had no diff and no previous
  * version, and a config value nobody remembers changing had no history at all.
  *
@@ -2119,7 +2119,7 @@ export const arrSyncState = sqliteTable("arr_sync_state", {
 });
 
 /**
- * Quality profiles Tinkerbell applied a preset to, and therefore owns.
+ * Quality profiles Rube applied a preset to, and therefore owns.
  *
  * Ownership is the whole point of the table. Without it, a drift check has no
  * way to tell "the user edited the profile we wrote" from "this was never ours",
@@ -2133,7 +2133,7 @@ export const arrSyncState = sqliteTable("arr_sync_state", {
  *
  * `preset_version` is the catalogue version at the last apply. A lower number
  * than the catalogue's is "update available", which is distinct from drift:
- * nothing changed in the \*Arr, Tinkerbell's opinion did.
+ * nothing changed in the \*Arr, Rube's opinion did.
  */
 export const arrManagedProfiles = sqliteTable(
   "arr_managed_profiles",
@@ -2164,7 +2164,7 @@ export const arrManagedProfiles = sqliteTable(
 );
 
 /**
- * The \*Arr's own settings, as they were before Tinkerbell wrote to them.
+ * The \*Arr's own settings, as they were before Rube wrote to them.
  *
  * Taken immediately before every apply, and restorable. `payload` is a
  * `readArea` result (endpoint path → document). `touched` names the exact
@@ -2209,7 +2209,7 @@ export const llmUsage = sqliteTable(
   {
     id: integer("id").primaryKey({ autoIncrement: true }),
     at: integer("at").notNull(),
-    /** Which caller made the request — see `LLM_FEATURES` in `@tinkerbell/domain.ai-usage`. */
+    /** Which caller made the request — see `LLM_FEATURES` in `@rube/domain.ai-usage`. */
     feature: text("feature").notNull(),
     ruleId: text("rule_id"),
     provider: text("provider").notNull(),
@@ -2227,7 +2227,7 @@ export const llmUsage = sqliteTable(
  * Movie match rooms — a group swiping through one movie library together.
  *
  * Kept rather than held in memory, which is what the standalone app did: a
- * Tinkerbell upgrade restarts the process, and a restart halfway through a
+ * Rube upgrade restarts the process, and a restart halfway through a
  * movie night lost every swipe and every member. Rooms that nobody has touched
  * for `MATCH_ROOM_RETENTION_MS` are swept by `purge-runs`.
  *
@@ -2402,7 +2402,7 @@ export const problemDismissals = sqliteTable(
  *
  * Radarr never downgrades: a 2160p file meets any 1080p cutoff, and a 1080p
  * release is refused at import as "not an upgrade". So a swap is a small
- * state machine Tinkerbell walks itself, a poll at a time — set the 1080p
+ * state machine Rube walks itself, a poll at a time — set the 1080p
  * profile, interactive-search, grab, wait for the download, then import it
  * with ManualImport, which replaces the 4K file in one step. The 4K copy is
  * never deleted ahead of a playable replacement, which is the whole reason

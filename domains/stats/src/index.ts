@@ -13,14 +13,14 @@
 
 import { and, eq, gte, inArray, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
-import { statsCache, jobs, jobRuns, mediaItems, playbackSessions, plexUsers, type Db } from "@tinkerbell/db";
+import { statsCache, jobs, jobRuns, mediaItems, playbackSessions, plexUsers, type Db } from "@rube/db";
 
-import { createPlexClient } from "@tinkerbell/plex";
+import { createPlexClient } from "@rube/plex";
 
-import { startOfLocalDay, DAY_MS, WEEK_MS, type ConfigStore, type Clients } from "@tinkerbell/core";
-import { type TopPlayedRank, type Playback } from "@tinkerbell/domain.playback";
-import type { PlexRecentItem } from "@tinkerbell/plex";
-import { token } from "@tinkerbell/container";
+import { startOfLocalDay, DAY_MS, WEEK_MS, type ConfigStore, type Clients } from "@rube/core";
+import { type TopPlayedRank, type Playback } from "@rube/domain.playback";
+import type { PlexRecentItem } from "@rube/plex";
+import { token } from "@rube/container";
 
 // ─── Cache helpers ────────────────────────────────────────────────────────────
 

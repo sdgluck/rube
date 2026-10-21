@@ -26,7 +26,7 @@ control height or a font, it is usually reimplementing something.
 }
 ```
 
-`tinkerbell/no-shadowed-primitive` fails the build if a module _declares_ a
+`rube/no-shadowed-primitive` fails the build if a module _declares_ a
 class named after a primitive instead of composing it. That rule exists because
 `.table` was once declared in four stylesheets, each with a different row
 height, and nobody noticed for months — you don't open four files at once.
@@ -36,7 +36,7 @@ pack card is `.packCard`, a login box is `.loginCard`. Same name, same thing.
 
 ### Size is the primitive's
 
-`tinkerbell/primitive-geometry` is the other half. Composing a primitive and
+`rube/primitive-geometry` is the other half. Composing a primitive and
 then overriding its size is how drift came back after `.table` stopped being
 redeclared: Backup and Watchlist composed `.table` and re-padded its cells to
 ~28px rows, the Overlays bar built 30px buttons, and new pages looked squashed

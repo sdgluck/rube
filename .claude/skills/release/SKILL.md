@@ -1,6 +1,6 @@
 ---
 name: release
-description: Cut a new Tinkerbell release — version bump, AI-written CHANGELOG entry, screenshot regeneration, commit, tag and push. Use when asked to "cut a release", "ship a version", "release patch/minor/major", or when a release run has failed partway and left the tree dirty.
+description: Cut a new Rube release — version bump, AI-written CHANGELOG entry, screenshot regeneration, commit, tag and push. Use when asked to "cut a release", "ship a version", "release patch/minor/major", or when a release run has failed partway and left the tree dirty.
 ---
 
 # Cutting a release
@@ -52,7 +52,7 @@ pnpm release <patch|minor|major>
 Pushing a `v*` tag triggers `.github/workflows/docker-publish.yml`, which builds
 `linux/amd64` and `linux/arm64` on native runners and publishes to GHCR under
 `latest` plus the semver tags. (Every push to `master` publishes `edge`
-separately.) `.github/workflows/site-deploy.yml` redeploys tinkerbell.dev,
+separately.) `.github/workflows/site-deploy.yml` redeploys rube.fyi,
 which also serves the rule registry.
 
 Check it with `gh run list --workflow=docker-publish.yml -L 3`.

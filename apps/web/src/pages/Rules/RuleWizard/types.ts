@@ -6,7 +6,7 @@
  * type without losing field values the user already entered.
  */
 
-import { DEFAULT_MAX_WRITES_PER_RUN, METADATA_SETTABLE_FIELDS } from "@tinkerbell/contracts";
+import { DEFAULT_MAX_WRITES_PER_RUN, METADATA_SETTABLE_FIELDS } from "@rube/contracts";
 import type {
   ArrService,
   CleanupMode,
@@ -14,12 +14,12 @@ import type {
   PosterSource,
   RuleTrigger,
   SummarySource,
-} from "@tinkerbell/contracts";
-import type { SmartFilterGroup } from "@tinkerbell/plex-smart-filter";
+} from "@rube/contracts";
+import type { SmartFilterGroup } from "@rube/plex-smart-filter";
 
 export type { CleanupMode, MetadataSettableField };
 
-export type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode, SmartFilterOp } from "@tinkerbell/plex-smart-filter";
+export type { SmartFilterGroup, SmartFilterLeaf, SmartFilterNode, SmartFilterOp } from "@rube/plex-smart-filter";
 
 export type AiVibe = "playful" | "serious" | "mixed";
 export type AiNameStyle = "short_punchy" | "descriptive";

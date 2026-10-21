@@ -10,14 +10,14 @@
  * it, and a rerun from the top costs less than the bookkeeping would.
  */
 
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import type { CommonJobConfig, JobContext } from "@rube/core";
 
 export function createCheckArrQualityCommand(deps: Services) {
   const { quality } = deps.arrSettings;
 
   async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-    ctx.log("tinkerbell check-arr-quality");
+    ctx.log("rube check-arr-quality");
     const results = await quality.checkAll();
     if (results.length === 0) {
       ctx.log("No managed quality profiles. Apply a preset from an instance page to start.");

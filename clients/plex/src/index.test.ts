@@ -195,7 +195,7 @@ describe("deleteCollectionsByLabel", () => {
       [
         { ratingKey: "1", labels: ["Rule:a"] },
         { ratingKey: "2", labels: ["Rule:b"] },
-        { ratingKey: "3", labels: ["Rule:b", "Tinkerbell"] },
+        { ratingKey: "3", labels: ["Rule:b", "Rube"] },
         { ratingKey: "4", labels: [] },
       ],
       { filterByLabel: true },
@@ -230,7 +230,7 @@ describe("deleteCollectionsByLabel", () => {
       [
         { ratingKey: "1", labels: ["Rule:a"] },
         { ratingKey: "2", labels: ["Rule:b"] },
-        { ratingKey: "3", labels: ["Rule:a", "Tinkerbell"] },
+        { ratingKey: "3", labels: ["Rule:a", "Rube"] },
       ],
       { labelsInListing: true },
     );
@@ -291,38 +291,38 @@ describe("setCollectionLabels", () => {
   });
 
   it("sends PUT to /library/metadata/:ratingKey (not /library/sections/)", async () => {
-    await client.setCollectionLabels("1", "100", ["Tinkerbell"]);
+    await client.setCollectionLabels("1", "100", ["Rube"]);
 
     assert.equal(mock.putRequests.length, 1);
     assert.equal(mock.putRequests[0].path, "/library/metadata/100");
   });
 
   it("sends label.locked=1 to replace all labels", async () => {
-    await client.setCollectionLabels("1", "100", ["Tinkerbell"]);
+    await client.setCollectionLabels("1", "100", ["Rube"]);
 
     const params = mock.putRequests[0].params;
     assert.equal(params["label.locked"], "1");
   });
 
   it("sends indexed label params for all desired labels", async () => {
-    await client.setCollectionLabels("1", "100", ["Tinkerbell", "User:alice"]);
+    await client.setCollectionLabels("1", "100", ["Rube", "User:alice"]);
 
     assert.equal(mock.putRequests.length, 1);
     const params = mock.putRequests[0].params;
 
-    assert.equal(params["label[0].tag.tag"], "Tinkerbell");
+    assert.equal(params["label[0].tag.tag"], "Rube");
     assert.equal(params["label[1].tag.tag"], "User:alice");
   });
 
   it("removes a label by omitting it from the desired list", async () => {
     // Desired labels exclude "BecauseYouWatched" — label.locked=1 means Plex
     // replaces the entire label set with what we provide
-    await client.setCollectionLabels("1", "100", ["Tinkerbell", "User:alice"]);
+    await client.setCollectionLabels("1", "100", ["Rube", "User:alice"]);
 
     assert.equal(mock.putRequests.length, 1);
     const params = mock.putRequests[0].params;
 
-    assert.equal(params["label[0].tag.tag"], "Tinkerbell");
+    assert.equal(params["label[0].tag.tag"], "Rube");
     assert.equal(params["label[1].tag.tag"], "User:alice");
     assert.equal(params["label.locked"], "1");
 
@@ -344,7 +344,7 @@ describe("setCollectionLabels", () => {
   });
 
   it("does not include type or id params (uses URL path instead)", async () => {
-    await client.setCollectionLabels("1", "100", ["Tinkerbell"]);
+    await client.setCollectionLabels("1", "100", ["Rube"]);
 
     const params = mock.putRequests[0].params;
     assert.equal(params["type"], undefined);

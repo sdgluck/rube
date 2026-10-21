@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CHANGE_LOG_ENTITIES, type ChangeLogEntity } from "@tinkerbell/contracts";
+import { CHANGE_LOG_ENTITIES, type ChangeLogEntity } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import CardSection from "#components/CardSection";
 import RelativeTime from "#components/RelativeTime";
@@ -25,7 +25,7 @@ const ENTITY_LABELS: Record<Entity, string> = {
 /** Who did it, in words rather than the raw source token. */
 function actorLabel(source: string, username: string): string {
   if (username) return username;
-  if (source === "system") return "Tinkerbell itself";
+  if (source === "system") return "Rube itself";
   if (source.startsWith("job:")) return `the ${source.slice(4)} job`;
   if (source === "import") return "an import";
   if (source === "restore") return "a restore";
@@ -43,9 +43,9 @@ function summarise(value: unknown): string {
 }
 
 /**
- * Every change anybody made to Tinkerbell's own configuration.
+ * Every change anybody made to Rube's own configuration.
  *
- * The counterpart to `/changes`, which is what Tinkerbell did to *Plex*. The
+ * The counterpart to `/changes`, which is what Rube did to *Plex*. The
  * two are kept apart deliberately: they answer different questions and are
  * read at different moments — that page after a collection looks wrong, this
  * one after the app itself starts behaving differently.

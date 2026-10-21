@@ -1,6 +1,6 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import PQueue from "p-queue";
-import { extractImdbId } from "@tinkerbell/omdb";
+import { extractImdbId } from "@rube/omdb";
 
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 

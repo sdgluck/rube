@@ -127,7 +127,7 @@ export interface MockArr {
  * Added for the preset planner, whose whole job is reading these, diffing
  * them and writing them back in the right order. A static answer could not
  * show that a second plan after an apply is empty, nor that a drift check
- * notices an edit made behind Tinkerbell's back.
+ * notices an edit made behind Rube's back.
  */
 export interface MockQualityState {
   profiles: Map<number, Record<string, unknown>>;

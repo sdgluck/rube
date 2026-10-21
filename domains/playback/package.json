@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.playback",
+  "name": "@rube/domain.playback",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,18 +15,18 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/domain.bandwidth": "workspace:*",
-    "@tinkerbell/plex": "workspace:*",
-    "@tinkerbell/plex-smart-filter": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
+    "@rube/domain.bandwidth": "workspace:*",
+    "@rube/plex": "workspace:*",
+    "@rube/plex-smart-filter": "workspace:*",
     "drizzle-orm": "^0.45.1",
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@tinkerbell/composition": "workspace:*",
-    "@tinkerbell/test-support": "workspace:*",
+    "@rube/composition": "workspace:*",
+    "@rube/test-support": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"
   }

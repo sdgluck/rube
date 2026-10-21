@@ -1,5 +1,5 @@
 {
-  "name": "@tinkerbell/domain.rules",
+  "name": "@rube/domain.rules",
   "version": "0.45.0",
   "private": true,
   "type": "module",
@@ -15,18 +15,18 @@
     "test:coverage": "node --test --experimental-test-coverage --experimental-strip-types 'src/**/*.test.ts'"
   },
   "dependencies": {
-    "@tinkerbell/container": "workspace:*",
-    "@tinkerbell/contracts": "workspace:*",
-    "@tinkerbell/core": "workspace:*",
-    "@tinkerbell/db": "workspace:*",
-    "@tinkerbell/ports": "workspace:*",
-    "@tinkerbell/domain.playback": "workspace:*",
-    "@tinkerbell/plex": "workspace:*",
-    "@tinkerbell/plex-smart-filter": "workspace:*",
+    "@rube/container": "workspace:*",
+    "@rube/contracts": "workspace:*",
+    "@rube/core": "workspace:*",
+    "@rube/db": "workspace:*",
+    "@rube/ports": "workspace:*",
+    "@rube/domain.playback": "workspace:*",
+    "@rube/plex": "workspace:*",
+    "@rube/plex-smart-filter": "workspace:*",
     "drizzle-orm": "^0.45.1"
   },
   "devDependencies": {
-    "@tinkerbell/composition": "workspace:*",
+    "@rube/composition": "workspace:*",
     "@types/node": "^25.2.3",
     "typescript": "^7.0.2"
   }

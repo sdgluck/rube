@@ -9,10 +9,10 @@
 import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { collectionItems, collections } from "@tinkerbell/db";
-import { CollectionsToken } from "@tinkerbell/domain.collections";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { collectionItems, collections } from "@rube/db";
+import { CollectionsToken } from "@rube/domain.collections";
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -28,7 +28,7 @@ function seed(ratingKey: string, title: string): void {
       sectionTitle: "Films",
       title,
       childCount: 2,
-      labels: ["Tinkerbell", "Rule:rule-a"],
+      labels: ["Rube", "Rule:rule-a"],
       addedAt: 1_700_000_000,
       syncedAt: Date.now(),
     })

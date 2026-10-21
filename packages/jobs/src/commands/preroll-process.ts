@@ -1,16 +1,8 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
+import { ServicesToken, type Services } from "@rube/composition";
 import { rm, stat, writeFile } from "node:fs/promises";
-import { errorMessage } from "@tinkerbell/core";
-import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
-import {
-  FfmpegError,
-  applyAction,
-  decide,
-  encodeStill,
-  ffmpegVersion,
-  generateThumbnail,
-  probe,
-} from "@tinkerbell/video";
+import { errorMessage } from "@rube/core";
+import type { CommonJobConfig, JobContext } from "@rube/core";
+import { FfmpegError, applyAction, decide, encodeStill, ffmpegVersion, generateThumbnail, probe } from "@rube/video";
 import {
   ensurePrerollDirs,
   extensionOf,
@@ -22,7 +14,7 @@ import {
   thumbPath,
   type Preroll,
   type ProcessedMetadata,
-} from "@tinkerbell/domain.prerolls";
+} from "@rube/domain.prerolls";
 
 export function createPrerollProcessCommand(deps: Pick<Services, "prerolls">) {
   const { prerolls } = deps;
@@ -45,7 +37,7 @@ export function createPrerollProcessCommand(deps: Pick<Services, "prerolls">) {
    * is no schedule; there's nothing to do until someone adds a file.
    */
   async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-    ctx.log("tinkerbell preroll-process");
+    ctx.log("rube preroll-process");
 
     const version = await ffmpegVersion();
     if (!version) {

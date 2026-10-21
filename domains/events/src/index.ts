@@ -1,8 +1,8 @@
 import { desc, asc, eq, and, inArray, sql } from "drizzle-orm";
-import { events, likeContains, type Db } from "@tinkerbell/db";
-import { MONTH_MS } from "@tinkerbell/core";
-import { type Notifier } from "@tinkerbell/ports";
-import { token } from "@tinkerbell/container";
+import { events, likeContains, type Db } from "@rube/db";
+import { MONTH_MS } from "@rube/core";
+import { type Notifier } from "@rube/ports";
+import { token } from "@rube/container";
 
 interface EventFilters {
   limit?: number;
@@ -43,7 +43,7 @@ function rollupKey(e: { type: string; message: string; metadata: Record<string, 
 
 /**
  * Extract a duration from the tail of a job-completion message produced by
- * `formatDuration` in `@tinkerbell/core` — either "<n>s" or "<m>m <n>s",
+ * `formatDuration` in `@rube/core` — either "<n>s" or "<m>m <n>s",
  * anchored at end-of-string so unrelated numbers in the middle of the
  * message ("3s into 5s window") don't match.
  *

@@ -1,6 +1,6 @@
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 /**
- * Tinkerbell's own watch record — persistence and queries.
+ * Rube's own watch record — persistence and queries.
  *
  * Plex answers "what is playing right now" (`/status/sessions`) and "who viewed
  * what, when" (`/status/sessions/history/all`). It does not answer "how much of
@@ -15,9 +15,9 @@ import { perDeps } from "@tinkerbell/container";
 import { and, asc, desc, eq, getTableColumns, gte, inArray, isNull, lt, lte, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import type { SQLiteColumn } from "drizzle-orm/sqlite-core";
-import { startOfLocalDay, DAY_MS, HOUR_MS, type ConfigStore } from "@tinkerbell/core";
-import { playbackSessions, plexUsers, watchState, type Db } from "@tinkerbell/db";
-import type { PlexSession } from "@tinkerbell/plex";
+import { startOfLocalDay, DAY_MS, HOUR_MS, type ConfigStore } from "@rube/core";
+import { playbackSessions, plexUsers, watchState, type Db } from "@rube/db";
+import type { PlexSession } from "@rube/plex";
 import { diffSnapshot, staleCloses, type OpenSession, type SessionClose } from "./diff.ts";
 
 /** Poll cadence. Also the yardstick `diffSnapshot` uses to tell playback from a seek. */

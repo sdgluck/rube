@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { PROBLEM_META } from "@tinkerbell/contracts";
+import { PROBLEM_META } from "@rube/contracts";
 import PageShell, { StatusChip } from "#components/PageShell";
 import EmptyState from "#components/EmptyState";
 import ErrorState from "#components/ErrorState";

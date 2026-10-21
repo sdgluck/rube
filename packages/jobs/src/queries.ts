@@ -1,11 +1,11 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 /**
  * Pure-read query helpers for the jobs/job_runs tables. Pulled out of
  * runner.ts so the lifecycle code doesn't share a file with persistence
  * formatting (GET-122).
  */
 import { and, eq, desc, inArray, sql, type InferSelectModel } from "drizzle-orm";
-import { jobs, jobRuns } from "@tinkerbell/db";
+import { jobs, jobRuns } from "@rube/db";
 import { ACTIVE_RUN_STATUSES } from "./statuses.ts";
 import { QUIET_INTERNAL_JOBS } from "./internal-jobs.ts";
 

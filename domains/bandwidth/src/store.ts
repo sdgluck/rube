@@ -1,7 +1,7 @@
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 import { desc, gte, sql } from "drizzle-orm";
-import { DAY_MS } from "@tinkerbell/core";
-import { bandwidthSamples, bandwidthTests, type Db } from "@tinkerbell/db";
+import { DAY_MS } from "@rube/core";
+import { bandwidthSamples, bandwidthTests, type Db } from "@rube/db";
 import type { InferInsertModel, InferSelectModel } from "drizzle-orm";
 
 export type BandwidthTest = InferSelectModel<typeof bandwidthTests>;

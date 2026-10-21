@@ -19,7 +19,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, test } from "node:test";
-import type { AnyToken } from "@tinkerbell/container";
+import type { AnyToken } from "@rube/container";
 import * as ports from "./index.ts";
 
 const SOURCE = join(import.meta.dirname, "index.ts");
@@ -71,13 +71,13 @@ describe("the scope rule", () => {
     // Type-only imports are erased, so they cannot create a cycle and are
     // allowed; a value import is what this is looking for.
     const runtimeImports = [...source.matchAll(/^import\s+(?!type\s)[^;]*?from\s+"([^"]+)";/gm)].map((m) => m[1]);
-    assert.deepEqual(runtimeImports, ["@tinkerbell/container"]);
+    assert.deepEqual(runtimeImports, ["@rube/container"]);
   });
 
   test("declares no dependency but the container", () => {
     const pkg = JSON.parse(readFileSync(join(import.meta.dirname, "..", "package.json"), "utf8")) as {
       dependencies?: Record<string, string>;
     };
-    assert.deepEqual(Object.keys(pkg.dependencies ?? {}), ["@tinkerbell/container"]);
+    assert.deepEqual(Object.keys(pkg.dependencies ?? {}), ["@rube/container"]);
   });
 });

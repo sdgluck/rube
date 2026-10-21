@@ -31,7 +31,7 @@
 import stylelint from "stylelint";
 import { collect, primitivesOf, subjectOf, STYLES_DIR } from "./composes.mjs";
 
-const ruleName = "tinkerbell/primitive-geometry";
+const ruleName = "rube/primitive-geometry";
 
 const messages = stylelint.utils.ruleMessages(ruleName, {
   override: (cls, kind, prop) =>

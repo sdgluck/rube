@@ -10,9 +10,9 @@
  * out of Settings since the row was made still has the row in it, and removing
  * the feature should leave nothing of it behind.
  */
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
-import type { JobContext } from "@tinkerbell/core";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
+import type { JobContext } from "@rube/core";
 import { plexConnection } from "./ai-collection-shared.ts";
 import { PIBU_LABEL } from "./pick-it-back-up/index.ts";
 
@@ -27,7 +27,7 @@ export function createPibuRemoveCommand(deps: Pick<Services, "clients" | "collec
     if (!token) throw new Error("Plex token is required. Configure it in Settings.");
 
     const client = createPlexClient({ url, token, signal: ctx.signal, onHealth: plexHealthCallback });
-    ctx.log(`tinkerbell pibu-remove`);
+    ctx.log(`rube pibu-remove`);
     ctx.log(`Server: ${url}`);
 
     const sections = await client.getSections();

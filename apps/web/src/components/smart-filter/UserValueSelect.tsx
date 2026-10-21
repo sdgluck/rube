@@ -1,4 +1,4 @@
-import { LOCAL_FIELD_DEFS } from "@tinkerbell/contracts";
+import { LOCAL_FIELD_DEFS } from "@rube/contracts";
 import { trpc } from "#/trpc";
 
 /**
@@ -49,12 +49,12 @@ export const LOCAL_FIELD_GROUP_LABEL = "Watch history";
  * Why the group exists, said once above the picker.
  *
  * The distinction genuinely matters: Plex's own `Unplayed` answers for
- * whichever token asked, and Tinkerbell asks with the owner's. A user picking
+ * whichever token asked, and Rube asks with the owner's. A user picking
  * between "Unplayed" and "Watched by nobody" needs to know they are not the
  * same question.
  */
 export const LOCAL_FIELD_GROUP_NOTE =
-  "These use Tinkerbell's own playback history across every user, not Plex's — Plex only ever reports the server owner's view state.";
+  "These use Rube's own playback history across every user, not Plex's — Plex only ever reports the server owner's view state.";
 
 export const LOCAL_FIELD_HINTS: ReadonlyMap<string, string> = new Map(
   LOCAL_FIELD_DEFS.map((d) => [d.field, d.hint ?? ""]),

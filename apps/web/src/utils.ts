@@ -1,4 +1,4 @@
-import { describeBuilder, parseBuilder } from "@tinkerbell/contracts";
+import { describeBuilder, parseBuilder } from "@rube/contracts";
 
 export function describeCron(expr: string): string {
   if (!expr) return "";

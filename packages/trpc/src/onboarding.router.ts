@@ -1,10 +1,10 @@
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { isOnboardingStepId, type OnboardingStepId } from "@tinkerbell/domain.onboarding";
-import { isValidTimezone } from "@tinkerbell/core";
-import { buildPreset, planFromContext } from "@tinkerbell/contracts";
-import { buildPlexAuthUrl, checkPlexPin, createPlexPin, getPlexAccount } from "@tinkerbell/plex";
+import { isOnboardingStepId, type OnboardingStepId } from "@rube/domain.onboarding";
+import { isValidTimezone } from "@rube/core";
+import { buildPreset, planFromContext } from "@rube/contracts";
+import { buildPlexAuthUrl, checkPlexPin, createPlexPin, getPlexAccount } from "@rube/plex";
 
 import { t, procedure } from "./_base.ts";
 

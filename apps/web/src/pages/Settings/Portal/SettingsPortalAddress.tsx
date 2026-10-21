@@ -13,7 +13,7 @@ import { useToast } from "#components/Toast";
 import ErrorState from "#components/ErrorState";
 import styles from "../Personalization.module.css";
 import local from "./SettingsPortalAddress.module.css";
-import { nativeConnectLink } from "@tinkerbell/contracts";
+import { nativeConnectLink } from "@rube/contracts";
 import QrCode from "#components/QrCode";
 import { NATIVE_APPS_RELEASED } from "#lib/nativeApps";
 
@@ -114,12 +114,12 @@ export default function SettingsPortalAddress() {
           saved address: the suggestion may not be one their phones can reach. */}
       {NATIVE_APPS_RELEASED && saved && (
         <div className={styles.card}>
-          <span className={styles.label}>Tinkerbell app</span>
-          <p className={styles.hint}>People with the Tinkerbell app can scan this to connect to the address above.</p>
+          <span className={styles.label}>Rube app</span>
+          <p className={styles.hint}>People with the Rube app can scan this to connect to the address above.</p>
           <div className={local.qr}>
             <QrCode
               value={nativeConnectLink({ portal: saved })}
-              label="QR code that connects the Tinkerbell app to this server's portal"
+              label="QR code that connects the Rube app to this server's portal"
             />
           </div>
         </div>

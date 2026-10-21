@@ -10,9 +10,9 @@
  */
 import { describe, test, after, afterEach, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { JobsToken, registerJobs } from "@tinkerbell/jobs";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { JobsToken, registerJobs } from "@rube/jobs";
 import { createTrpc } from "./index.ts";
 import { createHandshakes } from "./handshake.ts";
 
@@ -23,7 +23,7 @@ const trpcDeps = { ...c.resolve(ServicesToken), jobs: c.resolve(JobsToken) };
 const { portalRouter } = createTrpc(trpcDeps);
 const { createHandshake } = createHandshakes(trpcDeps);
 
-// As in `router-surface.test.ts`: `@tinkerbell/db` opens its SQLite file at
+// As in `router-surface.test.ts`: `@rube/db` opens its SQLite file at
 // import time, so point it somewhere disposable first.
 
 /**
@@ -59,7 +59,7 @@ function anonymousContext(): PortalContext {
     resHeaders: new Headers(),
     secure: false,
     handshakeNonce: undefined,
-    origin: "http://portal.tinkerbell.test",
+    origin: "http://portal.rube.test",
     ip: "test",
   };
 }
@@ -201,7 +201,7 @@ describe("a shared user's own data", () => {
   });
 
   const SMTP_OFF = { host: "", port: 0, secure: false, user: "", password: "", from: "" };
-  const SMTP_ON = { ...SMTP_OFF, host: "smtp.example.test", port: 587, from: "tinkerbell@example.test" };
+  const SMTP_ON = { ...SMTP_OFF, host: "smtp.example.test", port: 587, from: "rube@example.test" };
 
   test("a component needs its feature as well as its switch", async () => {
     // Leaving soon on a server with cleanup off could only ever say nothing was

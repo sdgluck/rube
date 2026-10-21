@@ -95,7 +95,7 @@ export default function MediaDetail() {
   const why = whyQuery.data ?? [];
   const identityQuery = trpc.plexIdentity.useQuery(undefined, { staleTime: Infinity, retry: false });
 
-  // What Tinkerbell has written to this item, ever. The endpoint existed from
+  // What Rube has written to this item, ever. The endpoint existed from
   // the day metadata editing shipped and had no caller — which meant the undo
   // ledger was only visible in aggregate, on a settings page, nowhere near
   // the item it had rewritten.
@@ -357,7 +357,7 @@ export default function MediaDetail() {
               rules put this here", this answers "why didn't one of them". */}
           <MediaWhyPanel ratingKey={item.ratingKey} />
 
-          {/* What Tinkerbell has changed here, and what it was before */}
+          {/* What Rube has changed here, and what it was before */}
           {history.length > 0 && (
             <section className={mediaStyles.section}>
               <h3 className={mediaStyles.sectionTitle}>

@@ -19,7 +19,7 @@ import { MatchFilters, MatchRoomSummary, SignedIn } from "./shared.ts";
 
 /** `auth.server` */
 export const AuthServerOutput = z.object({
-  product: z.enum(["tinkerbell-admin", "tinkerbell-portal"]),
+  product: z.enum(["rube-admin", "rube-portal"]),
   version: z.string(),
   capabilities: z.array(z.literal("exchange")),
 });

@@ -1,4 +1,4 @@
-import { isSystemCollectionLabel } from "@tinkerbell/contracts";
+import { isSystemCollectionLabel } from "@rube/contracts";
 import { useState, Fragment } from "react";
 import { useParams, useNavigate, useLocation, Link, Outlet } from "react-router-dom";
 import { Image, Pencil, Pin, PinOff, RefreshCw, RotateCcw, SlidersHorizontal, Trash2 } from "lucide-react";
@@ -250,7 +250,7 @@ export default function CollectionDetailLayout() {
               <>
                 <span className={local.metaRule} aria-hidden="true" />
                 <span className={local.chipGroup}>
-                  {isSmart && <span className={`${styles.metaChip} ${styles.labelTinkerbell}`}>Smart</span>}
+                  {isSmart && <span className={`${styles.metaChip} ${styles.labelRube}`}>Smart</span>}
                   {pinned && <span className={styles.metaChip}>Pinned</span>}
                   {owningRuleQuery.data && (
                     <Link
@@ -284,7 +284,7 @@ export default function CollectionDetailLayout() {
                   title={`Show collections labelled "${label}"`}
                   className={`${styles.label} ${local.labelChip} ${local.labelChipLink} ${
                     isSystemCollectionLabel(label)
-                      ? styles.labelTinkerbell
+                      ? styles.labelRube
                       : label.toLowerCase().startsWith("user:")
                         ? styles.labelUser
                         : ""

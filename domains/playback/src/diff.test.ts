@@ -1,6 +1,6 @@
 import { describe, test } from "node:test";
 import assert from "node:assert/strict";
-import type { PlexSession } from "@tinkerbell/plex";
+import type { PlexSession } from "@rube/plex";
 import { diffSnapshot, playKey, staleCloses, type OpenSession } from "./diff.ts";
 
 const INTERVAL = 30_000;

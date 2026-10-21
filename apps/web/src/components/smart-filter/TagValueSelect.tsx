@@ -1,4 +1,4 @@
-import { fieldDef, fieldKind } from "@tinkerbell/contracts";
+import { fieldDef, fieldKind } from "@rube/contracts";
 import { trpc } from "#/trpc";
 
 export interface TagOption {

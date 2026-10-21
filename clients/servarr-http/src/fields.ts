@@ -7,7 +7,7 @@
  * `/{provider}/schema`, which means a form can be *rendered* from the API
  * rather than hand-written per provider — one renderer covers five settings
  * areas across three apps, and a provider added by an upstream release works
- * without a Tinkerbell change.
+ * without a Rube change.
  *
  * This module owns the parts of that convention that are safety-critical:
  * knowing which fields are secret, and merging edits back without dropping

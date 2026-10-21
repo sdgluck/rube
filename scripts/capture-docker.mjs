@@ -22,7 +22,7 @@ import { join } from "node:path";
 const repoRoot = execFileSync("git", ["rev-parse", "--show-toplevel"], { encoding: "utf8" }).trim();
 // Resolve from the workspace that actually depends on Playwright — pnpm's
 // strict layout means the repo root can't see it.
-const require = createRequire(join(repoRoot, "apps/tinkerbell.dev/package.json"));
+const require = createRequire(join(repoRoot, "apps/rube.fyi/package.json"));
 
 const t0 = Date.now();
 const since = () => `+${((Date.now() - t0) / 1000).toFixed(1)}s`;
@@ -89,14 +89,14 @@ const playwrightVersion = require("playwright/package.json").version;
 // ── Build ───────────────────────────────────────────────────────────────────
 // Cheap after the first run: dependencies key on the lockfile, so a UI edit
 // only invalidates the source layer.
-const image = `tinkerbell-capture:${playwrightVersion}`;
+const image = `rube-capture:${playwrightVersion}`;
 console.log(`→ building ${image} (${since()})`);
 const build = spawnSync(
   "docker",
   [
     "build",
     "-f",
-    "apps/tinkerbell.dev/harness/Dockerfile",
+    "apps/rube.fyi/harness/Dockerfile",
     "--build-arg",
     `PLAYWRIGHT_VERSION=${playwrightVersion}`,
     "-t",
@@ -112,8 +112,8 @@ if (build.status !== 0) fail("image build failed");
 // time, so a macOS node_modules can never be loaded by a Linux process.
 const outputs = [
   join(repoRoot, "screenshots"),
-  join(repoRoot, "apps/tinkerbell.dev/public/screenshots"),
-  join(repoRoot, "apps/tinkerbell.dev/public/posters"),
+  join(repoRoot, "apps/rube.fyi/public/screenshots"),
+  join(repoRoot, "apps/rube.fyi/public/posters"),
 ];
 for (const dir of outputs) mkdirSync(dir, { recursive: true });
 
@@ -145,9 +145,9 @@ const run = spawnSync(
     "-v",
     `${join(repoRoot, "screenshots")}:/repo/screenshots`,
     "-v",
-    `${join(repoRoot, "apps/tinkerbell.dev/public/screenshots")}:/repo/apps/tinkerbell.dev/public/screenshots`,
+    `${join(repoRoot, "apps/rube.fyi/public/screenshots")}:/repo/apps/rube.fyi/public/screenshots`,
     "-v",
-    `${join(repoRoot, "apps/tinkerbell.dev/public/posters")}:/repo/apps/tinkerbell.dev/public/posters`,
+    `${join(repoRoot, "apps/rube.fyi/public/posters")}:/repo/apps/rube.fyi/public/posters`,
     image,
   ],
   { cwd: repoRoot, stdio: "inherit" },

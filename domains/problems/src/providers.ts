@@ -9,12 +9,12 @@
  */
 import { createHash } from "node:crypto";
 import { and, desc, eq, inArray, isNotNull, like, notLike, or, sql } from "drizzle-orm";
-import { mediaItems, ruleRuns, rules, showChecks, type Db } from "@tinkerbell/db";
-import type { ProblemKind } from "@tinkerbell/contracts";
-import type { ArrInstance } from "@tinkerbell/core";
-import type { ArrIssue, ArrLibrary } from "@tinkerbell/domain.arr-library";
-import type { RuleConflict } from "@tinkerbell/domain.rules";
-import { isTvdbOrdering } from "@tinkerbell/plex";
+import { mediaItems, ruleRuns, rules, showChecks, type Db } from "@rube/db";
+import type { ProblemKind } from "@rube/contracts";
+import type { ArrInstance } from "@rube/core";
+import type { ArrIssue, ArrLibrary } from "@rube/domain.arr-library";
+import type { RuleConflict } from "@rube/domain.rules";
+import { isTvdbOrdering } from "@rube/plex";
 import type { OrderingEvidence } from "./ordering.ts";
 import type { createArrFixes } from "./arr-fixes.ts";
 

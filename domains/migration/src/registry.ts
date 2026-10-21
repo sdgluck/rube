@@ -5,8 +5,8 @@
  * Two of those runtimes read the database and one reads config, so they are
  * factories now, and the registry is built per container rather than at import.
  */
-import type { Db } from "@tinkerbell/db";
-import type { ConfigStore } from "@tinkerbell/core";
+import type { Db } from "@rube/db";
+import type { ConfigStore } from "@rube/core";
 import type { ProviderRuntime } from "./runtime.ts";
 import { createKometa } from "./runtimes/kometa.ts";
 import { createKometaYaml } from "./runtimes/kometa-yaml.ts";

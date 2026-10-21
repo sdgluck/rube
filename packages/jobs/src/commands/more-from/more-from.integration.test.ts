@@ -9,12 +9,12 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import { ConfigStoreToken, displayTitle, noopCheckpoint, personalRowTitle, type JobContext } from "@tinkerbell/core";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, mediaItems, plexUsers, tmdbCache, userPreferences, watchState } from "@tinkerbell/db";
-import { ClockToken } from "@tinkerbell/ports";
-import { startMockTmdb, type MockTmdb } from "@tinkerbell/test-support/tmdb";
+import { ConfigStoreToken, displayTitle, noopCheckpoint, personalRowTitle, type JobContext } from "@rube/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, mediaItems, plexUsers, tmdbCache, userPreferences, watchState } from "@rube/db";
+import { ClockToken } from "@rube/ports";
+import { startMockTmdb, type MockTmdb } from "@rube/test-support/tmdb";
 import { startMockPlex, type MockPlex } from "../../test-support/mock-plex-server.ts";
 import { createMoreFromCommand, MORE_FROM_LABEL } from "./index.ts";
 import { createMoreFromRemoveCommand } from "../more-from-remove.ts";

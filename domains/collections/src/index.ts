@@ -3,14 +3,14 @@
  */
 
 import { eq, and, or, asc, desc, lt, notInArray, sql, inArray, type SQL, type InferSelectModel } from "drizzle-orm";
-import { collections, collectionItems, likeContains, type Db } from "@tinkerbell/db";
+import { collections, collectionItems, likeContains, type Db } from "@rube/db";
 
-import { PlexApiError, type PlexClient, type PlexSection } from "@tinkerbell/plex";
+import { PlexApiError, type PlexClient, type PlexSection } from "@rube/plex";
 import { createArtwork } from "./artwork.ts";
 import { createStats } from "./stats.ts";
 import { createPerformance } from "./performance.ts";
-import { type PostCollectionSync } from "@tinkerbell/ports";
-import { token } from "@tinkerbell/container";
+import { type PostCollectionSync } from "@rube/ports";
+import { token } from "@rube/container";
 
 export type CollectionRow = InferSelectModel<typeof collections>;
 
@@ -37,7 +37,7 @@ interface CollectionFilters {
    * Rule id filter: matches collections labeled `Rule:<id>` OR the rating
    * key recorded as the rule's last-generated collection. The latter
    * covers smart_filter rules created by migration where the existing
-   * Plex collection wasn't labeled by Tinkerbell.
+   * Plex collection wasn't labeled by Rube.
    */
   ruleIds?: string[];
   /** `ruleId` → that rule's last-generated collection rating key, where known. */
@@ -151,7 +151,7 @@ export function createCollections(deps: CollectionsDeps) {
    * Every distinct item ratingKey across the given collections.
    *
    * Reads the local mirror rather than Plex: the point of the caller (migration
-   * verification) is to compare what Kometa built against what a Tinkerbell
+   * verification) is to compare what Kometa built against what a Rube
    * rule *would* build, and a Plex round-trip per collection would make that a
    * slow question to ask about a hundred rules. The mirror is refreshed by the
    * collections sync, so it is as current as the last sync — which is the same
@@ -518,7 +518,7 @@ export function createCollections(deps: CollectionsDeps) {
    *
    * The `User:<name>` label is what personalization uses to keep one person's
    * collections off everybody else's home screen, so it is also the honest
-   * answer to "what did Tinkerbell make for me" — the portal shows exactly the
+   * answer to "what did Rube make for me" — the portal shows exactly the
    * set the user can actually see.
    *
    * Matched on the JSON array with LIKE, the same shape `getBywCollectionsGroupedByUser`

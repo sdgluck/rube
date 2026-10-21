@@ -2,7 +2,7 @@
  * Settings → AI → Usage: what the configured provider has been asked to do,
  * and the monthly cap on it.
  *
- * Tokens, not money — see the header of `@tinkerbell/domain.ai-usage` for why
+ * Tokens, not money — see the header of `@rube/domain.ai-usage` for why
  * there is no cost estimate. The budget saves on its own button rather than
  * riding the provider form's: switching provider and capping spend are
  * unrelated edits, and one dirty flag over both would make "Save" ambiguous.

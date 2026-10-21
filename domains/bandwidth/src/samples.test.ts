@@ -9,10 +9,10 @@
 import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { bandwidthSamples } from "@tinkerbell/db";
-import { BandwidthToken } from "@tinkerbell/domain.bandwidth";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { bandwidthSamples } from "@rube/db";
+import { BandwidthToken } from "@rube/domain.bandwidth";
 
 const c = createTestContainer();
 after(() => c.dispose());

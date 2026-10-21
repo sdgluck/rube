@@ -34,7 +34,7 @@ let server: Server;
 let base: string;
 
 before(async () => {
-  dir = mkdtempSync(join(tmpdir(), "tinkerbell-preroll-"));
+  dir = mkdtempSync(join(tmpdir(), "rube-preroll-"));
   filePath = join(dir, "clip.mp4");
   writeFileSync(filePath, CONTENT);
 

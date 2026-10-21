@@ -35,13 +35,13 @@ test("each procedure gets a typed Swift endpoint, NoInput/NoOutput where it take
     swift,
     /public enum AdminAPI \{\n {4}public static let authServer = Endpoint<NoInput, Admin\.AuthServerOutput>/,
   );
-  // TinkerbellModels' Support.swift defines these; a second copy wouldn't compile.
+  // RubeModels' Support.swift defines these; a second copy wouldn't compile.
   assert.doesNotMatch(swift, /enum JSONValue/);
 });
 
 test("each procedure gets a Kotlin endpoint with its serializers", () => {
   const kotlin = emitKotlin(sources);
-  assert.match(kotlin, /^package dev\.tinkerbell\.model$/m);
+  assert.match(kotlin, /^package fyi\.rube\.model$/m);
   assert.match(
     kotlin,
     /val leavingSoon = Endpoint\("leavingSoon", Endpoint\.Kind\.QUERY, NoInput\.serializer\(\), ListSerializer\(Portal\.LeavingSoonItem\.serializer\(\)\)\)/,

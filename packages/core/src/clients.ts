@@ -11,21 +11,21 @@
  * cannot resolve at all.
  */
 
-import { token } from "@tinkerbell/container";
-import { createPlexClient } from "@tinkerbell/plex";
-import { createOmdbClient } from "@tinkerbell/omdb";
-import { createImdbClient } from "@tinkerbell/imdb";
-import { createMdblistClient } from "@tinkerbell/mdblist";
-import { createTraktClient } from "@tinkerbell/trakt";
-import type { HealthReporter } from "@tinkerbell/ports";
-import type { Db } from "@tinkerbell/db";
+import { token } from "@rube/container";
+import { createPlexClient } from "@rube/plex";
+import { createOmdbClient } from "@rube/omdb";
+import { createImdbClient } from "@rube/imdb";
+import { createMdblistClient } from "@rube/mdblist";
+import { createTraktClient } from "@rube/trakt";
+import type { HealthReporter } from "@rube/ports";
+import type { Db } from "@rube/db";
 import type { ConfigStore } from "./config.ts";
 
 /**
  * Thrown when a client is asked for before its credentials exist. This is a
  * state the user can resolve in Settings, not a fault, so callers that speak
  * HTTP map it to 412 rather than letting it fall through as a 500 — see
- * `mapNotConfiguredClient` in `@tinkerbell/trpc`'s `_base.ts`. Core stays free
+ * `mapNotConfiguredClient` in `@rube/trpc`'s `_base.ts`. Core stays free
  * of any dependency on the transport by naming the condition and no more.
  */
 export class NotConfiguredError extends Error {

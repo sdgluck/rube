@@ -15,7 +15,7 @@ interface ImportExistingModalProps {
  * Adopt videos that are already sitting in the prerolls folder.
  *
  * The folder is a bind mount the admin can write to directly, so it commonly
- * arrives with content Tinkerbell has never seen. This lists what's there and
+ * arrives with content Rube has never seen. This lists what's there and
  * hands the selection to the same processing pipeline an upload goes through.
  */
 export default function ImportExistingModal({ onClose, onImported }: ImportExistingModalProps) {

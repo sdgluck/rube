@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { formatBytes } from "@tinkerbell/contracts";
+import { formatBytes } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import PageShell, { StatusChip } from "#components/PageShell";
 import EmptyState from "#components/EmptyState";

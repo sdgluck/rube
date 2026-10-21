@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { isSeededRule } from "@tinkerbell/contracts";
+import { isSeededRule } from "@rube/contracts";
 import { trpc } from "#/trpc";
 import PackDetail from "#pages/Registry/PackDetail";
 import { REQUIREMENT_LABELS } from "#pages/Registry/labels";

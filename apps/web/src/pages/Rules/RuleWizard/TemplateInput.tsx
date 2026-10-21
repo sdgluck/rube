@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { METADATA_TOKENS } from "@tinkerbell/contracts";
+import { METADATA_TOKENS } from "@rube/contracts";
 import controls from "#/styles/controls.module.css";
 import shared from "#/styles/shared.module.css";
 import styles from "./RuleWizard.module.css";

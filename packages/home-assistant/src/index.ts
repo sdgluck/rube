@@ -1,5 +1,5 @@
 /**
- * Home Assistant over MQTT: publish Tinkerbell's state, with discovery.
+ * Home Assistant over MQTT: publish Rube's state, with discovery.
  *
  * **State only, by construction.** The client never subscribes, and the
  * snapshot is read through a caller carrying an `apiKey` identity, so
@@ -18,10 +18,10 @@
  * publishers would fight over the availability topic.
  */
 
-import type { Scope } from "@tinkerbell/container";
-import { createLogger, errorMessage } from "@tinkerbell/core";
-import { connectMqtt, type MqttConnection } from "@tinkerbell/mqtt";
-import type { AdminContext, createTrpc } from "@tinkerbell/trpc";
+import type { Scope } from "@rube/container";
+import { createLogger, errorMessage } from "@rube/core";
+import { connectMqtt, type MqttConnection } from "@rube/mqtt";
+import type { AdminContext, createTrpc } from "@rube/trpc";
 import { discoveryPayload, discoveryTopic, ENTITIES, topicsFor, type Topics } from "./entities.ts";
 import { takeSnapshot } from "./snapshot.ts";
 
@@ -129,7 +129,7 @@ export function createHomeAssistant(deps: HomeAssistantDeps) {
       const t = topicsFor(cfg);
       try {
         conn = await connect(cfg, {
-          clientId: `tinkerbell-${t.node}`,
+          clientId: `rube-${t.node}`,
           will: { topic: t.availability, payload: "offline" },
         });
       } catch (err) {

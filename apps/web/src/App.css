@@ -332,7 +332,7 @@
   --status-special-dot: #6e5cc4;
 
   /* ─── Responsive scale ──────────────────────────────────────────────
-   * Five steps, and stylelint (tinkerbell/breakpoint-scale) rejects a media
+   * Five steps, and stylelint (rube/breakpoint-scale) rejects a media
    * query at any other width. There used to be eleven — 480 through 1100,
    * each one the width at which one particular panel started to look
    * cramped — and the sum of eleven local answers is that nobody can say
@@ -1371,7 +1371,7 @@ input[type="checkbox"]:disabled {
      and leaves it zoomed. The interface-size setting can shrink rem, so the
      floor is in px. */
   :root {
-    /* stylelint-disable-next-line tinkerbell/no-px -- iOS's zoom-on-focus threshold is 16 CSS px exactly, whatever the root size */
+    /* stylelint-disable-next-line rube/no-px -- iOS's zoom-on-focus threshold is 16 CSS px exactly, whatever the root size */
     --input-font-size: max(1.6rem, 16px);
   }
 

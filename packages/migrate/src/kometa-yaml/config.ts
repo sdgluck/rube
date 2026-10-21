@@ -9,7 +9,7 @@ import type { PlanDiagnostic } from "../types.ts";
  * references hanging off each of them, and enough of `settings` to resolve a
  * `repo:` reference later. Everything else in a Kometa config is either
  * credentials (which we deliberately do not read past noting *that* an
- * integration was configured) or run-behaviour knobs with no Tinkerbell
+ * integration was configured) or run-behaviour knobs with no Rube
  * counterpart.
  */
 

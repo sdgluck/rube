@@ -1,14 +1,9 @@
-import { ServicesToken, type Services } from "@tinkerbell/composition";
-import { createPlexClient } from "@tinkerbell/plex";
-import { ruleConfigSchema } from "@tinkerbell/contracts";
-import {
-  badgeStyleSchema,
-  conditionalRuleSchema,
-  overlayPositionSchema,
-  overlayTypeSchema,
-} from "@tinkerbell/overlays";
+import { ServicesToken, type Services } from "@rube/composition";
+import { createPlexClient } from "@rube/plex";
+import { ruleConfigSchema } from "@rube/contracts";
+import { badgeStyleSchema, conditionalRuleSchema, overlayPositionSchema, overlayTypeSchema } from "@rube/overlays";
 
-import type { CommonJobConfig, JobContext } from "@tinkerbell/core";
+import type { CommonJobConfig, JobContext } from "@rube/core";
 
 function dedupeName(name: string, taken: Set<string>): string {
   if (!taken.has(name)) return name;
@@ -39,7 +34,7 @@ export function createMigrateCollectionsCommand(
   const { replaceOverlayConfigs } = overlaysDomain;
 
   async function run(ctx: JobContext, _config: CommonJobConfig): Promise<void> {
-    ctx.log("tinkerbell migrate-collections");
+    ctx.log("rube migrate-collections");
 
     const pending = getConfig("migration_pending_plan");
     if (!pending) {

@@ -3,7 +3,7 @@
  *
  * The helper this replaced (`setupTempDb`) had to mkdtemp a directory, point
  * `process.env.DATA_DIR` at it, and spawn `migrate.ts` as a **subprocess**, all
- * before anything that transitively imported `@tinkerbell/db` was allowed to
+ * before anything that transitively imported `@rube/db` was allowed to
  * load — which is why forty-odd test files imported their subject with a
  * dynamic `await import()` in a hand-maintained order. None of that was about
  * testing; it was working around a connection opened at import time.
@@ -25,7 +25,7 @@ import { join } from "node:path";
 import { createDb, closeDb, type Db } from "./index.ts";
 
 const MIGRATIONS_DIR = join(import.meta.dirname, "..", "drizzle");
-const DB_FILE = "tinkerbell.db";
+const DB_FILE = "rube.db";
 
 /**
  * Applying the 56 migrations costs ~65ms, and the suite asks for a database
@@ -45,7 +45,7 @@ function templatePath(): string {
     hash.update(f);
     hash.update(readFileSync(join(MIGRATIONS_DIR, f)));
   }
-  return join(tmpdir(), `tinkerbell-schema-${hash.digest("hex").slice(0, 16)}.db`);
+  return join(tmpdir(), `rube-schema-${hash.digest("hex").slice(0, 16)}.db`);
 }
 
 let template: string | undefined;
@@ -55,7 +55,7 @@ function ensureTemplate(): string {
 
   const target = templatePath();
   if (!existsSync(target)) {
-    const dir = mkdtempSync(join(tmpdir(), "tinkerbell-schema-build-"));
+    const dir = mkdtempSync(join(tmpdir(), "rube-schema-build-"));
     const db = createDb({ dataDir: dir });
     // A fresh file never needs `migrate.ts`'s legacy push-managed bootstrap —
     // that path exists for databases provisioned before `__drizzle_migrations`,
@@ -95,7 +95,7 @@ export interface TestDb {
  * different storage mode than production is worth less than the milliseconds
  * it saves.
  */
-export function createTestDb(prefix = "tinkerbell-test-"): TestDb {
+export function createTestDb(prefix = "rube-test-"): TestDb {
   const dataDir = mkdtempSync(join(tmpdir(), prefix));
   // Copy the migrated template instead of replaying the migrations. The result
   // is byte-identical to what `migrate` produced, `__drizzle_migrations` and

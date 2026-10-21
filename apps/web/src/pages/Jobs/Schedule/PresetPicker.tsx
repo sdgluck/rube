@@ -6,7 +6,7 @@ import {
   SCHEDULE_PRESETS,
   type ScheduleContext,
   type SchedulePlan,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import styles from "./Schedule.module.css";
 
 /**

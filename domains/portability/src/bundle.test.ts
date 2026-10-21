@@ -8,15 +8,15 @@
 import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer, type TestContainer } from "@tinkerbell/composition/test-support";
-import { ArrInstancesToken, ConfigStoreToken, REDACTED_SECRET } from "@tinkerbell/core";
-import { ArrSettingsToken } from "@tinkerbell/domain.arr-settings";
-import { ConfigHistoryToken } from "@tinkerbell/domain.config-history";
-import { OverlaysToken } from "@tinkerbell/domain.overlays";
-import { RulesToken } from "@tinkerbell/domain.rules";
-import { SectionsToken } from "@tinkerbell/domain.sections";
-import { arrManagedProfiles, jobs, plexSections, DbToken } from "@tinkerbell/db";
-import type { Bundle } from "@tinkerbell/contracts";
+import { createTestContainer, type TestContainer } from "@rube/composition/test-support";
+import { ArrInstancesToken, ConfigStoreToken, REDACTED_SECRET } from "@rube/core";
+import { ArrSettingsToken } from "@rube/domain.arr-settings";
+import { ConfigHistoryToken } from "@rube/domain.config-history";
+import { OverlaysToken } from "@rube/domain.overlays";
+import { RulesToken } from "@rube/domain.rules";
+import { SectionsToken } from "@rube/domain.sections";
+import { arrManagedProfiles, jobs, plexSections, DbToken } from "@rube/db";
+import type { Bundle } from "@rube/contracts";
 
 import { createPortability, PortabilityToken } from "./index.ts";
 
@@ -104,7 +104,7 @@ describe("export", () => {
 
   test("tag keys leave as display names, so the rule means the same thing elsewhere", async () => {
     source.resolve(RulesToken).createRule(HORROR_RULE);
-    const { bundle } = await exportBundle({ parts: ["rules"], tinkerbellVersion: "test" });
+    const { bundle } = await exportBundle({ parts: ["rules"], rubeVersion: "test" });
 
     const rule = bundle.rules!.find((r) => r.name === "Horror Gems")!;
     const leaf = (rule.config.smartFilter as { children: { value: string }[] }).children[0];
@@ -115,7 +115,7 @@ describe("export", () => {
     setConfig("global_radarr_api_key", "radarr-plaintext");
     setConfig("global_llm", { provider: "anthropic", model: "claude", apiKey: "nested-plaintext" } as never);
 
-    const { bundle } = await exportBundle({ parts: ["config"], tinkerbellVersion: "test" });
+    const { bundle } = await exportBundle({ parts: ["config"], rubeVersion: "test" });
     const serialised = JSON.stringify(bundle);
 
     assert.equal(bundle.containsSecrets, false);
@@ -128,14 +128,14 @@ describe("export", () => {
   });
 
   test("with the flag, they travel and the bundle is marked", async () => {
-    const { bundle } = await exportBundle({ parts: ["config"], includeSecrets: true, tinkerbellVersion: "test" });
+    const { bundle } = await exportBundle({ parts: ["config"], includeSecrets: true, rubeVersion: "test" });
     assert.equal(bundle.containsSecrets, true);
     assert.equal(bundle.config!.global_radarr_api_key, "radarr-plaintext");
   });
 
   test("auth state never travels, flag or not", async () => {
     setConfig("admin_allowed_user_ids", [12345]);
-    const { bundle } = await exportBundle({ parts: ["config"], includeSecrets: true, tinkerbellVersion: "test" });
+    const { bundle } = await exportBundle({ parts: ["config"], includeSecrets: true, rubeVersion: "test" });
     assert.equal(
       bundle.config!.admin_allowed_user_ids,
       undefined,
@@ -152,7 +152,7 @@ describe("the round trip", () => {
       source.resolve(RulesToken).createRule(HORROR_RULE);
       const { bundle } = await source.resolve(PortabilityToken).exportBundle({
         parts: ["rules"],
-        tinkerbellVersion: "test",
+        rubeVersion: "test",
       });
 
       const summary = await target.resolve(PortabilityToken).applyImport(bundle, {});
@@ -182,7 +182,7 @@ describe("the round trip", () => {
       const bundle = {
         formatVersion: 1,
         exportedAt: Date.now(),
-        tinkerbellVersion: "0.43.0",
+        rubeVersion: "0.43.0",
         containsSecrets: false,
         // `nav_bottom_tabs` went with the admin app's phone tab bar.
         config: { nav_bottom_tabs: ["/rules"], ui_theme: "dark" },
@@ -202,7 +202,7 @@ describe("the round trip", () => {
       const bundle = {
         formatVersion: 1,
         exportedAt: Date.now(),
-        tinkerbellVersion: "test",
+        rubeVersion: "test",
         containsSecrets: false,
         rules: [
           {
@@ -242,7 +242,7 @@ describe("conflicts", () => {
       createRule({ name: "Untouched", type: "smart_filter", config: { limit: 5 } });
       createRule({ name: "Edited", type: "smart_filter", config: { limit: 5 } });
 
-      const { bundle } = await portability.exportBundle({ parts: ["rules"], tinkerbellVersion: "test" });
+      const { bundle } = await portability.exportBundle({ parts: ["rules"], rubeVersion: "test" });
 
       // One rule moves on this server after the export was taken — the exact
       // situation the preview exists to make visible.
@@ -276,7 +276,7 @@ describe("conflicts", () => {
       const portability = c.resolve(PortabilityToken);
 
       const rule = createRule({ name: "Mine", type: "smart_filter", config: { limit: 5 } });
-      const { bundle } = await portability.exportBundle({ parts: ["rules"], tinkerbellVersion: "test" });
+      const { bundle } = await portability.exportBundle({ parts: ["rules"], rubeVersion: "test" });
       updateRule(rule.id, { config: { limit: 999 } });
 
       // No decisions passed at all.
@@ -294,7 +294,7 @@ describe("conflicts", () => {
       const { createRule, updateRule, getRules } = c.resolve(RulesToken);
       const portability = c.resolve(PortabilityToken);
       const rule = createRule({ name: "Mine", type: "smart_filter", config: { limit: 5 } });
-      const { bundle } = await portability.exportBundle({ parts: ["rules"], tinkerbellVersion: "test" });
+      const { bundle } = await portability.exportBundle({ parts: ["rules"], rubeVersion: "test" });
       updateRule(rule.id, { config: { limit: 999 } });
 
       const summary = await portability.applyImport(bundle, { "rule:Mine": "overwrite" });
@@ -315,7 +315,7 @@ describe("conflicts", () => {
       const { createRule, updateRule, getRules } = c.resolve(RulesToken);
       const portability = c.resolve(PortabilityToken);
       const rule = createRule({ name: "Mine", type: "smart_filter", config: { limit: 5 } });
-      const { bundle } = await portability.exportBundle({ parts: ["rules"], tinkerbellVersion: "test" });
+      const { bundle } = await portability.exportBundle({ parts: ["rules"], rubeVersion: "test" });
       updateRule(rule.id, { config: { limit: 999 } });
 
       await portability.applyImport(bundle, { "rule:Mine": "duplicate" });
@@ -359,7 +359,7 @@ describe("managed quality profiles", () => {
         .run();
       const { bundle } = await source.resolve(PortabilityToken).exportBundle({
         parts: ["arrQualityProfiles"],
-        tinkerbellVersion: "test",
+        rubeVersion: "test",
       });
       assert.deepEqual(bundle.arrQualityProfiles, [
         { instanceId: "radarr", profileName: "HD", presetId: "radarr-hd-bluray-web", limits: LIMIT },
@@ -383,7 +383,7 @@ describe("managed quality profiles", () => {
       const bundle = {
         formatVersion: 1,
         exportedAt: 0,
-        tinkerbellVersion: "test",
+        rubeVersion: "test",
         arrQualityProfiles: [
           { instanceId: "radarr-4k", profileName: "UHD", presetId: "radarr-uhd-bluray-web", limits: LIMIT },
         ],
@@ -407,23 +407,23 @@ describe("bundles this version can't read", () => {
         parseBundle({
           formatVersion: 99,
           exportedAt: 0,
-          tinkerbellVersion: "9.9.9",
+          rubeVersion: "9.9.9",
           containsSecrets: false,
         } satisfies Partial<Bundle>),
-      /format version 99.*update Tinkerbell/s,
+      /format version 99.*update Rube/s,
     );
   });
 
   test("a malformed bundle fails before anything is written", () => {
-    assert.throws(() => parseBundle({ rules: "not an array" }), /isn't a Tinkerbell bundle|damaged/);
-    assert.throws(() => parseBundle("just a string"), /isn't a Tinkerbell bundle|damaged/);
+    assert.throws(() => parseBundle({ rules: "not an array" }), /isn't a Rube bundle|damaged/);
+    assert.throws(() => parseBundle("just a string"), /isn't a Rube bundle|damaged/);
   });
 
   test("a rule config the engine can't parse is blocked in the preview, not stored", async () => {
     const bad = {
       formatVersion: 1,
       exportedAt: Date.now(),
-      tinkerbellVersion: "test",
+      rubeVersion: "test",
       containsSecrets: false,
       rules: [
         {
@@ -470,7 +470,7 @@ describe("importing jobs", () => {
       const bundle: Bundle = {
         formatVersion: 1,
         exportedAt: Date.now(),
-        tinkerbellVersion: "test",
+        rubeVersion: "test",
         containsSecrets: false,
         jobs: [
           { id: "generate", name: "Generate", command: "generate", schedule: "0 4 * * *", enabled: false, config: {} },

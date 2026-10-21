@@ -1,6 +1,6 @@
 import { initTRPC, TRPCError } from "@trpc/server";
-import type { Scope } from "@tinkerbell/container";
-import { NotConfiguredError, runAsActor, type Clients } from "@tinkerbell/core";
+import type { Scope } from "@rube/container";
+import { NotConfiguredError, runAsActor, type Clients } from "@rube/core";
 
 /**
  * What every admin procedure can see about its caller. Populated by

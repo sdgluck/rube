@@ -38,17 +38,17 @@ const BUCKET_LABEL: Record<BucketKind, string> = {
 
 /** Short note shown for buckets we recognize but don't have a rule type for yet. */
 const FUTURE_NOTES: Partial<Record<BucketKind, string>> = {
-  decade: "Decades rule type ships in a future Tinkerbell release.",
-  year: "Years rule type ships in a future Tinkerbell release.",
-  resolution: "Resolutions rule type ships in a future Tinkerbell release.",
-  audio_language: "Audio language rule type ships in a future Tinkerbell release.",
-  subtitle_language: "Subtitle language rule type ships in a future Tinkerbell release.",
-  video_format: "Video format rule type ships in a future Tinkerbell release.",
-  streaming: "Streaming rule type ships in a future Tinkerbell release.",
-  based_on: "Based-on rule type ships in a future Tinkerbell release.",
-  seasonal: "Seasonal rule type ships in a future Tinkerbell release.",
-  universe: "Universe rule type ships in a future Tinkerbell release.",
-  award: "Awards rule type ships in a future Tinkerbell release.",
+  decade: "Decades rule type ships in a future Rube release.",
+  year: "Years rule type ships in a future Rube release.",
+  resolution: "Resolutions rule type ships in a future Rube release.",
+  audio_language: "Audio language rule type ships in a future Rube release.",
+  subtitle_language: "Subtitle language rule type ships in a future Rube release.",
+  video_format: "Video format rule type ships in a future Rube release.",
+  streaming: "Streaming rule type ships in a future Rube release.",
+  based_on: "Based-on rule type ships in a future Rube release.",
+  seasonal: "Seasonal rule type ships in a future Rube release.",
+  universe: "Universe rule type ships in a future Rube release.",
+  award: "Awards rule type ships in a future Rube release.",
 };
 
 interface Group {
@@ -139,7 +139,7 @@ export function buildPlan(classified: ClassifiedCollection[], opts: PlanOptions)
         sectionTitle: group.sectionTitle,
         sampleNames,
         count: group.members.length,
-        note: FUTURE_NOTES[group.bucket] ?? "Not yet supported by Tinkerbell.",
+        note: FUTURE_NOTES[group.bucket] ?? "Not yet supported by Rube.",
       });
     }
   }

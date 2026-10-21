@@ -14,15 +14,15 @@
  */
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
-import type { JobContext } from "@tinkerbell/core";
+import type { JobContext } from "@rube/core";
 import type { MockPlex } from "../test-support/mock-plex-server.ts";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken } from "@tinkerbell/db";
-import { ConfigStoreToken, noopCheckpoint } from "@tinkerbell/core";
-import { stressTestRuns } from "@tinkerbell/db";
-import { createPlexClient } from "@tinkerbell/plex";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken } from "@rube/db";
+import { ConfigStoreToken, noopCheckpoint } from "@rube/core";
+import { stressTestRuns } from "@rube/db";
+import { createPlexClient } from "@rube/plex";
 import { eq } from "drizzle-orm";
 import { createStressTest } from "./index.ts";
 
@@ -449,7 +449,7 @@ describe("the telemetry series", () => {
 
     const withSessions = result.telemetry.find((s) => s.sessions.length > 0)!;
     assert.ok(
-      withSessions.sessions.every((r) => !r.id.startsWith("tinkerbell-stress-")),
+      withSessions.sessions.every((r) => !r.id.startsWith("rube-stress-")),
       "lane labels carry the client id without the prefix every one of them shares",
     );
   });

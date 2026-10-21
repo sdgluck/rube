@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { PROVIDERS, getProviderMeta, type LlmConfig, type LlmProvider } from "@tinkerbell/llm/meta";
+import { PROVIDERS, getProviderMeta, type LlmConfig, type LlmProvider } from "@rube/llm/meta";
 import { trpc } from "#/trpc";
 import { useToast } from "#components/Toast";
 import UnsavedBanner from "#components/UnsavedBanner";

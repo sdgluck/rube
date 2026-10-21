@@ -1,11 +1,11 @@
-import { collections, type Db } from "@tinkerbell/db";
+import { collections, type Db } from "@rube/db";
 import {
   isKometaClaimed,
   kometaProvider,
   type BucketKind,
   type CollectionInput,
   type MigrationPlan,
-} from "@tinkerbell/migrate";
+} from "@rube/migrate";
 import { summariseBySection, type ProviderRuntime, type ProviderScanResult } from "../runtime.ts";
 
 /**

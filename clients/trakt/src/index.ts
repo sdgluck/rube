@@ -24,7 +24,7 @@
  * reference parsing. One copy, here, so the two can't drift.
  */
 
-import { httpRequestJson, HttpError } from "@tinkerbell/http";
+import { httpRequestJson, HttpError } from "@rube/http";
 
 const TRAKT_TIMEOUT_MS = 20_000;
 const DEFAULT_BASE_URL = "https://api.trakt.tv";

@@ -9,10 +9,10 @@
 import { describe, it, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
 
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { DbToken } from "@tinkerbell/db";
-import { playbackSessions } from "@tinkerbell/db";
-import { StatsToken } from "@tinkerbell/domain.stats";
+import { createTestContainer } from "@rube/composition/test-support";
+import { DbToken } from "@rube/db";
+import { playbackSessions } from "@rube/db";
+import { StatsToken } from "@rube/domain.stats";
 
 const c = createTestContainer();
 after(() => c.dispose());

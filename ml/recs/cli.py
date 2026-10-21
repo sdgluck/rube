@@ -129,7 +129,7 @@ def _write_fixture(published: "export.Published", target: Path) -> None:
 
 # Release assets rather than the site: at ~25MB the file is too big to commit,
 # and a tag per model version keeps every published file reachable.
-RELEASE_URL = "https://github.com/sdgluck/tinkerbell/releases/download/recs-v{version}"
+RELEASE_URL = "https://github.com/sdgluck/rube/releases/download/recs-v{version}"
 
 
 def _build(ratings: pd.DataFrame, movies: pd.DataFrame, version: int) -> None:

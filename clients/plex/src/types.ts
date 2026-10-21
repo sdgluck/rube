@@ -164,7 +164,7 @@ export interface PlexShareSettings {
   allowCameraUpload?: boolean;
 }
 
-/** Raw plex.tv filter strings, e.g. `contentRating=PG-13|label=Tinkerbell`. */
+/** Raw plex.tv filter strings, e.g. `contentRating=PG-13|label=Rube`. */
 export interface PlexShareFilters {
   filterMovies?: string;
   filterTelevision?: string;

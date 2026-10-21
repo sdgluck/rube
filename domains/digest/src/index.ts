@@ -8,10 +8,10 @@
  * it send me last week" is answerable without having kept the message.
  * Rendering is pure and stays a module export.
  */
-import { token } from "@tinkerbell/container";
-import type { Db } from "@tinkerbell/db";
-import type { ConfigStore, Sharing } from "@tinkerbell/core";
-import type { Cleanup } from "@tinkerbell/domain.cleanup";
+import { token } from "@rube/container";
+import type { Db } from "@rube/db";
+import type { ConfigStore, Sharing } from "@rube/core";
+import type { Cleanup } from "@rube/domain.cleanup";
 import { createBuild } from "./build.ts";
 import { createDeliveries } from "./deliveries.ts";
 import { createPeriod } from "./period.ts";

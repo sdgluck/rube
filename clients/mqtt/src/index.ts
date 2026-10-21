@@ -1,7 +1,7 @@
 /**
- * The MQTT broker, as Tinkerbell uses it: connect, publish retained JSON, leave.
+ * The MQTT broker, as Rube uses it: connect, publish retained JSON, leave.
  *
- * Not an HTTP API, so `@tinkerbell/http` and the `fetch` deadline guard don't
+ * Not an HTTP API, so `@rube/http` and the `fetch` deadline guard don't
  * reach it — the deadlines live here instead. Every wait has one: a broker that
  * accepts the TCP connection and never sends CONNACK would otherwise hang the
  * Settings "Test" button and the health job, which runs every other check in
@@ -136,7 +136,7 @@ export async function connectMqtt(
 export async function testMqtt(settings: MqttSettings): Promise<string> {
   validateMqttUrl(settings.url);
   const client = await withTimeout(
-    mqtt.connectAsync(settings.url, optionsFor(settings, `tinkerbell-test-${Date.now()}`, { reconnectPeriod: 0 })),
+    mqtt.connectAsync(settings.url, optionsFor(settings, `rube-test-${Date.now()}`, { reconnectPeriod: 0 })),
     CONNECT_TIMEOUT_MS + 1_000,
     "Connecting to the broker",
   );

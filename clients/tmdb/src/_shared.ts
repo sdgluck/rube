@@ -9,7 +9,7 @@
 
 import PQueue from "p-queue";
 import type { z } from "zod";
-import { httpRequest, HttpError } from "@tinkerbell/http";
+import { httpRequest, HttpError } from "@rube/http";
 
 export const TMDB_BASE = "https://api.themoviedb.org/3";
 

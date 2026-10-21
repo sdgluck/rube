@@ -5,8 +5,8 @@
  * which part is "next", what to do about a gap — can be tested without Plex
  * or TMDb.
  */
-import { arrMovies, mediaItems, watchState, type Db } from "@tinkerbell/db";
-import type { TmdbCollectionPart } from "@tinkerbell/tmdb";
+import { arrMovies, mediaItems, watchState, type Db } from "@rube/db";
+import type { TmdbCollectionPart } from "@rube/tmdb";
 import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 /** Watched this far through counts as seen — the same line Pick It Back Up and We Think You'd Like draw. */

@@ -10,10 +10,10 @@
 import { describe, it, before, after, beforeEach } from "node:test";
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
-import { displayTitle, noopCheckpoint, personalRowTitle, ConfigStoreToken, type JobContext } from "@tinkerbell/core";
-import { createTestContainer } from "@tinkerbell/composition/test-support";
-import { ServicesToken } from "@tinkerbell/composition";
-import { DbToken, llmUsage, playbackSessions, plexUsers } from "@tinkerbell/db";
+import { displayTitle, noopCheckpoint, personalRowTitle, ConfigStoreToken, type JobContext } from "@rube/core";
+import { createTestContainer } from "@rube/composition/test-support";
+import { ServicesToken } from "@rube/composition";
+import { DbToken, llmUsage, playbackSessions, plexUsers } from "@rube/db";
 import { startMockPlex, type MockPlex } from "../../test-support/mock-plex-server.ts";
 import { createWeThinkYoudLikeCommand, WTYL_LABEL } from "./index.ts";
 import { createWtylRemoveCommand } from "../wtyl-remove.ts";
@@ -156,7 +156,7 @@ describe("we-think-youd-like", () => {
       personalRowTitle("We Think You'd Like", "alice"),
       "her own title, so her row's contents are hers",
     );
-    // No baseline label: restrictions are `label=Tinkerbell,User:<self>`, an OR, so
+    // No baseline label: restrictions are `label=Rube,User:<self>`, an OR, so
     // carrying it would show Alice's row to everyone.
     assert.deepEqual(row.labels, [WTYL_LABEL, "User:alice"]);
     assert.equal(row.summary, "Quiet dramas with a long fuse.");
@@ -265,7 +265,7 @@ describe("we-think-youd-like", () => {
       ratingKey: "9001",
       title: "We Think You'd Like",
       sectionId: "1",
-      labels: ["Tinkerbell", WTYL_LABEL, "User:bob"],
+      labels: ["Rube", WTYL_LABEL, "User:bob"],
       memberKeys: ["110"],
     });
     await run(testContext().ctx, CONFIG);
@@ -277,7 +277,7 @@ describe("we-think-youd-like", () => {
       ratingKey: "9000",
       title: "We Think You'd Like",
       sectionId: "1",
-      labels: ["Tinkerbell", WTYL_LABEL, "User:alice"],
+      labels: ["Rube", WTYL_LABEL, "User:alice"],
       memberKeys: ["110"],
     });
     llm.answer = "not json";
@@ -358,7 +358,7 @@ describe("we-think-youd-like", () => {
       ratingKey: "8000",
       title: "Because you watched Film 0",
       sectionId: "1",
-      labels: ["Tinkerbell", "BecauseYouWatched", "User:alice"],
+      labels: ["Rube", "BecauseYouWatched", "User:alice"],
       memberKeys: ["110"],
     });
 

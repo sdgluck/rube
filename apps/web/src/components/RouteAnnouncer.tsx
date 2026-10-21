@@ -63,7 +63,7 @@ export function RouteReady() {
   const { pathname } = useLocation();
 
   useEffect(() => {
-    announce(`${titleForPath(pathname) ?? "Tinkerbell"} — loaded`);
+    announce(`${titleForPath(pathname) ?? "Rube"} — loaded`);
   }, [pathname]);
 
   return null;

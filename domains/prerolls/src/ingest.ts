@@ -7,7 +7,7 @@ import { createWriteStream } from "node:fs";
 import { rm } from "node:fs/promises";
 import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
-import { assertSafeOutboundUrl, httpRequest } from "@tinkerbell/http";
+import { assertSafeOutboundUrl, httpRequest } from "@rube/http";
 import { extensionOf, incomingPath } from "./index.ts";
 
 /**

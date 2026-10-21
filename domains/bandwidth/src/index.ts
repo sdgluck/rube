@@ -3,7 +3,7 @@
  *
  * Measured against Cloudflare's public speed endpoints — no key, no account,
  * and an anycast edge that is close to almost everyone. What this measures is
- * the *Tinkerbell host's* internet connection, not the browser's and not the
+ * the *Rube host's* internet connection, not the browser's and not the
  * LAN path to Plex. That is the deliberate choice: serving a remote stream is
  * this host uploading, so its upload figure is the capacity the Stats tile
  * divides live session bandwidth by.
@@ -14,8 +14,8 @@
  */
 import { randomFillSync, randomUUID } from "node:crypto";
 import { createStore } from "./store.ts";
-import { errorMessage, type JobContext, type Clients } from "@tinkerbell/core";
-import type { Db } from "@tinkerbell/db";
+import { errorMessage, type JobContext, type Clients } from "@rube/core";
+import type { Db } from "@rube/db";
 
 import {
   isSlowerThanUsual,
@@ -26,9 +26,9 @@ import {
   throughputMbps,
 } from "./math.ts";
 import { download, ENDPOINT, LATENCY_PROBES, runPhase, STREAMS, upload } from "./transfer.ts";
-import { type EventBus } from "@tinkerbell/ports";
-import { token } from "@tinkerbell/container";
-import { realSessions } from "@tinkerbell/plex";
+import { type EventBus } from "@rube/ports";
+import { token } from "@rube/container";
+import { realSessions } from "@rube/plex";
 
 export type { BandwidthTest } from "./store.ts";
 export { isSlowerThanUsual, summarise, throughputMbps } from "./math.ts";
@@ -90,7 +90,7 @@ export function createBandwidth(deps: BandwidthDeps) {
   /**
    * Live session bandwidth in kbps, or 0 if Plex isn't reachable/configured.
    *
-   * Tinkerbell's own simulated playback is excluded. This figure exists to
+   * Rube's own simulated playback is excluded. This figure exists to
    * explain a slow reading — "the link was already carrying 60 Mbps" — and a
    * stress run's load is not something the bandwidth test was contending with
    * on the *internet* link at all; it is LAN traffic the harness is generating.

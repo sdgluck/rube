@@ -6,9 +6,9 @@
  * nothing to inject. The two halves that read and write the database are
  * factories, composed here into the domain the container registers.
  */
-import { token } from "@tinkerbell/container";
-import type { Scope } from "@tinkerbell/container";
-import type { Db } from "@tinkerbell/db";
+import { token } from "@rube/container";
+import type { Scope } from "@rube/container";
+import type { Db } from "@rube/db";
 import { createRuns } from "./runs.ts";
 import { createChanges } from "./changes.ts";
 import { createRuleRunQueue } from "./queue.ts";

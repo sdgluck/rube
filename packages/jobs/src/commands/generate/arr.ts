@@ -1,11 +1,11 @@
-import { type Services } from "@tinkerbell/composition";
+import { type Services } from "@rube/composition";
 import { createImdbCommand } from "./sources/imdb.ts";
-import type { PlexClient, PlexSection } from "@tinkerbell/plex";
+import type { PlexClient, PlexSection } from "@rube/plex";
 
-import { arrTargetFor, type ArrService, type ArrTarget } from "@tinkerbell/contracts";
-import { errorMessage, imdbId, tmdbId } from "@tinkerbell/core";
-import type { JobContext } from "@tinkerbell/core";
-import type { Rule } from "@tinkerbell/domain.rules";
+import { arrTargetFor, type ArrService, type ArrTarget } from "@rube/contracts";
+import { errorMessage, imdbId, tmdbId } from "@rube/core";
+import type { JobContext } from "@rube/core";
+import type { Rule } from "@rube/domain.rules";
 import type { RuleConfig } from "./config.ts";
 
 import { lookupBelongsToCollection } from "./sources/tmdb.ts";
@@ -173,7 +173,7 @@ export function createArrCommand(deps: Services) {
     // an empty `presentTv` would otherwise read as "every show is missing".
     const sectionMediaTypes = new Set(sections.map((s) => (s.type === "show" ? "tv" : "movie")));
 
-    const { iterSeerrRequests } = await import("@tinkerbell/seerr");
+    const { iterSeerrRequests } = await import("@rube/seerr");
     const out: Unmatched[] = [];
     for await (const req of iterSeerrRequests({ url: seerrUrl, apiKey: seerrApiKey, filter })) {
       const mt = req.media.mediaType;
@@ -200,7 +200,7 @@ export function createArrCommand(deps: Services) {
     const apiKey = getConfig("global_tmdb_api_key");
     if (!apiKey) return null;
 
-    const { fetchPopularPeople, fetchPersonCredits } = await import("@tinkerbell/tmdb");
+    const { fetchPopularPeople, fetchPersonCredits } = await import("@rube/tmdb");
     const peopleLimit = Math.min(ruleConfig.limit ?? 10, 50);
     const department = rule.type === "tmdb_popular_actors" ? "Acting" : "Directing";
     const role: "cast" | "crew" = rule.type === "tmdb_popular_actors" ? "cast" : "crew";
@@ -259,7 +259,7 @@ export function createArrCommand(deps: Services) {
     const apiKey = getConfig("global_tmdb_api_key");
     if (!apiKey) return null;
 
-    const { fetchCollection } = await import("@tinkerbell/tmdb");
+    const { fetchCollection } = await import("@rube/tmdb");
     const groupLimit = Math.min(ruleConfig.limit ?? 25, 100);
 
     const out: Unmatched[] = [];
@@ -332,7 +332,7 @@ export function createArrCommand(deps: Services) {
     arrCfg: NonNullable<RuleConfig["arr"]>,
     legacyService: ArrService | null,
   ): Promise<ArrResolution> {
-    const { lookupByExternalId, addItem } = await import("@tinkerbell/arr");
+    const { lookupByExternalId, addItem } = await import("@rube/arr");
 
     // Resolved once per service, not per item: a missing target or instance is
     // one log line, not one per title.

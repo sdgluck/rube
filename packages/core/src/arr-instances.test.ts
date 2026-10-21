@@ -7,12 +7,12 @@
  */
 import { describe, test, beforeEach, after } from "node:test";
 import assert from "node:assert/strict";
-import { config } from "@tinkerbell/db";
-import { createTestDb } from "@tinkerbell/db/test-db";
+import { config } from "@rube/db";
+import { createTestDb } from "@rube/db/test-db";
 import { createConfigStore } from "./config.ts";
 import { createArrInstances, DEFAULT_ARR_IDS } from "./arr-instances.ts";
 
-const testDb = createTestDb("tinkerbell-arr-instances-test-");
+const testDb = createTestDb("rube-arr-instances-test-");
 after(testDb.dispose);
 
 const db = testDb.db;

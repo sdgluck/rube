@@ -7,7 +7,7 @@
  * Plex being down must not stop HA hearing that Plex is down.
  */
 
-import type { createTrpc } from "@tinkerbell/trpc";
+import type { createTrpc } from "@rube/trpc";
 import type { Snapshot } from "./entities.ts";
 
 type Caller = ReturnType<ReturnType<typeof createTrpc>["createCaller"]>;

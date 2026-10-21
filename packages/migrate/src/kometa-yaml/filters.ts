@@ -1,13 +1,13 @@
-import type { SmartFilterGroup, SmartFilterNode } from "@tinkerbell/plex-smart-filter";
+import type { SmartFilterGroup, SmartFilterNode } from "@rube/plex-smart-filter";
 import { asStringList } from "./parse.ts";
 import type { PlanWarning } from "../types.ts";
 
 /**
- * Kometa `filters:` / `plex_search:` → a Tinkerbell smart-filter tree.
+ * Kometa `filters:` / `plex_search:` → a Rube smart-filter tree.
  *
  * Kometa's filter vocabulary is much wider than Plex's query language: it
  * happily filters on `tmdb_vote_count` or `has_dolby_vision` by fetching the
- * data itself and discarding items in Python. Tinkerbell's smart filter is a
+ * data itself and discarding items in Python. Rube's smart filter is a
  * Plex query, so anything Plex can't express has to be dropped.
  *
  * The important design decision is that a dropped filter is *loud*. Silently
@@ -121,7 +121,7 @@ export function mapFilters(filters: Record<string, unknown>): FilterResult {
     if (NON_PLEX_FIELDS.has(field)) {
       warnings.push({
         code: "filter-not-in-plex",
-        message: `Filter \`${rawKey}\` was dropped — it reads data Plex doesn't store, so Tinkerbell can't apply it in a Plex query. This collection will hold more items than Kometa's did.`,
+        message: `Filter \`${rawKey}\` was dropped — it reads data Plex doesn't store, so Rube can't apply it in a Plex query. This collection will hold more items than Kometa's did.`,
       });
       continue;
     }
@@ -138,7 +138,7 @@ export function mapFilters(filters: Record<string, unknown>): FilterResult {
     if (!plexField) {
       warnings.push({
         code: "filter-unknown-field",
-        message: `Filter \`${rawKey}\` was dropped — Tinkerbell has no equivalent field.`,
+        message: `Filter \`${rawKey}\` was dropped — Rube has no equivalent field.`,
       });
       continue;
     }
@@ -188,7 +188,7 @@ export function mapPlexSearch(search: Record<string, unknown>): FilterResult & {
     if (key === "sort_by") {
       warnings.push({
         code: "sort-by-dropped",
-        message: `\`sort_by: ${String(value)}\` was dropped — Tinkerbell orders collections through the rule's presentation settings rather than the search.`,
+        message: `\`sort_by: ${String(value)}\` was dropped — Rube orders collections through the rule's presentation settings rather than the search.`,
       });
       continue;
     }

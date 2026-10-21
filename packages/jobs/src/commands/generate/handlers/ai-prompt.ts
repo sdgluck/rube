@@ -1,8 +1,8 @@
-import { type Services } from "@tinkerbell/composition";
-import { describeSkip } from "@tinkerbell/domain.recommendations";
+import { type Services } from "@rube/composition";
+import { describeSkip } from "@rube/domain.recommendations";
 import { createLlmCommand } from "../ai/llm.ts";
-import { errorMessage } from "@tinkerbell/core";
-import type { HistoricalCollection } from "@tinkerbell/domain.rule-history";
+import { errorMessage } from "@rube/core";
+import type { HistoricalCollection } from "@rube/domain.rule-history";
 import {
   buildNamingPrompt,
   namingList,

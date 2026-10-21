@@ -7,8 +7,8 @@ import type { TrpcDeps } from "./deps.ts";
  */
 import { initTRPC, TRPCError } from "@trpc/server";
 import { z } from "zod";
-import { displayTitle, parseBearerToken, userPreferencesSchema } from "@tinkerbell/core";
-import { TASTES_PREFERENCE_KEYS, type PortalComponentId } from "@tinkerbell/contracts";
+import { displayTitle, parseBearerToken, userPreferencesSchema } from "@rube/core";
+import { TASTES_PREFERENCE_KEYS, type PortalComponentId } from "@rube/contracts";
 // From _base, not core, so an unconfigured Plex answers 412 here too.
 import { mapNotConfiguredClient } from "./_base.ts";
 import {
@@ -27,8 +27,8 @@ import { createHandshakes } from "./handshake.ts";
 import { createPortalComponents } from "./portal-components.ts";
 import { createPortalMatchRouter } from "./portal-match.router.ts";
 import { serverInfo } from "./server-info.ts";
-import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@tinkerbell/plex";
-import { NativePortal } from "@tinkerbell/contracts/native-api";
+import { createPlexPin, buildPlexAuthUrl, checkPlexPin, getPlexAccount } from "@rube/plex";
+import { NativePortal } from "@rube/contracts/native-api";
 
 export interface PortalContext {
   session?: { userId: number; username: string };
@@ -216,8 +216,8 @@ export function createPortalRouter(deps: TrpcDeps) {
         return { ok: true };
       }),
 
-      /** "Is this a Tinkerbell portal, and which release?" — see `server-info.ts`. */
-      server: publicProcedure.output(NativePortal.AuthServerOutput).query(() => serverInfo("tinkerbell-portal")),
+      /** "Is this a Rube portal, and which release?" — see `server-info.ts`. */
+      server: publicProcedure.output(NativePortal.AuthServerOutput).query(() => serverInfo("rube-portal")),
     }),
 
     me: userProcedure.output(NativePortal.MeOutput).query(({ ctx }) => {
@@ -284,7 +284,7 @@ export function createPortalRouter(deps: TrpcDeps) {
     }),
 
     /**
-     * The collections Tinkerbell has built *for this user*, with a few titles
+     * The collections Rube has built *for this user*, with a few titles
      * from each.
      *
      * The portal was a form and nothing else: you rated fourteen genres, pressed

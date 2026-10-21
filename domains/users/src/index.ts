@@ -9,10 +9,10 @@
  * personal collections and said so in the UI. It is now the injected
  * `CollectionsReader` port: unprovided means unresolvable, not silently empty.
  */
-import { token } from "@tinkerbell/container";
-import type { Db } from "@tinkerbell/db";
-import type { ConfigStore } from "@tinkerbell/core";
-import type { CollectionsReader } from "@tinkerbell/ports";
+import { token } from "@rube/container";
+import type { Db } from "@rube/db";
+import type { ConfigStore } from "@rube/core";
+import type { CollectionsReader } from "@rube/ports";
 import { createSync } from "./sync.ts";
 import { createQuery } from "./query.ts";
 import { createDetail } from "./detail.ts";

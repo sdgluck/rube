@@ -2,7 +2,7 @@
 
 Offline training for the item vectors that Because You Watched and We Think
 You'd Like rank a library with. Nothing here runs in the app or ships in the
-image. Tinkerbell downloads the published vectors and personalises them
+image. Rube downloads the published vectors and personalises them
 locally from each person's plays, so no viewing data ever leaves a server.
 
 Why train it centrally: a Plex server has a handful of viewers, which is too
@@ -24,7 +24,7 @@ uv run recs eval     # downloads MovieLens 32M (~240MB) on first run
 of training entirely. It then folds those users in from their history, weighted
 like `titleWeight` in the app, and scores what they went on to like against a
 sampled 3,000-title library. A model is only worth publishing if it beats
-`genre (fitLibrary)`, which is the ranking Tinkerbell already has without one.
+`genre (fitLibrary)`, which is the ranking Rube already has without one.
 `evaluate.py`'s header explains each choice.
 
 ## Content features

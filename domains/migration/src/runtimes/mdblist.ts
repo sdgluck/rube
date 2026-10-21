@@ -1,8 +1,8 @@
 import { z } from "zod";
 
-import type { MigrationPlan, PlanItem } from "@tinkerbell/migrate";
+import type { MigrationPlan, PlanItem } from "@rube/migrate";
 import type { ProviderRuntime, ProviderScanResult } from "../runtime.ts";
-import { type ConfigStore } from "@tinkerbell/core";
+import { type ConfigStore } from "@rube/core";
 
 const mdbListUserListSchema = z.object({
   id: z.number(),

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { Check, EyeOff, ExternalLink, RefreshCw, RotateCcw, Wrench } from "lucide-react";
-import { isProblemKind, PROBLEM_META, type ProblemKind as Kind } from "@tinkerbell/contracts";
+import { isProblemKind, PROBLEM_META, type ProblemKind as Kind } from "@rube/contracts";
 import PageShell, { StatusChip } from "#components/PageShell";
 import BulkBar, { type BulkAction } from "#components/BulkBar";
 import EmptyState from "#components/EmptyState";

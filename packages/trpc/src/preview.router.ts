@@ -1,9 +1,9 @@
-import { perDeps } from "@tinkerbell/container";
+import { perDeps } from "@rube/container";
 import type { TrpcDeps } from "./deps.ts";
 import { z } from "zod";
 
-import { getPreviewForUser, type PreviewResult } from "@tinkerbell/domain.preview";
-import { shuffleSectionHubs } from "@tinkerbell/domain.shuffle-hubs";
+import { getPreviewForUser, type PreviewResult } from "@rube/domain.preview";
+import { shuffleSectionHubs } from "@rube/domain.shuffle-hubs";
 import { t, procedure, mapNotConfiguredClient } from "./_base.ts";
 
 // Process-local TTL cache for preview results. The underlying Plex calls
@@ -105,7 +105,7 @@ export function createPreviewRouter(deps: TrpcDeps) {
 
     shuffleSection: procedure.input(z.object({ sectionKey: z.string() })).mutation(async ({ input }) => {
       const section = (await shuffleSections()).find((s) => s.key === input.sectionKey);
-      if (!section) throw new Error(`Library ${input.sectionKey} is not one Tinkerbell manages`);
+      if (!section) throw new Error(`Library ${input.sectionKey} is not one Rube manages`);
       const result = await shuffleSectionHubs(getPlexClient(), section);
       previewCache.clear();
       return result;

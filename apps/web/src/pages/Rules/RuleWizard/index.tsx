@@ -18,7 +18,7 @@ import {
   volumeLevel,
   type ArrService,
   type RuleSchedule,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
 import ColorField from "#components/ColorField";
 import CronPreview from "#components/CronPreview";
@@ -248,7 +248,7 @@ function RotationHint({ count, whenOff }: { count: number; whenOff: string }) {
 /** One line per mode, saying what it actually does rather than restating it. */
 const CLEANUP_MODE_HINTS: Record<CleanupMode, string> = {
   collection_only: "Matches gather on the Cleanup queue; nothing changes.",
-  label: "Adds a Tinkerbell:Cleanup label in Plex; nothing is removed.",
+  label: "Adds a Rube:Cleanup label in Plex; nothing is removed.",
   unmonitor: "Keeps the files; stops Radarr/Sonarr re-grabbing them.",
   delete: "Removes the files from disk. There is no undo.",
 };

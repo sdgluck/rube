@@ -14,7 +14,7 @@ import {
   type ResolvedSeason,
   type SeasonOverride,
   type SeasonsConfig,
-} from "@tinkerbell/contracts";
+} from "@rube/contracts";
 
 export type SeasonDraft = ResolvedSeason[];
 

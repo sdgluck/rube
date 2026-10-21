@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { isLocalField, LOCAL_FIELD_PREFIX } from "@tinkerbell/plex-smart-filter";
+import { isLocalField, LOCAL_FIELD_PREFIX } from "@rube/plex-smart-filter";
 import { isNonPortableField, isTagField, ruleConfigSchema, TAG_FIELDS } from "./rule-config.ts";
 import { fieldDef, fieldLabel, LOCAL_FIELD_DEFS, SMART_FILTER_FIELD_DEFS } from "./smart-filter-fields.ts";
 

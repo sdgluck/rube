@@ -41,10 +41,10 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.100.11(react@19.2.6)
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/trpc':
+      '@rube/trpc':
         specifier: workspace:*
         version: link:../../packages/trpc
       '@trpc/client':
@@ -87,55 +87,55 @@ importers:
 
   apps/server:
     dependencies:
-      '@tinkerbell/agent-api':
+      '@rube/agent-api':
         specifier: workspace:*
         version: link:../../packages/agent-api
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.backups':
+      '@rube/domain.backups':
         specifier: workspace:*
         version: link:../../domains/backups
-      '@tinkerbell/domain.collections':
+      '@rube/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections
-      '@tinkerbell/domain.events':
+      '@rube/domain.events':
         specifier: workspace:*
         version: link:../../domains/events
-      '@tinkerbell/domain.health':
+      '@rube/domain.health':
         specifier: workspace:*
         version: link:../../domains/health
-      '@tinkerbell/domain.migration':
+      '@rube/domain.migration':
         specifier: workspace:*
         version: link:../../domains/migration
-      '@tinkerbell/domain.overlays':
+      '@rube/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
-      '@tinkerbell/domain.prerolls':
+      '@rube/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls
-      '@tinkerbell/home-assistant':
+      '@rube/home-assistant':
         specifier: workspace:*
         version: link:../../packages/home-assistant
-      '@tinkerbell/jobs':
+      '@rube/jobs':
         specifier: workspace:*
         version: link:../../packages/jobs
-      '@tinkerbell/posters':
+      '@rube/posters':
         specifier: workspace:*
         version: link:../../packages/posters
-      '@tinkerbell/trpc':
+      '@rube/trpc':
         specifier: workspace:*
         version: link:../../packages/trpc
       '@trpc/server':
@@ -149,12 +149,12 @@ importers:
         specifier: ^7.0.2
         version: 7.0.2
 
-  apps/tinkerbell.dev:
+  apps/rube.fyi:
     dependencies:
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/plex-smart-filter':
+      '@rube/plex-smart-filter':
         specifier: workspace:*
         version: link:../../packages/plex-smart-filter
       react:
@@ -167,13 +167,13 @@ importers:
         specifier: ^7.1.0
         version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
     devDependencies:
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -206,16 +206,16 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.90.21
         version: 5.100.11(react@19.2.6)
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/llm':
+      '@rube/llm':
         specifier: workspace:*
         version: link:../../packages/llm
-      '@tinkerbell/plex-smart-filter':
+      '@rube/plex-smart-filter':
         specifier: workspace:*
         version: link:../../packages/plex-smart-filter
-      '@tinkerbell/trpc':
+      '@rube/trpc':
         specifier: workspace:*
         version: link:../../packages/trpc
       '@trpc/client':
@@ -276,11 +276,11 @@ importers:
 
   clients/arr:
     dependencies:
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
     devDependencies:
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -292,14 +292,14 @@ importers:
 
   clients/download-clients:
     dependencies:
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
     devDependencies:
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -311,7 +311,7 @@ importers:
 
   clients/imdb:
     dependencies:
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
       zod:
@@ -327,11 +327,11 @@ importers:
 
   clients/mdblist:
     dependencies:
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
     devDependencies:
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -356,17 +356,17 @@ importers:
 
   clients/omdb:
     dependencies:
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -378,7 +378,7 @@ importers:
 
   clients/plex:
     dependencies:
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
       fast-xml-parser:
@@ -400,7 +400,7 @@ importers:
 
   clients/radarr:
     dependencies:
-      '@tinkerbell/servarr-http':
+      '@rube/servarr-http':
         specifier: workspace:*
         version: link:../servarr-http
     devDependencies:
@@ -413,7 +413,7 @@ importers:
 
   clients/seerr:
     dependencies:
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
     devDependencies:
@@ -426,7 +426,7 @@ importers:
 
   clients/servarr-http:
     dependencies:
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
     devDependencies:
@@ -439,7 +439,7 @@ importers:
 
   clients/sonarr:
     dependencies:
-      '@tinkerbell/servarr-http':
+      '@rube/servarr-http':
         specifier: workspace:*
         version: link:../servarr-http
     devDependencies:
@@ -452,7 +452,7 @@ importers:
 
   clients/tmdb:
     dependencies:
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
       p-queue:
@@ -471,11 +471,11 @@ importers:
 
   clients/trakt:
     dependencies:
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
     devDependencies:
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -487,26 +487,26 @@ importers:
 
   domains/ai-usage:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/llm':
+      '@rube/llm':
         specifier: workspace:*
         version: link:../../packages/llm
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -518,20 +518,20 @@ importers:
 
   domains/api-keys:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -543,32 +543,32 @@ importers:
 
   domains/arr-activity:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
-      '@tinkerbell/radarr':
+      '@rube/radarr':
         specifier: workspace:*
         version: link:../../clients/radarr
-      '@tinkerbell/sonarr':
+      '@rube/sonarr':
         specifier: workspace:*
         version: link:../../clients/sonarr
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -580,32 +580,32 @@ importers:
 
   domains/arr-library:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
-      '@tinkerbell/radarr':
+      '@rube/radarr':
         specifier: workspace:*
         version: link:../../clients/radarr
-      '@tinkerbell/sonarr':
+      '@rube/sonarr':
         specifier: workspace:*
         version: link:../../clients/sonarr
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -617,41 +617,41 @@ importers:
 
   domains/arr-settings:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.config-history':
+      '@rube/domain.config-history':
         specifier: workspace:*
         version: link:../config-history
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
-      '@tinkerbell/radarr':
+      '@rube/radarr':
         specifier: workspace:*
         version: link:../../clients/radarr
-      '@tinkerbell/sonarr':
+      '@rube/sonarr':
         specifier: workspace:*
         version: link:../../clients/sonarr
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
-      '@tinkerbell/domain.arr-library':
+      '@rube/domain.arr-library':
         specifier: workspace:*
         version: link:../arr-library
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -663,23 +663,23 @@ importers:
 
   domains/backups:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/better-sqlite3':
@@ -697,29 +697,29 @@ importers:
 
   domains/bandwidth:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.events':
+      '@rube/domain.events':
         specifier: workspace:*
         version: link:../events
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -731,20 +731,20 @@ importers:
 
   domains/changes:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -756,20 +756,20 @@ importers:
 
   domains/cleanup:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -781,26 +781,26 @@ importers:
 
   domains/collections:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -812,32 +812,32 @@ importers:
 
   domains/config-history:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
-      '@tinkerbell/domain.overlays':
+      '@rube/domain.overlays':
         specifier: workspace:*
         version: link:../overlays
-      '@tinkerbell/domain.rules':
+      '@rube/domain.rules':
         specifier: workspace:*
         version: link:../rules
       '@types/node':
@@ -849,26 +849,26 @@ importers:
 
   domains/digest:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.cleanup':
+      '@rube/domain.cleanup':
         specifier: workspace:*
         version: link:../cleanup
-      '@tinkerbell/domain.notifications':
+      '@rube/domain.notifications':
         specifier: workspace:*
         version: link:../notifications
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -880,23 +880,23 @@ importers:
 
   domains/download-clients:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/download-clients':
+      '@rube/download-clients':
         specifier: workspace:*
         version: link:../../clients/download-clients
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -908,19 +908,19 @@ importers:
 
   domains/events:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.notifications':
+      '@rube/domain.notifications':
         specifier: workspace:*
         version: link:../notifications
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
@@ -936,46 +936,46 @@ importers:
 
   domains/health:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.ai-usage':
+      '@rube/domain.ai-usage':
         specifier: workspace:*
         version: link:../ai-usage
-      '@tinkerbell/domain.download-clients':
+      '@rube/domain.download-clients':
         specifier: workspace:*
         version: link:../download-clients
-      '@tinkerbell/domain.events':
+      '@rube/domain.events':
         specifier: workspace:*
         version: link:../events
-      '@tinkerbell/domain.prerolls':
+      '@rube/domain.prerolls':
         specifier: workspace:*
         version: link:../prerolls
-      '@tinkerbell/download-clients':
+      '@rube/download-clients':
         specifier: workspace:*
         version: link:../../clients/download-clients
-      '@tinkerbell/llm':
+      '@rube/llm':
         specifier: workspace:*
         version: link:../../packages/llm
-      '@tinkerbell/mqtt':
+      '@rube/mqtt':
         specifier: workspace:*
         version: link:../../clients/mqtt
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
-      '@tinkerbell/seerr':
+      '@rube/seerr':
         specifier: workspace:*
         version: link:../../clients/seerr
-      '@tinkerbell/tmdb':
+      '@rube/tmdb':
         specifier: workspace:*
         version: link:../../clients/tmdb
       drizzle-orm:
@@ -985,7 +985,7 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -997,26 +997,26 @@ importers:
 
   domains/match:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1028,29 +1028,29 @@ importers:
 
   domains/media:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.events':
+      '@rube/domain.events':
         specifier: workspace:*
         version: link:../events
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1062,20 +1062,20 @@ importers:
 
   domains/metadata:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1087,10 +1087,10 @@ importers:
 
   domains/metadata-overrides:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
@@ -1106,19 +1106,19 @@ importers:
 
   domains/migration:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/migrate':
+      '@rube/migrate':
         specifier: workspace:*
         version: link:../../packages/migrate
       drizzle-orm:
@@ -1137,26 +1137,26 @@ importers:
 
   domains/notifications:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       nodemailer:
         specifier: ^7.0.9
         version: 7.0.13
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       '@types/node':
@@ -1171,29 +1171,29 @@ importers:
 
   domains/onboarding:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/domain.health':
+      '@rube/domain.health':
         specifier: workspace:*
         version: link:../health
-      '@tinkerbell/domain.migration':
+      '@rube/domain.migration':
         specifier: workspace:*
         version: link:../migration
-      '@tinkerbell/domain.rules':
+      '@rube/domain.rules':
         specifier: workspace:*
         version: link:../rules
       zod:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1205,16 +1205,16 @@ importers:
 
   domains/overlays:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/overlays':
+      '@rube/overlays':
         specifier: workspace:*
         version: link:../../packages/overlays
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
@@ -1224,7 +1224,7 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1236,22 +1236,22 @@ importers:
 
   domains/playback:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.bandwidth':
+      '@rube/domain.bandwidth':
         specifier: workspace:*
         version: link:../bandwidth
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/plex-smart-filter':
+      '@rube/plex-smart-filter':
         specifier: workspace:*
         version: link:../../packages/plex-smart-filter
       drizzle-orm:
@@ -1261,10 +1261,10 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -1276,17 +1276,17 @@ importers:
 
   domains/playlists:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1298,28 +1298,28 @@ importers:
 
   domains/portability:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.overlays':
+      '@rube/domain.overlays':
         specifier: workspace:*
         version: link:../overlays
-      '@tinkerbell/domain.rules':
+      '@rube/domain.rules':
         specifier: workspace:*
         version: link:../rules
-      '@tinkerbell/domain.sections':
+      '@rube/domain.sections':
         specifier: workspace:*
         version: link:../sections
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
@@ -1329,13 +1329,13 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
-      '@tinkerbell/domain.arr-settings':
+      '@rube/domain.arr-settings':
         specifier: workspace:*
         version: link:../arr-settings
-      '@tinkerbell/domain.config-history':
+      '@rube/domain.config-history':
         specifier: workspace:*
         version: link:../config-history
       '@types/node':
@@ -1347,28 +1347,28 @@ importers:
 
   domains/prerolls:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
-      '@tinkerbell/overlays':
+      '@rube/overlays':
         specifier: workspace:*
         version: link:../../packages/overlays
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
-      '@tinkerbell/video':
+      '@rube/video':
         specifier: workspace:*
         version: link:../../packages/video
       drizzle-orm:
@@ -1390,11 +1390,11 @@ importers:
 
   domains/preview:
     dependencies:
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1406,44 +1406,44 @@ importers:
 
   domains/problems:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.arr-library':
+      '@rube/domain.arr-library':
         specifier: workspace:*
         version: link:../arr-library
-      '@tinkerbell/domain.rules':
+      '@rube/domain.rules':
         specifier: workspace:*
         version: link:../rules
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
-      '@tinkerbell/radarr':
+      '@rube/radarr':
         specifier: workspace:*
         version: link:../../clients/radarr
-      '@tinkerbell/sonarr':
+      '@rube/sonarr':
         specifier: workspace:*
         version: link:../../clients/sonarr
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -1455,32 +1455,32 @@ importers:
 
   domains/quality-swaps:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
-      '@tinkerbell/radarr':
+      '@rube/radarr':
         specifier: workspace:*
         version: link:../../clients/radarr
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -1492,13 +1492,13 @@ importers:
 
   domains/recommendations:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
@@ -1514,25 +1514,25 @@ importers:
 
   domains/registry:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.rules':
+      '@rube/domain.rules':
         specifier: workspace:*
         version: link:../rules
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../../packages/http
-      '@tinkerbell/plex-smart-filter':
+      '@rube/plex-smart-filter':
         specifier: workspace:*
         version: link:../../packages/plex-smart-filter
       zod:
@@ -1548,32 +1548,32 @@ importers:
 
   domains/rule-drafts:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.ai-usage':
+      '@rube/domain.ai-usage':
         specifier: workspace:*
         version: link:../ai-usage
-      '@tinkerbell/llm':
+      '@rube/llm':
         specifier: workspace:*
         version: link:../../packages/llm
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/plex-smart-filter':
+      '@rube/plex-smart-filter':
         specifier: workspace:*
         version: link:../../packages/plex-smart-filter
     devDependencies:
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../../packages/test-support
       '@types/node':
@@ -1585,17 +1585,17 @@ importers:
 
   domains/rule-history:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1607,23 +1607,23 @@ importers:
 
   domains/rule-runs:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1635,35 +1635,35 @@ importers:
 
   domains/rules:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.playback':
+      '@rube/domain.playback':
         specifier: workspace:*
         version: link:../playback
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/plex-smart-filter':
+      '@rube/plex-smart-filter':
         specifier: workspace:*
         version: link:../../packages/plex-smart-filter
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1675,17 +1675,17 @@ importers:
 
   domains/search:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1697,20 +1697,20 @@ importers:
 
   domains/sections:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1722,7 +1722,7 @@ importers:
 
   domains/shuffle-hubs:
     dependencies:
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
     devDependencies:
@@ -1735,19 +1735,19 @@ importers:
 
   domains/stats:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/domain.playback':
+      '@rube/domain.playback':
         specifier: workspace:*
         version: link:../playback
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
       drizzle-orm:
@@ -1757,7 +1757,7 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1769,26 +1769,26 @@ importers:
 
   domains/users:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/node':
@@ -1800,29 +1800,29 @@ importers:
 
   domains/watchlist:
     dependencies:
-      '@tinkerbell/arr':
+      '@rube/arr':
         specifier: workspace:*
         version: link:../../clients/arr
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../../packages/container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../../packages/db
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../../packages/ports
       drizzle-orm:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../../packages/composition
       '@types/better-sqlite3':
@@ -1840,25 +1840,25 @@ importers:
 
   packages/agent-api:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../core
-      '@tinkerbell/domain.api-keys':
+      '@rube/domain.api-keys':
         specifier: workspace:*
         version: link:../../domains/api-keys
-      '@tinkerbell/domain.changes':
+      '@rube/domain.changes':
         specifier: workspace:*
         version: link:../../domains/changes
-      '@tinkerbell/domain.search':
+      '@rube/domain.search':
         specifier: workspace:*
         version: link:../../domains/search
-      '@tinkerbell/trpc':
+      '@rube/trpc':
         specifier: workspace:*
         version: link:../trpc
       '@trpc/server':
@@ -1868,13 +1868,13 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../composition
-      '@tinkerbell/jobs':
+      '@rube/jobs':
         specifier: workspace:*
         version: link:../jobs
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../test-support
       '@types/node':
@@ -1886,145 +1886,145 @@ importers:
 
   packages/composition:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../db
-      '@tinkerbell/domain.ai-usage':
+      '@rube/domain.ai-usage':
         specifier: workspace:*
         version: link:../../domains/ai-usage
-      '@tinkerbell/domain.api-keys':
+      '@rube/domain.api-keys':
         specifier: workspace:*
         version: link:../../domains/api-keys
-      '@tinkerbell/domain.arr-activity':
+      '@rube/domain.arr-activity':
         specifier: workspace:*
         version: link:../../domains/arr-activity
-      '@tinkerbell/domain.arr-library':
+      '@rube/domain.arr-library':
         specifier: workspace:*
         version: link:../../domains/arr-library
-      '@tinkerbell/domain.arr-settings':
+      '@rube/domain.arr-settings':
         specifier: workspace:*
         version: link:../../domains/arr-settings
-      '@tinkerbell/domain.backups':
+      '@rube/domain.backups':
         specifier: workspace:*
         version: link:../../domains/backups
-      '@tinkerbell/domain.bandwidth':
+      '@rube/domain.bandwidth':
         specifier: workspace:*
         version: link:../../domains/bandwidth
-      '@tinkerbell/domain.changes':
+      '@rube/domain.changes':
         specifier: workspace:*
         version: link:../../domains/changes
-      '@tinkerbell/domain.cleanup':
+      '@rube/domain.cleanup':
         specifier: workspace:*
         version: link:../../domains/cleanup
-      '@tinkerbell/domain.collections':
+      '@rube/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections
-      '@tinkerbell/domain.config-history':
+      '@rube/domain.config-history':
         specifier: workspace:*
         version: link:../../domains/config-history
-      '@tinkerbell/domain.digest':
+      '@rube/domain.digest':
         specifier: workspace:*
         version: link:../../domains/digest
-      '@tinkerbell/domain.download-clients':
+      '@rube/domain.download-clients':
         specifier: workspace:*
         version: link:../../domains/download-clients
-      '@tinkerbell/domain.events':
+      '@rube/domain.events':
         specifier: workspace:*
         version: link:../../domains/events
-      '@tinkerbell/domain.health':
+      '@rube/domain.health':
         specifier: workspace:*
         version: link:../../domains/health
-      '@tinkerbell/domain.match':
+      '@rube/domain.match':
         specifier: workspace:*
         version: link:../../domains/match
-      '@tinkerbell/domain.media':
+      '@rube/domain.media':
         specifier: workspace:*
         version: link:../../domains/media
-      '@tinkerbell/domain.metadata':
+      '@rube/domain.metadata':
         specifier: workspace:*
         version: link:../../domains/metadata
-      '@tinkerbell/domain.metadata-overrides':
+      '@rube/domain.metadata-overrides':
         specifier: workspace:*
         version: link:../../domains/metadata-overrides
-      '@tinkerbell/domain.migration':
+      '@rube/domain.migration':
         specifier: workspace:*
         version: link:../../domains/migration
-      '@tinkerbell/domain.notifications':
+      '@rube/domain.notifications':
         specifier: workspace:*
         version: link:../../domains/notifications
-      '@tinkerbell/domain.onboarding':
+      '@rube/domain.onboarding':
         specifier: workspace:*
         version: link:../../domains/onboarding
-      '@tinkerbell/domain.overlays':
+      '@rube/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
-      '@tinkerbell/domain.playback':
+      '@rube/domain.playback':
         specifier: workspace:*
         version: link:../../domains/playback
-      '@tinkerbell/domain.playlists':
+      '@rube/domain.playlists':
         specifier: workspace:*
         version: link:../../domains/playlists
-      '@tinkerbell/domain.portability':
+      '@rube/domain.portability':
         specifier: workspace:*
         version: link:../../domains/portability
-      '@tinkerbell/domain.prerolls':
+      '@rube/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls
-      '@tinkerbell/domain.preview':
+      '@rube/domain.preview':
         specifier: workspace:*
         version: link:../../domains/preview
-      '@tinkerbell/domain.problems':
+      '@rube/domain.problems':
         specifier: workspace:*
         version: link:../../domains/problems
-      '@tinkerbell/domain.quality-swaps':
+      '@rube/domain.quality-swaps':
         specifier: workspace:*
         version: link:../../domains/quality-swaps
-      '@tinkerbell/domain.recommendations':
+      '@rube/domain.recommendations':
         specifier: workspace:*
         version: link:../../domains/recommendations
-      '@tinkerbell/domain.registry':
+      '@rube/domain.registry':
         specifier: workspace:*
         version: link:../../domains/registry
-      '@tinkerbell/domain.rule-drafts':
+      '@rube/domain.rule-drafts':
         specifier: workspace:*
         version: link:../../domains/rule-drafts
-      '@tinkerbell/domain.rule-history':
+      '@rube/domain.rule-history':
         specifier: workspace:*
         version: link:../../domains/rule-history
-      '@tinkerbell/domain.rule-runs':
+      '@rube/domain.rule-runs':
         specifier: workspace:*
         version: link:../../domains/rule-runs
-      '@tinkerbell/domain.rules':
+      '@rube/domain.rules':
         specifier: workspace:*
         version: link:../../domains/rules
-      '@tinkerbell/domain.search':
+      '@rube/domain.search':
         specifier: workspace:*
         version: link:../../domains/search
-      '@tinkerbell/domain.sections':
+      '@rube/domain.sections':
         specifier: workspace:*
         version: link:../../domains/sections
-      '@tinkerbell/domain.shuffle-hubs':
+      '@rube/domain.shuffle-hubs':
         specifier: workspace:*
         version: link:../../domains/shuffle-hubs
-      '@tinkerbell/domain.stats':
+      '@rube/domain.stats':
         specifier: workspace:*
         version: link:../../domains/stats
-      '@tinkerbell/domain.users':
+      '@rube/domain.users':
         specifier: workspace:*
         version: link:../../domains/users
-      '@tinkerbell/domain.watchlist':
+      '@rube/domain.watchlist':
         specifier: workspace:*
         version: link:../../domains/watchlist
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../ports
-      '@tinkerbell/posters':
+      '@rube/posters':
         specifier: workspace:*
         version: link:../posters
     devDependencies:
@@ -2046,10 +2046,10 @@ importers:
 
   packages/contracts:
     dependencies:
-      '@tinkerbell/overlays':
+      '@rube/overlays':
         specifier: workspace:*
         version: link:../overlays
-      '@tinkerbell/plex-smart-filter':
+      '@rube/plex-smart-filter':
         specifier: workspace:*
         version: link:../plex-smart-filter
       croner:
@@ -2059,7 +2059,7 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../test-support
       '@types/node':
@@ -2071,37 +2071,37 @@ importers:
 
   packages/core:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../db
-      '@tinkerbell/imdb':
+      '@rube/imdb':
         specifier: workspace:*
         version: link:../../clients/imdb
-      '@tinkerbell/llm':
+      '@rube/llm':
         specifier: workspace:*
         version: link:../llm
-      '@tinkerbell/mdblist':
+      '@rube/mdblist':
         specifier: workspace:*
         version: link:../../clients/mdblist
-      '@tinkerbell/omdb':
+      '@rube/omdb':
         specifier: workspace:*
         version: link:../../clients/omdb
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../ports
-      '@tinkerbell/posters':
+      '@rube/posters':
         specifier: workspace:*
         version: link:../posters
-      '@tinkerbell/trakt':
+      '@rube/trakt':
         specifier: workspace:*
         version: link:../../clients/trakt
       drizzle-orm:
@@ -2111,7 +2111,7 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../composition
       '@types/node':
@@ -2123,7 +2123,7 @@ importers:
 
   packages/db:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../container
       better-sqlite3:
@@ -2148,26 +2148,26 @@ importers:
 
   packages/home-assistant:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../container
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../core
-      '@tinkerbell/mqtt':
+      '@rube/mqtt':
         specifier: workspace:*
         version: link:../../clients/mqtt
-      '@tinkerbell/trpc':
+      '@rube/trpc':
         specifier: workspace:*
         version: link:../trpc
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../composition
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../db
-      '@tinkerbell/jobs':
+      '@rube/jobs':
         specifier: workspace:*
         version: link:../jobs
       '@types/node':
@@ -2191,145 +2191,145 @@ importers:
       '@sidequest/sqlite-backend':
         specifier: ^1.14.0
         version: 1.15.0(supports-color@10.2.2)
-      '@tinkerbell/arr':
+      '@rube/arr':
         specifier: workspace:*
         version: link:../../clients/arr
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../composition
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../db
-      '@tinkerbell/domain.ai-usage':
+      '@rube/domain.ai-usage':
         specifier: workspace:*
         version: link:../../domains/ai-usage
-      '@tinkerbell/domain.backups':
+      '@rube/domain.backups':
         specifier: workspace:*
         version: link:../../domains/backups
-      '@tinkerbell/domain.bandwidth':
+      '@rube/domain.bandwidth':
         specifier: workspace:*
         version: link:../../domains/bandwidth
-      '@tinkerbell/domain.cleanup':
+      '@rube/domain.cleanup':
         specifier: workspace:*
         version: link:../../domains/cleanup
-      '@tinkerbell/domain.collections':
+      '@rube/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections
-      '@tinkerbell/domain.config-history':
+      '@rube/domain.config-history':
         specifier: workspace:*
         version: link:../../domains/config-history
-      '@tinkerbell/domain.digest':
+      '@rube/domain.digest':
         specifier: workspace:*
         version: link:../../domains/digest
-      '@tinkerbell/domain.events':
+      '@rube/domain.events':
         specifier: workspace:*
         version: link:../../domains/events
-      '@tinkerbell/domain.health':
+      '@rube/domain.health':
         specifier: workspace:*
         version: link:../../domains/health
-      '@tinkerbell/domain.media':
+      '@rube/domain.media':
         specifier: workspace:*
         version: link:../../domains/media
-      '@tinkerbell/domain.metadata':
+      '@rube/domain.metadata':
         specifier: workspace:*
         version: link:../../domains/metadata
-      '@tinkerbell/domain.metadata-overrides':
+      '@rube/domain.metadata-overrides':
         specifier: workspace:*
         version: link:../../domains/metadata-overrides
-      '@tinkerbell/domain.migration':
+      '@rube/domain.migration':
         specifier: workspace:*
         version: link:../../domains/migration
-      '@tinkerbell/domain.notifications':
+      '@rube/domain.notifications':
         specifier: workspace:*
         version: link:../../domains/notifications
-      '@tinkerbell/domain.onboarding':
+      '@rube/domain.onboarding':
         specifier: workspace:*
         version: link:../../domains/onboarding
-      '@tinkerbell/domain.overlays':
+      '@rube/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
-      '@tinkerbell/domain.playback':
+      '@rube/domain.playback':
         specifier: workspace:*
         version: link:../../domains/playback
-      '@tinkerbell/domain.playlists':
+      '@rube/domain.playlists':
         specifier: workspace:*
         version: link:../../domains/playlists
-      '@tinkerbell/domain.prerolls':
+      '@rube/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls
-      '@tinkerbell/domain.recommendations':
+      '@rube/domain.recommendations':
         specifier: workspace:*
         version: link:../../domains/recommendations
-      '@tinkerbell/domain.registry':
+      '@rube/domain.registry':
         specifier: workspace:*
         version: link:../../domains/registry
-      '@tinkerbell/domain.rule-history':
+      '@rube/domain.rule-history':
         specifier: workspace:*
         version: link:../../domains/rule-history
-      '@tinkerbell/domain.rule-runs':
+      '@rube/domain.rule-runs':
         specifier: workspace:*
         version: link:../../domains/rule-runs
-      '@tinkerbell/domain.rules':
+      '@rube/domain.rules':
         specifier: workspace:*
         version: link:../../domains/rules
-      '@tinkerbell/domain.shuffle-hubs':
+      '@rube/domain.shuffle-hubs':
         specifier: workspace:*
         version: link:../../domains/shuffle-hubs
-      '@tinkerbell/domain.stats':
+      '@rube/domain.stats':
         specifier: workspace:*
         version: link:../../domains/stats
-      '@tinkerbell/domain.users':
+      '@rube/domain.users':
         specifier: workspace:*
         version: link:../../domains/users
-      '@tinkerbell/domain.watchlist':
+      '@rube/domain.watchlist':
         specifier: workspace:*
         version: link:../../domains/watchlist
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../http
-      '@tinkerbell/llm':
+      '@rube/llm':
         specifier: workspace:*
         version: link:../llm
-      '@tinkerbell/omdb':
+      '@rube/omdb':
         specifier: workspace:*
         version: link:../../clients/omdb
-      '@tinkerbell/overlays':
+      '@rube/overlays':
         specifier: workspace:*
         version: link:../overlays
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/plex-smart-filter':
+      '@rube/plex-smart-filter':
         specifier: workspace:*
         version: link:../plex-smart-filter
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../ports
-      '@tinkerbell/posters':
+      '@rube/posters':
         specifier: workspace:*
         version: link:../posters
-      '@tinkerbell/radarr':
+      '@rube/radarr':
         specifier: workspace:*
         version: link:../../clients/radarr
-      '@tinkerbell/seerr':
+      '@rube/seerr':
         specifier: workspace:*
         version: link:../../clients/seerr
-      '@tinkerbell/sonarr':
+      '@rube/sonarr':
         specifier: workspace:*
         version: link:../../clients/sonarr
-      '@tinkerbell/tmdb':
+      '@rube/tmdb':
         specifier: workspace:*
         version: link:../../clients/tmdb
-      '@tinkerbell/video':
+      '@rube/video':
         specifier: workspace:*
         version: link:../video
       croner:
@@ -2351,7 +2351,7 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../test-support
       '@types/node':
@@ -2376,10 +2376,10 @@ importers:
 
   packages/migrate:
     dependencies:
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tinkerbell/plex-smart-filter':
+      '@rube/plex-smart-filter':
         specifier: workspace:*
         version: link:../plex-smart-filter
       yaml:
@@ -2398,20 +2398,20 @@ importers:
 
   packages/native-codegen:
     dependencies:
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../contracts
       zod:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../composition
-      '@tinkerbell/jobs':
+      '@rube/jobs':
         specifier: workspace:*
         version: link:../jobs
-      '@tinkerbell/trpc':
+      '@rube/trpc':
         specifier: workspace:*
         version: link:../trpc
       '@types/node':
@@ -2467,7 +2467,7 @@ importers:
 
   packages/ports:
     dependencies:
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../container
     devDependencies:
@@ -2480,10 +2480,10 @@ importers:
 
   packages/posters:
     dependencies:
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tinkerbell/overlays':
+      '@rube/overlays':
         specifier: workspace:*
         version: link:../overlays
       sharp:
@@ -2511,169 +2511,169 @@ importers:
 
   packages/trpc:
     dependencies:
-      '@tinkerbell/arr':
+      '@rube/arr':
         specifier: workspace:*
         version: link:../../clients/arr
-      '@tinkerbell/composition':
+      '@rube/composition':
         specifier: workspace:*
         version: link:../composition
-      '@tinkerbell/container':
+      '@rube/container':
         specifier: workspace:*
         version: link:../container
-      '@tinkerbell/contracts':
+      '@rube/contracts':
         specifier: workspace:*
         version: link:../contracts
-      '@tinkerbell/core':
+      '@rube/core':
         specifier: workspace:*
         version: link:../core
-      '@tinkerbell/db':
+      '@rube/db':
         specifier: workspace:*
         version: link:../db
-      '@tinkerbell/domain.ai-usage':
+      '@rube/domain.ai-usage':
         specifier: workspace:*
         version: link:../../domains/ai-usage
-      '@tinkerbell/domain.api-keys':
+      '@rube/domain.api-keys':
         specifier: workspace:*
         version: link:../../domains/api-keys
-      '@tinkerbell/domain.arr-activity':
+      '@rube/domain.arr-activity':
         specifier: workspace:*
         version: link:../../domains/arr-activity
-      '@tinkerbell/domain.arr-library':
+      '@rube/domain.arr-library':
         specifier: workspace:*
         version: link:../../domains/arr-library
-      '@tinkerbell/domain.arr-settings':
+      '@rube/domain.arr-settings':
         specifier: workspace:*
         version: link:../../domains/arr-settings
-      '@tinkerbell/domain.backups':
+      '@rube/domain.backups':
         specifier: workspace:*
         version: link:../../domains/backups
-      '@tinkerbell/domain.bandwidth':
+      '@rube/domain.bandwidth':
         specifier: workspace:*
         version: link:../../domains/bandwidth
-      '@tinkerbell/domain.changes':
+      '@rube/domain.changes':
         specifier: workspace:*
         version: link:../../domains/changes
-      '@tinkerbell/domain.cleanup':
+      '@rube/domain.cleanup':
         specifier: workspace:*
         version: link:../../domains/cleanup
-      '@tinkerbell/domain.collections':
+      '@rube/domain.collections':
         specifier: workspace:*
         version: link:../../domains/collections
-      '@tinkerbell/domain.config-history':
+      '@rube/domain.config-history':
         specifier: workspace:*
         version: link:../../domains/config-history
-      '@tinkerbell/domain.digest':
+      '@rube/domain.digest':
         specifier: workspace:*
         version: link:../../domains/digest
-      '@tinkerbell/domain.download-clients':
+      '@rube/domain.download-clients':
         specifier: workspace:*
         version: link:../../domains/download-clients
-      '@tinkerbell/domain.events':
+      '@rube/domain.events':
         specifier: workspace:*
         version: link:../../domains/events
-      '@tinkerbell/domain.health':
+      '@rube/domain.health':
         specifier: workspace:*
         version: link:../../domains/health
-      '@tinkerbell/domain.match':
+      '@rube/domain.match':
         specifier: workspace:*
         version: link:../../domains/match
-      '@tinkerbell/domain.media':
+      '@rube/domain.media':
         specifier: workspace:*
         version: link:../../domains/media
-      '@tinkerbell/domain.metadata':
+      '@rube/domain.metadata':
         specifier: workspace:*
         version: link:../../domains/metadata
-      '@tinkerbell/domain.migration':
+      '@rube/domain.migration':
         specifier: workspace:*
         version: link:../../domains/migration
-      '@tinkerbell/domain.notifications':
+      '@rube/domain.notifications':
         specifier: workspace:*
         version: link:../../domains/notifications
-      '@tinkerbell/domain.onboarding':
+      '@rube/domain.onboarding':
         specifier: workspace:*
         version: link:../../domains/onboarding
-      '@tinkerbell/domain.overlays':
+      '@rube/domain.overlays':
         specifier: workspace:*
         version: link:../../domains/overlays
-      '@tinkerbell/domain.playback':
+      '@rube/domain.playback':
         specifier: workspace:*
         version: link:../../domains/playback
-      '@tinkerbell/domain.prerolls':
+      '@rube/domain.prerolls':
         specifier: workspace:*
         version: link:../../domains/prerolls
-      '@tinkerbell/domain.preview':
+      '@rube/domain.preview':
         specifier: workspace:*
         version: link:../../domains/preview
-      '@tinkerbell/domain.problems':
+      '@rube/domain.problems':
         specifier: workspace:*
         version: link:../../domains/problems
-      '@tinkerbell/domain.registry':
+      '@rube/domain.registry':
         specifier: workspace:*
         version: link:../../domains/registry
-      '@tinkerbell/domain.rule-drafts':
+      '@rube/domain.rule-drafts':
         specifier: workspace:*
         version: link:../../domains/rule-drafts
-      '@tinkerbell/domain.rule-runs':
+      '@rube/domain.rule-runs':
         specifier: workspace:*
         version: link:../../domains/rule-runs
-      '@tinkerbell/domain.rules':
+      '@rube/domain.rules':
         specifier: workspace:*
         version: link:../../domains/rules
-      '@tinkerbell/domain.search':
+      '@rube/domain.search':
         specifier: workspace:*
         version: link:../../domains/search
-      '@tinkerbell/domain.sections':
+      '@rube/domain.sections':
         specifier: workspace:*
         version: link:../../domains/sections
-      '@tinkerbell/domain.shuffle-hubs':
+      '@rube/domain.shuffle-hubs':
         specifier: workspace:*
         version: link:../../domains/shuffle-hubs
-      '@tinkerbell/domain.stats':
+      '@rube/domain.stats':
         specifier: workspace:*
         version: link:../../domains/stats
-      '@tinkerbell/domain.users':
+      '@rube/domain.users':
         specifier: workspace:*
         version: link:../../domains/users
-      '@tinkerbell/domain.watchlist':
+      '@rube/domain.watchlist':
         specifier: workspace:*
         version: link:../../domains/watchlist
-      '@tinkerbell/http':
+      '@rube/http':
         specifier: workspace:*
         version: link:../http
-      '@tinkerbell/jobs':
+      '@rube/jobs':
         specifier: workspace:*
         version: link:../jobs
-      '@tinkerbell/llm':
+      '@rube/llm':
         specifier: workspace:*
         version: link:../llm
-      '@tinkerbell/migrate':
+      '@rube/migrate':
         specifier: workspace:*
         version: link:../migrate
-      '@tinkerbell/mqtt':
+      '@rube/mqtt':
         specifier: workspace:*
         version: link:../../clients/mqtt
-      '@tinkerbell/omdb':
+      '@rube/omdb':
         specifier: workspace:*
         version: link:../../clients/omdb
-      '@tinkerbell/plex':
+      '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
-      '@tinkerbell/ports':
+      '@rube/ports':
         specifier: workspace:*
         version: link:../ports
-      '@tinkerbell/posters':
+      '@rube/posters':
         specifier: workspace:*
         version: link:../posters
-      '@tinkerbell/radarr':
+      '@rube/radarr':
         specifier: workspace:*
         version: link:../../clients/radarr
-      '@tinkerbell/seerr':
+      '@rube/seerr':
         specifier: workspace:*
         version: link:../../clients/seerr
-      '@tinkerbell/sonarr':
+      '@rube/sonarr':
         specifier: workspace:*
         version: link:../../clients/sonarr
-      '@tinkerbell/tmdb':
+      '@rube/tmdb':
         specifier: workspace:*
         version: link:../../clients/tmdb
       '@trpc/server':
@@ -2686,13 +2686,13 @@ importers:
         specifier: ^4.3.6
         version: 4.4.3
     devDependencies:
-      '@tinkerbell/mdblist':
+      '@rube/mdblist':
         specifier: workspace:*
         version: link:../../clients/mdblist
-      '@tinkerbell/test-support':
+      '@rube/test-support':
         specifier: workspace:*
         version: link:../test-support
-      '@tinkerbell/trakt':
+      '@rube/trakt':
         specifier: workspace:*
         version: link:../../clients/trakt
       '@types/node':

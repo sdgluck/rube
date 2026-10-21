@@ -12,12 +12,12 @@ if ! getent passwd "$PUID" >/dev/null 2>&1; then
 fi
 
 chown -R "$PUID:$PGID" /config
-# Prerolls are written here by Tinkerbell and read by Plex, so it needs the
+# Prerolls are written here by Rube and read by Plex, so it needs the
 # same ownership treatment. Skipped when the volume isn't mounted.
 [ -d /prerolls ] && chown -R "$PUID:$PGID" /prerolls
 
 # Apply pending DB migrations as a discrete step before the app process
 # starts. Runs as the app user so the DB file picks up the right ownership.
-su-exec "$PUID:$PGID" node node_modules/@tinkerbell/db/src/migrate.ts
+su-exec "$PUID:$PGID" node node_modules/@rube/db/src/migrate.ts
 
 exec su-exec "$PUID:$PGID" "$@"

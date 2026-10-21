@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import type { SeerrRequest } from "@tinkerbell/seerr";
+import type { SeerrRequest } from "@rube/seerr";
 import { arrivedAt, createRequesterMatcher, isArrived, requestsSummary } from "./match.ts";
 
 const USERS = [

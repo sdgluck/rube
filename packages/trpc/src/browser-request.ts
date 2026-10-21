@@ -21,6 +21,6 @@ export function isBrowserRequest(req: Request): boolean {
 
 export function refuseBrowser(fromBrowser: boolean | undefined): void {
   if (fromBrowser) {
-    throw new TRPCError({ code: "FORBIDDEN", message: "This sign-in is for the Tinkerbell app only." });
+    throw new TRPCError({ code: "FORBIDDEN", message: "This sign-in is for the Rube app only." });
   }
 }
