@@ -3,6 +3,8 @@
  * and the document-title hook so a new settings page is reachable and
  * titled without touching three files.
  */
+import { NATIVE_APPS_RELEASED } from "#lib/nativeApps";
+
 export type SettingsLink = { to: string; label: string };
 export type SettingsSection = { heading: string; links: SettingsLink[] };
 
@@ -58,7 +60,7 @@ export const SETTINGS_SECTIONS: SettingsSection[] = [
       // Beside Security: both are about who can reach this instance, and an API
       // key is the other credential it accepts.
       { to: "/settings/api", label: "API & MCP" },
-      { to: "/settings/mobile", label: "Mobile app" },
+      ...(NATIVE_APPS_RELEASED ? [{ to: "/settings/mobile", label: "Mobile app" }] : []),
     ],
   },
   {

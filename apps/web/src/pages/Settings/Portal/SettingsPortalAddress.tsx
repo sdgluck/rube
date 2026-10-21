@@ -15,6 +15,7 @@ import styles from "../Personalization.module.css";
 import local from "./SettingsPortalAddress.module.css";
 import { nativeConnectLink } from "@tinkerbell/contracts";
 import QrCode from "#components/QrCode";
+import { NATIVE_APPS_RELEASED } from "#lib/nativeApps";
 
 const USED_WITHOUT_FALLBACK = ["Cleanup warnings", "Portal preroll"];
 
@@ -111,7 +112,7 @@ export default function SettingsPortalAddress() {
       {/* The portal app's connect code — for the admin to share with the
           people they share with, so none of them types the address. Only for a
           saved address: the suggestion may not be one their phones can reach. */}
-      {saved && (
+      {NATIVE_APPS_RELEASED && saved && (
         <div className={styles.card}>
           <span className={styles.label}>Tinkerbell app</span>
           <p className={styles.hint}>People with the Tinkerbell app can scan this to connect to the address above.</p>

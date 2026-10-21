@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react"
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import ErrorBoundary from "#components/ErrorBoundary";
 import { useIsPhone } from "#hooks/useMediaQuery";
+import { NATIVE_APPS_RELEASED } from "#lib/nativeApps";
 import { OPEN_SEARCH_EVENT } from "#lib/openSearch";
 import ScrollRestoration from "#layout/ScrollRestoration";
 import { AppBarProvider } from "#layout/AppBar";
@@ -669,14 +670,16 @@ export default function App() {
                         </LazyPage>
                       }
                     />
-                    <Route
-                      path="mobile"
-                      element={
-                        <LazyPage>
-                          <SettingsMobile />
-                        </LazyPage>
-                      }
-                    />
+                    {NATIVE_APPS_RELEASED && (
+                      <Route
+                        path="mobile"
+                        element={
+                          <LazyPage>
+                            <SettingsMobile />
+                          </LazyPage>
+                        }
+                      />
+                    )}
                     <Route
                       path="portal"
                       element={
