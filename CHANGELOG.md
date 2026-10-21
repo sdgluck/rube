@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.45.1] - 2026-10-21
+
+### Changed
+
+- The project is now called Rube: the website and rule registry live at rube.fyi, and the container image is ghcr.io/sdgluck/rube.
+
+### Fixed
+
+- The admin web interface now hides the mobile app settings until the mobile apps are available in the app stores.
+
 ## [0.45.0] - 2026-10-20
 
 ### Added
