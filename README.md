@@ -16,25 +16,11 @@ and notifications on a schedule.
   users.
 - **Collections**: sort order, pinning to the home screen, and shuffled hubs.
 - **Overlays**: draw ratings, badges and labels on posters.
-- **Because you watched**: recommendation collections for each user.
-- **We think you'd like**: one collection per user per library, picked by AI
-  from their recent watch history. [More](#we-think-youd-like)
-- **Pick it back up**: one collection per user per TV library of the shows
-  they started and stopped watching. [More](#pick-it-back-up)
-- **Finish the franchise**: one collection per user per film library of the
-  next film in each series they've started. [More](#finish-the-franchise)
-- **Your requests are here**: one collection per user per library of what
-  they asked for in Overseerr that has arrived. [More](#your-requests-are-here)
-- **Watch it again**: one collection per user per film library of films they
-  loved and haven't watched in years. [More](#watch-it-again)
-- **New for you**: one collection per user per library of what was added
-  lately, in the order they're likeliest to enjoy it. [More](#new-for-you)
-- **More from…**: per user, a collection of the unseen films of each director
-  or lead actor whose work they keep finishing. [More](#more-from)
-- **Season collections**: a Christmas, Halloween or other holiday collection
-  in each library while the holiday is on. [More](#season-collections)
-- **Leaving soon**: a collection in each library of what cleanup is about to
-  remove. [More](#leaving-soon)
+- **Ready-made collections**: per-user rows built from each person's watch
+  history (because you watched, picked by AI, shows to pick back up, the next
+  film in a franchise, requests that have arrived, films to watch again, new
+  additions in their order, more from favourite directors and actors), plus
+  library-wide ones for the current holiday and what cleanup will remove next.
 - **Personalized home screens**: each Plex user sets their own tastes.
   [More](#personalized-home-screens)
 - **Movie match**: a group swipes through a movie library together until
