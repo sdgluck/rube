@@ -4,9 +4,9 @@
 > Tinkerbell is in beta. Expect rough edges and changes between releases, and
 > keep [backups](#backups) before upgrading.
 
-A self-hosted companion for Plex. You write rules over your library, and
-Tinkerbell uses them to manage collections, overlays, labels, playlists, cleanup
-and notifications on a schedule.
+**Plex on autopilot.** Write a rule once and Tinkerbell keeps your collections,
+overlays and playlists fresh, clears out what nobody watches, and gives everyone
+a home screen of their own. Self-hosted, one container.
 
 > [Screenshots](screenshots/) · [Development guide](DEVELOPMENT.md)
 
