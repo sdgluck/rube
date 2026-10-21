@@ -12,37 +12,27 @@ and notifications on a schedule.
 
 ## Features
 
-- **Rules**: build Plex collections from your library on a schedule.
-- **Smart filters**: match on Plex, IMDb and Overseerr, or have AI draft one.
-- **Collections**: sort order, home-screen pinning and shuffled hubs.
-- **Overlays**: drag ratings, badges and labels onto a live poster preview.
-- **Ready-made collections**: per-user picks, seasonal and leaving-soon rows.
-  [More](#ready-made-collections)
-- **Personalized home screens**: each Plex user sets their own tastes.
-  [More](#personalized-home-screens)
-- **Movie match**: a group swipes until everyone likes the same film.
-  [More](#movie-match)
-- **Prerolls**: videos for Plex to play before a movie. [More](#prerolls)
-- **Problems**: what's wrong across Plex, Radarr/Sonarr and your rules.
-  [More](#problems)
-- **Labels**: apply and undo Plex labels in bulk.
-- **Discover**: search TMDb and send what's missing to Radarr or Sonarr.
-- **Watchlist sync**: send new Plex watchlist items to Radarr or Sonarr.
-- **Unused 4K**: swap 4K films nobody watches in 4K to 1080p.
-  [More](#unused-4k)
-- **Home Assistant**: streams, jobs and health as MQTT sensors.
-  [More](#home-assistant)
-- **Notifications**: Discord, Slack, Telegram, email, webhooks and more.
-- **Backup, export and change history**.
-  [More](#backup-export-and-change-history)
-- **Stats and events**: library stats, activity feed and playback history.
-- **Stress test**: find how many streams your server can handle.
-  [More](#stress-test)
-- **Users**: invite people, set their libraries and limits, see what they stream.
-- **Mobile apps**: one iOS and Android app for guests and admins.
-  [More](#mobile-apps)
-- **API and MCP**: a read-only API for AI assistants and scripts.
-  [More](#api-and-mcp)
+- **Rules**: build and update Plex collections and playlists from your library on a schedule.
+- **Smart filters**: match on Plex metadata, IMDb ratings and Overseerr requests, or let AI draft one.
+- **Collections**: control sort order, pin collections to the home screen, and shuffle hubs.
+- **Overlays**: drag ratings, badges and labels onto a live poster preview, then apply in bulk.
+- **Ready-made collections**: picks for each user from what they watch, plus holiday and leaving-soon rows. [More](#ready-made-collections)
+- **Personalized home screens**: each Plex user sees only their own recommendations. [More](#personalized-home-screens)
+- **Movie match**: a group swipes through a movie library until everyone likes the same film. [More](#movie-match)
+- **Prerolls**: manage videos for Plex to play before a movie, converted if Plex can't play them. [More](#prerolls)
+- **Problems**: one page for what's wrong across Plex, Radarr/Sonarr and your rules, with fixes. [More](#problems)
+- **Labels**: apply and undo Plex labels in bulk, with a preview first.
+- **Discover**: search TMDb, see what you already have, and send the rest to Radarr or Sonarr.
+- **Watchlist sync**: send new Plex watchlist items to Radarr or Sonarr automatically.
+- **Unused 4K**: find 4K films nobody watches in 4K and swap them to 1080p without a gap. [More](#unused-4k)
+- **Home Assistant**: streams, jobs, failing rules and health as MQTT sensors. [More](#home-assistant)
+- **Notifications**: Discord, Slack, Telegram, Gotify, Pushover, email, webhooks and more.
+- **Backups**: nightly database backups, JSON export/import and a history of every change. [More](#backup-export-and-change-history)
+- **Stats and events**: library stats, an activity feed and full playback history.
+- **Stress test**: find how many streams your server can handle before it falls behind. [More](#stress-test)
+- **Users**: invite people, choose their libraries, set limits and see or stop streams.
+- **Mobile apps**: one iOS and Android app, with a portal for guests and an admin part. [More](#mobile-apps)
+- **API and MCP**: a read-only API and MCP server for AI assistants and scripts. [More](#api-and-mcp)
 
 ## Install
 
