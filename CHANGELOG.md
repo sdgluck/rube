@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.46.0] - 2026-10-21
+
+### Changed
+
+- The favicon is now the letter R in Archivo ExtraBold instead of the old sparkle, in the admin app, the end-user portal, and the navigation bar and footer of rube.fyi.
+- The project's main icon image now uses the same Archivo ExtraBold R as the new favicon.
+- The iOS app now has a new home screen icon that uses the same R as the favicon.
+- The Android app now has a new launcher icon that uses the same R as the favicon.
+
 ## [0.45.1] - 2026-10-21
 
 ### Changed
