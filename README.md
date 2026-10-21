@@ -13,7 +13,7 @@ and notifications on a schedule.
 - **Collections**: sort order, home-screen pinning and shuffled hubs.
 - **Overlays**: ratings, badges and labels drawn on posters.
 - **Ready-made collections**: per-user picks, seasonal and leaving-soon rows.
-  [More](#we-think-youd-like)
+  [More](#ready-made-collections)
 - **Personalized home screens**: each Plex user sets their own tastes.
   [More](#personalized-home-screens)
 - **Movie match**: a group swipes until everyone likes the same film.
@@ -231,7 +231,13 @@ Limits:
   appear on their Home and not on their Recommended tab.
 - Click **Reconcile users** after sharing with someone new.
 
-## We think you'd like
+## Ready-made collections
+
+Collections Tinkerbell builds for you, besides the ones your rules make. Most
+are per user, built from what each person watches; the last two are one per
+library.
+
+### We think you'd like
 
 Each user gets one "We Think You'd Like" collection in each library. The AI
 picks it from their taste over the whole history window, not from the last few
@@ -254,7 +260,7 @@ Limits:
   window are skipped.
 - Playback retention limits how far back it can read.
 
-## Pick it back up
+### Pick it back up
 
 Each user gets a "Pick It Back Up" collection in each TV library, holding the
 shows they started and then stopped watching. Plex's Continue Watching only
@@ -281,7 +287,7 @@ Limits:
 - It reads Tinkerbell's own playback history, so playback retention limits how
   far back **Given up after** can reach.
 
-## Finish the franchise
+### Finish the franchise
 
 Each user gets a "Finish the Franchise" collection in each film library,
 holding the next film in each series they've started — watched Alien and
@@ -307,7 +313,7 @@ Limits:
   Media** first. A watched film that has since been deleted still counts when
   Radarr remembers it.
 
-## Your requests are here
+### Your requests are here
 
 Each user gets a "Your Requests Are Here" collection in each library, holding
 what they asked for in Overseerr that has arrived and they haven't watched
@@ -328,7 +334,7 @@ Limits:
 - It reads the 500 most recent available requests each run. An arrival has to
   be in the library index, so it shows after the next **Sync Media**.
 
-## Watch it again
+### Watch it again
 
 Each user gets a "Watch It Again" collection in each film library, holding
 films they watched through and haven't played since — favourites they may be
@@ -348,7 +354,7 @@ Limits:
   Watch History** once.
 - Films only.
 
-## New for you
+### New for you
 
 Each user gets a "New For You" collection in each library, holding what was
 added in the last **Added within** (30 days) that they haven't watched,
@@ -366,7 +372,7 @@ morning and uses no AI.
 
 It needs Personalized Home Screens and recorded watch history.
 
-## More from…
+### More from…
 
 Each user gets up to **Rows per person** (2) collections in each film
 library, such as "More from Denis Villeneuve", for the directors and lead
@@ -389,7 +395,7 @@ It needs Personalized Home Screens, a TMDb API key and recorded watch
 history. Each run asks TMDb for the filmography of every name in play, once
 per name however many users share it.
 
-## Season collections
+### Season collections
 
 Each library gets a collection for a holiday while it is on, such as
 "Christmas" from 1 to 26 December, and loses it the morning after. Install it
@@ -423,7 +429,7 @@ Limits:
 - A date window repeats every year on the same days, so a holiday whose date
   moves, such as Easter, needs its dates updating each year.
 
-## Leaving soon
+### Leaving soon
 
 Each library gets a "Leaving Soon" collection on everyone's home screen,
 holding the titles cleanup rules are about to remove — a last chance to watch
