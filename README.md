@@ -4,12 +4,6 @@
 > Rube is in beta. Expect rough edges and changes between releases, and
 > keep [backups](#backups) before upgrading.
 
-Rube runs rules over your Plex library and turns them into collections,
-playlists, poster overlays and cleanup. Everyone you share with gets their own
-home screen, with rows picked from what they watch, and a portal where they sign
-in with Plex to set their tastes. Groups can swipe through your films to agree
-on one.
-
 > [Screenshots](screenshots/) · [Development guide](DEVELOPMENT.md)
 
 ## Features
