@@ -6,8 +6,9 @@
 
 Tinkerbell runs rules over your Plex library and turns them into collections,
 playlists, poster overlays and cleanup. Everyone you share with gets their own
-home screen, with rows picked from what they watch. Groups can swipe through
-your films to agree on one, and there's an app for iOS and Android.
+home screen, with rows picked from what they watch, and a portal where they sign
+in with Plex to set their tastes. Groups can swipe through your films to agree
+on one.
 
 > [Screenshots](screenshots/) · [Development guide](DEVELOPMENT.md)
 
@@ -18,6 +19,7 @@ your films to agree on one, and there's an app for iOS and Android.
 - **Collections**: control sort order, pin collections to the home screen, and shuffle hubs.
 - **Overlays**: drag ratings, badges and labels onto a live poster preview, then apply in bulk.
 - **Ready-made collections**: picks for each user from what they watch, plus holiday and leaving-soon rows. [More](#ready-made-collections)
+- **Portal**: people you share with sign in with Plex to see their collections and set their tastes. [More](#the-portal)
 - **Personalized home screens**: each Plex user sees only their own recommendations. [More](#personalized-home-screens)
 - **Movie match**: a group swipes through a movie library until everyone likes the same film. [More](#movie-match)
 - **Prerolls**: manage videos for Plex to play before a movie, converted if Plex can't play them. [More](#prerolls)
@@ -32,7 +34,6 @@ your films to agree on one, and there's an app for iOS and Android.
 - **Stats and events**: library stats, an activity feed and full playback history.
 - **Stress test**: find how many streams your server can handle before it falls behind. [More](#stress-test)
 - **Users**: invite people, choose their libraries, set limits and see or stop streams.
-- **Mobile apps**: one iOS and Android app, with a portal for guests and an admin part. [More](#mobile-apps)
 - **API and MCP**: a read-only API and MCP server for AI assistants and scripts. [More](#api-and-mcp)
 
 ## Contents
@@ -40,8 +41,8 @@ your films to agree on one, and there's an app for iOS and Android.
 - [Install](#install)
 - [Security](#security)
 - [For your users](#for-your-users)
+  - [The portal](#the-portal)
   - [Personalized home screens](#personalized-home-screens)
-  - [Mobile apps](#mobile-apps)
   - [Movie match](#movie-match)
 - [Ready-made collections](#ready-made-collections)
   - [We think you'd like](#we-think-youd-like)
@@ -138,6 +139,20 @@ that, only the Plex account that owns your server can sign in.
 
 What the people you share your server with get.
 
+### The portal
+
+The people you share your server with sign in to the portal with their Plex
+account, in any browser. It runs on its own port (`3100`), separate from the
+admin app, and only while a portal feature is on. There they can:
+
+- see the collections Tinkerbell built for them, and press **Not for me** on any
+  that miss;
+- set their tastes, which steer their personal collections;
+- see what's leaving soon;
+- start or join a [movie match](#movie-match).
+
+Set the portal's public address under **Settings → Portal → Address**.
+
 ### Personalized home screens
 
 Each user gets their own recommendation collections, and only they can see them.
@@ -159,51 +174,6 @@ Limits:
 - Plex has one Recommended setting per row for everyone, so a shared user's rows
   appear on their Home and not on their Recommended tab.
 - Click **Reconcile users** after sharing with someone new.
-
-### Mobile apps
-
-Tinkerbell has one phone app, for iOS and Android. The people you share your
-server with use its **Portal** part: their collections, tastes, movie match and
-what's leaving soon. If you run the server, the same app also has an **Admin**
-part, with a switch between the two.
-
-- **Connecting yourself.** Open **Settings → Mobile app** in a browser and scan
-  the code with your phone. The code carries both the admin and the portal
-  address.
-- **Connecting the people you share with.** Save the portal's address under
-  **Settings → Portal → Address**. A code for the portal then appears there.
-  Either way, you can also type an address into the app, and the app always
-  asks before it connects to a server.
-- **Signing in.** You sign in with Plex inside the app. The app then signs in
-  to the portal and to the admin server separately, and each one checks your
-  Plex account for itself. The portal never learns the admin address, and a
-  portal session can't open the admin part. The app keeps its sessions in the
-  phone's keychain and doesn't keep your Plex token at all.
-- **Movie match invites.** An invite link opens in the app if it's installed,
-  even for a room on someone else's server, where you join as a guest. Without
-  the app, the link opens the web portal.
-- **The admin part** covers the overview and health, jobs and rule runs,
-  cleanup and protections, collections, and users. Everything else has a link
-  to the web admin.
-- **App lock.** You can turn on Face ID, Touch ID or fingerprint unlock in the
-  app's settings.
-- **At home and away.** On your home network, a plain address like
-  `http://192.168.1.10:3000` works. Away from home, your phone needs an address
-  that reaches the server from outside, served over HTTPS by a reverse proxy.
-  The admin server listens only on `127.0.0.1` unless you set `HOST`, and a
-  phone can't reach that. **Settings → Mobile app** warns when that is the case.
-- **Admin sign-in.** Turn on admin sign-in before you make the admin server
-  reachable from outside. The admin part still works with sign-in off, but it
-  shows a warning that anyone who can reach the server can change it.
-
-**Upgrading from the old apps.** Tinkerbell used to have two separate phone
-apps, "Tinkerbell" and "Tinkerbell Portal". They are replaced by the one app
-above, and no longer work with this version of the server. Install
-the new app and connect it with the code in **Settings → Mobile app**.
-
-The app's sign-in hands the session back to the app itself, so the server
-refuses it from a web browser. Exposing the server for the app doesn't let a
-web page sign in on anyone's behalf.
 
 ### Movie match
 
