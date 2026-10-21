@@ -1,5 +1,9 @@
 # Tinkerbell
 
+> [!WARNING]
+> Tinkerbell is in beta. Expect rough edges and changes between releases, and
+> keep [backups](#backups) before upgrading.
+
 A self-hosted companion for Plex. You write rules over your library, and
 Tinkerbell uses them to manage collections, overlays, labels, playlists, cleanup
 and notifications on a schedule.
