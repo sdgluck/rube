@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 108dp canvas, glyph inside the 66dp safe zone: a four-point sparkle and a small companion. -->
+<!-- 108dp canvas, glyph inside the 66dp safe zone: Archivo ExtraBold's R, the same outlines as favicon.svg. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -7,8 +7,5 @@
     android:viewportHeight="108">
     <path
         android:fillColor="@color/icon_teal"
-        android:pathData="M50,26 C52,40 56,46 70,50 C56,54 52,60 50,74 C48,60 44,54 30,50 C44,46 48,40 50,26 Z" />
-    <path
-        android:fillColor="@color/icon_teal"
-        android:pathData="M72,30 C73,35 74.5,36.5 79,38 C74.5,39.5 73,41 72,46 C71,41 69.5,39.5 65,38 C69.5,36.5 71,35 72,30 Z" />
+        android:pathData="M36.02 73V35H58.09Q62.32 35 65.14 36.59Q67.95 38.18 69.36 40.89Q70.77 43.61 70.77 46.99Q70.77 50.67 69.08 53.51Q67.39 56.36 64.33 57.95L71.98 73H60.94L54.6 59.62H45.95V73ZM45.95 52.27H56.19Q58.23 52.27 59.45 50.92Q60.68 49.57 60.68 47.26Q60.68 45.8 60.13 44.75Q59.59 43.7 58.59 43.11Q57.59 42.52 56.19 42.52H45.95Z" />
 </vector>
