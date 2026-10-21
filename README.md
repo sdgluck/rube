@@ -15,7 +15,7 @@ and notifications on a schedule.
 - **Rules**: build Plex collections from your library on a schedule.
 - **Smart filters**: match on Plex, IMDb and Overseerr, or have AI draft one.
 - **Collections**: sort order, home-screen pinning and shuffled hubs.
-- **Overlays**: ratings, badges and labels drawn on posters.
+- **Overlays**: drag ratings, badges and labels onto a live poster preview.
 - **Ready-made collections**: per-user picks, seasonal and leaving-soon rows.
   [More](#ready-made-collections)
 - **Personalized home screens**: each Plex user sets their own tastes.
