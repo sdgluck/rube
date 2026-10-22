@@ -61,7 +61,12 @@ jobs:
           distribution: temurin
           java-version: 21
 
+      # The action's default package list includes `tools`, which Google has
+      # removed from the SDK repository; asking for it fails sdkmanager before
+      # Gradle runs. Gradle fetches the platform it compiles against itself.
       - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - uses: gradle/actions/setup-gradle@v5
 
