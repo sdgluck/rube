@@ -25,6 +25,15 @@ function errorMessage(err: unknown): string {
   return String(err);
 }
 
+/**
+ * How long "OMDb has no Rotten Tomatoes score for this" stands before it is
+ * asked again. Caching the absence for ever meant a film OMDb scored after
+ * its first lookup — every new release — stayed out of RT rules for good;
+ * re-asking every run would spend a free key's 1,000-a-day on the same
+ * unscored titles. A present score is still cached for ever.
+ */
+export const MISSING_RT_RECHECK_MS = 30 * 24 * 60 * 60 * 1000;
+
 export function createOmdbClient(opts: OmdbClientOptions) {
   const { apiKey, onHealth, db } = opts;
 
@@ -32,7 +41,8 @@ export function createOmdbClient(opts: OmdbClientOptions) {
     imdbId: string,
   ): Promise<{ imdbRating: string | null; rtRating: string | null; source: "cache" | "api" } | null> {
     const cached = db.select().from(omdbCache).where(eq(omdbCache.imdbId, imdbId)).get();
-    if (cached) {
+    const stale = cached && cached.rtRating === null && Date.now() - cached.fetchedAt > MISSING_RT_RECHECK_MS;
+    if (cached && (!stale || !apiKey)) {
       return { imdbRating: cached.imdbRating, rtRating: cached.rtRating, source: "cache" };
     }
 
@@ -60,7 +70,15 @@ export function createOmdbClient(opts: OmdbClientOptions) {
     onHealth?.("ok", `GET /?i=${imdbId} → ${res.status}`);
 
     const data = await res.json();
-    if (data.Response === "False") return null;
+    if (data.Response === "False") {
+      // Answered 200, so the success above already went out. "Movie not found!"
+      // is a fact about one title; anything else — "Request limit reached!",
+      // "Invalid API key!" — fails every lookup after it, and reads as a
+      // library with no ratings unless it lands somewhere a person looks.
+      const error = typeof data.Error === "string" ? data.Error : "unknown error";
+      if (!/not found/i.test(error)) onHealth?.("error", `OMDb: ${error}`);
+      return null;
+    }
 
     const imdbRating = data.imdbRating && data.imdbRating !== "N/A" ? data.imdbRating : null;
     let rtRating: string | null = null;
@@ -70,15 +88,10 @@ export function createOmdbClient(opts: OmdbClientOptions) {
       if (rt) rtRating = rt.Value;
     }
 
+    const row = { imdbRating, rtRating, response: data, fetchedAt: Date.now() };
     db.insert(omdbCache)
-      .values({
-        imdbId,
-        imdbRating,
-        rtRating,
-        response: data,
-        fetchedAt: Date.now(),
-      })
-      .onConflictDoNothing()
+      .values({ imdbId, ...row })
+      .onConflictDoUpdate({ target: omdbCache.imdbId, set: row })
       .run();
 
     return { imdbRating, rtRating, source: "api" };

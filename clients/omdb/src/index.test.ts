@@ -4,8 +4,9 @@
  * Two things make a bug here quiet. First, a wrong rating is still a rating —
  * a badge saying 6.9 where it should say 8.1 looks entirely normal, and a
  * `minImdb` rule silently excludes the wrong films. Second, everything is
- * cached: `omdb_cache` has no TTL, so a value written wrongly once is wrong
- * for ever, and re-running the job will not fix it.
+ * cached: a present rating never expires, so a value written wrongly once is
+ * wrong for ever, and re-running the job will not fix it. (Only a *missing*
+ * Rotten Tomatoes score is re-asked, after `MISSING_RT_RECHECK_MS`.)
  *
  * The cache short-circuit is therefore the most important behaviour here, in
  * both directions — it must be consulted *before* the API key check (so a cache
@@ -23,7 +24,8 @@ import { after, afterEach, beforeEach, describe, test } from "node:test";
 import { createTestContainer } from "@rube/composition/test-support";
 import { DbToken, omdbCache } from "@rube/db";
 
-import { createOmdbClient, extractImdbId } from "./index.ts";
+import { eq } from "drizzle-orm";
+import { createOmdbClient, extractImdbId, MISSING_RT_RECHECK_MS } from "./index.ts";
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -184,6 +186,43 @@ describe("rating extraction", () => {
     assert.equal(second?.source, "cache");
     assert.deepEqual(calls, []);
   });
+
+  test("a missing Rotten Tomatoes score is asked again once it is a month old", async () => {
+    respond = () => Response.json({ Response: "True", imdbRating: "7.0", Ratings: [] });
+    await client().getRatings("tt1");
+    db.update(omdbCache)
+      .set({ fetchedAt: Date.now() - MISSING_RT_RECHECK_MS - 1 })
+      .where(eq(omdbCache.imdbId, "tt1"))
+      .run();
+
+    respond = () =>
+      Response.json({ Response: "True", imdbRating: "7.0", Ratings: [{ Source: "Rotten Tomatoes", Value: "91%" }] });
+    calls = [];
+    const again = await client().getRatings("tt1");
+    assert.equal(again?.source, "api");
+    assert.equal(again?.rtRating, "91%");
+    assert.equal(calls.length, 1);
+    assert.equal(db.select().from(omdbCache).get()?.rtRating, "91%");
+  });
+
+  test("a present score never expires", async () => {
+    respond = () =>
+      Response.json({ Response: "True", imdbRating: "7.0", Ratings: [{ Source: "Rotten Tomatoes", Value: "91%" }] });
+    await client().getRatings("tt1");
+    db.update(omdbCache).set({ fetchedAt: 0 }).run();
+    calls = [];
+    assert.equal((await client().getRatings("tt1"))?.source, "cache");
+    assert.deepEqual(calls, []);
+  });
+
+  test("a stale entry is still served on an install with no key", async () => {
+    respond = () => Response.json({ Response: "True", imdbRating: "7.0", Ratings: [] });
+    await client().getRatings("tt1");
+    db.update(omdbCache).set({ fetchedAt: 0 }).run();
+    calls = [];
+    assert.equal((await client({ apiKey: null }).getRatings("tt1"))?.source, "cache");
+    assert.deepEqual(calls, []);
+  });
 });
 
 describe("the request", () => {
@@ -237,6 +276,20 @@ describe("health reporting", () => {
       null,
     );
     assert.equal(events.at(-1)?.status, "error");
+  });
+
+  test("OMDb's own refusal (request limit, bad key) is reported, not swallowed", async () => {
+    const reports: Array<[string, string]> = [];
+    respond = () => Response.json({ Response: "False", Error: "Request limit reached!" });
+    assert.equal(await client({ onHealth: (s, m) => reports.push([s, m]) }).getRatings("tt1"), null);
+    assert.deepEqual(reports.at(-1), ["error", "OMDb: Request limit reached!"]);
+  });
+
+  test("an unknown title is not an error", async () => {
+    const reports: Array<[string, string]> = [];
+    respond = () => Response.json({ Response: "False", Error: "Movie not found!" });
+    await client({ onHealth: (s, m) => reports.push([s, m]) }).getRatings("tt1");
+    assert.ok(reports.every(([status]) => status === "ok"));
   });
 
   test("a cache hit reports nothing — it did not talk to anyone", async () => {
