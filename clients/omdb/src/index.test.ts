@@ -6,7 +6,8 @@
  * `minImdb` rule silently excludes the wrong films. Second, everything is
  * cached: a present rating never expires, so a value written wrongly once is
  * wrong for ever, and re-running the job will not fix it. (Only a *missing*
- * Rotten Tomatoes score is re-asked, after `MISSING_RT_RECHECK_MS`.)
+ * Rotten Tomatoes score, or a recent release's, is re-asked after
+ * `OMDB_RECHECK_MS`.)
  *
  * The cache short-circuit is therefore the most important behaviour here, in
  * both directions — it must be consulted *before* the API key check (so a cache
@@ -25,7 +26,7 @@ import { createTestContainer } from "@rube/composition/test-support";
 import { DbToken, omdbCache } from "@rube/db";
 
 import { eq } from "drizzle-orm";
-import { createOmdbClient, extractImdbId, MISSING_RT_RECHECK_MS } from "./index.ts";
+import { createOmdbClient, extractImdbId, OMDB_RECHECK_MS } from "./index.ts";
 
 const c = createTestContainer();
 after(() => c.dispose());
@@ -191,7 +192,7 @@ describe("rating extraction", () => {
     respond = () => Response.json({ Response: "True", imdbRating: "7.0", Ratings: [] });
     await client().getRatings("tt1");
     db.update(omdbCache)
-      .set({ fetchedAt: Date.now() - MISSING_RT_RECHECK_MS - 1 })
+      .set({ fetchedAt: Date.now() - OMDB_RECHECK_MS - 1 })
       .where(eq(omdbCache.imdbId, "tt1"))
       .run();
 
@@ -205,7 +206,20 @@ describe("rating extraction", () => {
     assert.equal(db.select().from(omdbCache).get()?.rtRating, "91%");
   });
 
-  test("a present score never expires", async () => {
+  test("a recent release is asked again a month on, so awards it won since land", async () => {
+    const year = String(new Date().getFullYear());
+    const scored = { Source: "Rotten Tomatoes", Value: "91%" };
+    respond = () => Response.json({ Response: "True", Year: year, Awards: "N/A", Ratings: [scored] });
+    await client().getRatings("tt1");
+    db.update(omdbCache).set({ fetchedAt: 0 }).run();
+
+    respond = () => Response.json({ Response: "True", Year: year, Awards: "Won 1 Oscar.", Ratings: [scored] });
+    const again = await client().getRatings("tt1");
+    assert.equal(again?.source, "api");
+    assert.equal(again?.awards, "Won 1 Oscar.");
+  });
+
+  test("a present score on an older title never expires", async () => {
     respond = () =>
       Response.json({ Response: "True", imdbRating: "7.0", Ratings: [{ Source: "Rotten Tomatoes", Value: "91%" }] });
     await client().getRatings("tt1");
@@ -222,6 +236,22 @@ describe("rating extraction", () => {
     calls = [];
     assert.equal((await client({ apiKey: null }).getRatings("tt1"))?.source, "cache");
     assert.deepEqual(calls, []);
+  });
+});
+
+describe("awards", () => {
+  test("the awards headline comes back from the API and from the cache alike", async () => {
+    respond = () =>
+      Response.json({ Response: "True", Awards: "Won 7 Oscars. 23 wins & 18 nominations total", Ratings: [] });
+    assert.equal((await client().getRatings("tt1"))?.awards, "Won 7 Oscars. 23 wins & 18 nominations total");
+    const cached = await client().getRatings("tt1");
+    assert.equal(cached?.source, "cache");
+    assert.equal(cached?.awards, "Won 7 Oscars. 23 wins & 18 nominations total");
+  });
+
+  test("`N/A` is null", async () => {
+    respond = () => Response.json({ Response: "True", Awards: "N/A", Ratings: [] });
+    assert.equal((await client().getRatings("tt1"))?.awards, null);
   });
 });
 

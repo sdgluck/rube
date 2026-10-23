@@ -226,7 +226,7 @@ export const RULE_TYPES: RuleType[] = [
     value: "awards",
     label: "Awards",
     description:
-      "Award-winners collections (Oscars, BAFTAs, Cannes, Golden Globes). Coverage depends on TMDb keyword tagging.",
+      "Award-winners collections (Oscars, Emmys, Golden Globes, BAFTAs) from the awards OMDb lists for each film and show.",
     requires: "tmdb",
   },
 ];

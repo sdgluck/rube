@@ -685,7 +685,9 @@ export const RULE_TYPE_REQUIRES: Partial<Record<RuleTypeValue, RuleRequirement>>
   streaming: "tmdb",
   based_on: "tmdb",
   seasonal: "tmdb",
-  awards: "tmdb",
+  // OMDb, not TMDb: TMDb tags so few titles with an award keyword that a
+  // 4,241-film library found one winner. See `handlers/awards.ts`.
+  awards: "omdb",
   tmdb_popular_actors: "tmdb",
   tmdb_popular_directors: "tmdb",
   tmdb_franchises: "tmdb",

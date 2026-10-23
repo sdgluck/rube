@@ -26,24 +26,54 @@ function errorMessage(err: unknown): string {
 }
 
 /**
- * How long "OMDb has no Rotten Tomatoes score for this" stands before it is
- * asked again. Caching the absence for ever meant a film OMDb scored after
- * its first lookup — every new release — stayed out of RT rules for good;
- * re-asking every run would spend a free key's 1,000-a-day on the same
- * unscored titles. A present score is still cached for ever.
+ * How long a lookup that may yet change stands before it is asked again.
+ *
+ * Two kinds of answer go stale. A missing Rotten Tomatoes score: caching the
+ * absence for ever kept every film OMDb scored after its first lookup — every
+ * new release — out of RT rules for good. And a recent release's awards line:
+ * a film is looked up on release and wins its Oscar the following spring.
+ * Re-asking everything every run would spend a free key's 1,000-a-day on
+ * answers that cannot change, so an older title with a score stays cached.
  */
-export const MISSING_RT_RECHECK_MS = 30 * 24 * 60 * 60 * 1000;
+export const OMDB_RECHECK_MS = 30 * 24 * 60 * 60 * 1000;
+
+/** Releases this many years old or newer can still pick up awards. */
+const AWARDS_SETTLE_YEARS = 2;
+
+export interface OmdbRatings {
+  imdbRating: string | null;
+  rtRating: string | null;
+  /** OMDb's awards headline ("Won 7 Oscars. 23 wins & 18 nominations total"), or null. */
+  awards: string | null;
+  source: "cache" | "api";
+}
+
+function awardsLine(response: unknown): string | null {
+  const value = (response as { Awards?: unknown } | null)?.Awards;
+  return typeof value === "string" && value !== "N/A" ? value : null;
+}
+
+function isRecentRelease(response: unknown): boolean {
+  const year = parseInt(String((response as { Year?: unknown } | null)?.Year ?? ""), 10);
+  return Number.isFinite(year) && year >= new Date().getFullYear() - AWARDS_SETTLE_YEARS;
+}
 
 export function createOmdbClient(opts: OmdbClientOptions) {
   const { apiKey, onHealth, db } = opts;
 
-  async function getRatings(
-    imdbId: string,
-  ): Promise<{ imdbRating: string | null; rtRating: string | null; source: "cache" | "api" } | null> {
+  async function getRatings(imdbId: string): Promise<OmdbRatings | null> {
     const cached = db.select().from(omdbCache).where(eq(omdbCache.imdbId, imdbId)).get();
-    const stale = cached && cached.rtRating === null && Date.now() - cached.fetchedAt > MISSING_RT_RECHECK_MS;
+    const stale =
+      cached &&
+      Date.now() - cached.fetchedAt > OMDB_RECHECK_MS &&
+      (cached.rtRating === null || isRecentRelease(cached.response));
     if (cached && (!stale || !apiKey)) {
-      return { imdbRating: cached.imdbRating, rtRating: cached.rtRating, source: "cache" };
+      return {
+        imdbRating: cached.imdbRating,
+        rtRating: cached.rtRating,
+        awards: awardsLine(cached.response),
+        source: "cache",
+      };
     }
 
     if (!apiKey) return null;
@@ -94,7 +124,7 @@ export function createOmdbClient(opts: OmdbClientOptions) {
       .onConflictDoUpdate({ target: omdbCache.imdbId, set: row })
       .run();
 
-    return { imdbRating, rtRating, source: "api" };
+    return { imdbRating, rtRating, awards: awardsLine(data), source: "api" };
   }
 
   return { getRatings };

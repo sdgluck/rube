@@ -148,7 +148,8 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
   {
     slug: "award-winners",
     name: "Award Winners",
-    description: "Oscars, BAFTAs, Cannes, Golden Globes. Coverage depends on TMDb keyword tagging.",
+    description:
+      "Oscar, Golden Globe and BAFTA winners, from the awards OMDb lists for each film. Needs an OMDb API key.",
     type: "awards",
     config: {
       pinToHomepage: true,
@@ -160,7 +161,8 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
   {
     slug: "tv-award-winners",
     name: "Emmy & Globe Winners",
-    description: "The awards rule pointed at a TV library — prestige, certified.",
+    description:
+      "Emmy, Golden Globe and BAFTA winners, from the awards OMDb lists for each show. Needs an OMDb API key.",
     type: "awards",
     config: {
       pinToHomepage: true,

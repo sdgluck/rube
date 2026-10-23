@@ -8,7 +8,7 @@ import { indexItemsByTmdb } from "#commands/generate/plex-index.ts";
 import { collectionLimit, describeLimits, filterGroups, minItemsPerGroup } from "#commands/generate/handlers/limits.ts";
 import type { HandlerDeps, PendingCollection } from "#commands/generate/types.ts";
 
-export type KeywordGroupedField = "based_on" | "seasonal" | "awards";
+export type KeywordGroupedField = "based_on" | "seasonal";
 
 export interface KeywordBucket {
   /** Stable key — used to dedup groupings within a single rule run. */
@@ -49,24 +49,9 @@ const SEASONAL: KeywordBucket[] = SEASON_PRESETS.map((season) => ({
   keywordIds: season.keywords.map((k) => k.id),
 }));
 
-/**
- * Awards. TMDb's keyword coverage for awards is sparse — there are
- * "academy award" / "bafta" / "palme d'or" style keywords but they're
- * applied inconsistently. This is a starter set; users with a larger
- * award library can extend via custom rule config in a future release.
- */
-const AWARDS: KeywordBucket[] = [
-  { key: "awards:oscar", label: "Academy Award Winners", keywordIds: [220391, 209714] },
-  { key: "awards:bafta", label: "BAFTA Winners", keywordIds: [221111] },
-  { key: "awards:palme_dor", label: "Palme d'Or", keywordIds: [233316] },
-  { key: "awards:golden_globe", label: "Golden Globe Winners", keywordIds: [220957] },
-  { key: "awards:cannes", label: "Cannes Selections", keywordIds: [192917] },
-];
-
 const BUCKETS: Record<KeywordGroupedField, KeywordBucket[]> = {
   based_on: BASED_ON,
   seasonal: SEASONAL,
-  awards: AWARDS,
 };
 
 export function matchesBucket(bucket: KeywordBucket, details: TmdbCachedDetails): boolean {
@@ -85,7 +70,7 @@ export function createKeywordGroupedCommand(deps: Services) {
 
   /**
    * Generic "build one collection per keyword bucket" handler. Bucket
-   * definitions are static so the same TMDb cache row drives all three
+   * definitions are static so the same TMDb cache row drives both
    * rule types — no extra round-trips beyond what the existing grouped
    * rules already pay.
    */

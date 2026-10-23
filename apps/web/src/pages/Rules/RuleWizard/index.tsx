@@ -16,8 +16,10 @@ import {
   rotatesPins,
   ruleCollectionCount,
   volumeLevel,
+  RULE_TYPE_REQUIRES,
   type ArrService,
   type RuleSchedule,
+  type RuleTypeValue,
 } from "@rube/contracts";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
 import ColorField from "#components/ColorField";
@@ -857,7 +859,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
 
         {renderVolumeEstimate()}
 
-        {form.type === "rt_top_rated" && !omdbConfigured && (
+        {RULE_TYPE_REQUIRES[form.type as RuleTypeValue] === "omdb" && !omdbConfigured && (
           <div className={styles.field}>
             <RequirementLink requirement="omdb" />
           </div>

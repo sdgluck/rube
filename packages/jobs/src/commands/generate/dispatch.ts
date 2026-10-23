@@ -9,6 +9,7 @@ import { createAiPromptCommand } from "./handlers/ai-prompt.ts";
 import { createTmdbGroupedCommand } from "./handlers/tmdb-grouped.ts";
 import { createImdbContentCommand } from "./handlers/imdb-content.ts";
 import { createRtTopRatedCommand } from "./handlers/rt-top-rated.ts";
+import { createAwardsCommand } from "./handlers/awards.ts";
 import { createSeerrRequestsCommand } from "./handlers/seerr-requests.ts";
 import { createTmdbPopularPeopleCommand } from "./handlers/tmdb-popular-people.ts";
 import { createTmdbFranchisesCommand } from "./handlers/tmdb-franchises.ts";
@@ -60,6 +61,7 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
   const { tmdbGroupedHandler } = createTmdbGroupedCommand(deps);
   const { imdbContentHandler } = createImdbContentCommand(deps);
   const { rtTopRatedHandler } = createRtTopRatedCommand(deps);
+  const { awardsHandler } = createAwardsCommand(deps);
   const { seerrRequestsHandler } = createSeerrRequestsCommand(deps);
   const { tmdbPopularPeopleHandler } = createTmdbPopularPeopleCommand(deps);
   const { tmdbFranchisesHandler } = createTmdbFranchisesCommand(deps);
@@ -120,8 +122,9 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
         return mediaGroupedHandler(ruleType);
       case "based_on":
       case "seasonal":
-      case "awards":
         return keywordGroupedHandler(ruleType);
+      case "awards":
+        return awardsHandler;
       case "tmdb_popular_actors":
         return tmdbPopularPeopleHandler("cast");
       case "tmdb_popular_directors":
