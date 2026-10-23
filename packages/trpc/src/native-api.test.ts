@@ -14,6 +14,9 @@
  * And then the calls themselves: every input-less query is run as a signed-in
  * caller against a real container. Output validation is on, so a resolver that
  * answers outside its schema fails here as the 500 it would be in production.
+ * The container is seeded with a rule and two active runs (one with a funnel),
+ * because an empty array satisfies any schema — that is how `hasFunnel` coming
+ * back from SQLite as 0/1 shipped as a 500 on every rule-run query.
  */
 import { describe, test, after } from "node:test";
 import assert from "node:assert/strict";
@@ -23,7 +26,7 @@ import { TRPCError } from "@trpc/server";
 import { NATIVE_PROCEDURES, type NativeRouter } from "@rube/contracts/native-api";
 import { createTestContainer } from "@rube/composition/test-support";
 import { ServicesToken } from "@rube/composition";
-import { DbToken, plexUsers } from "@rube/db";
+import { DbToken, plexUsers, rules } from "@rube/db";
 import { JobsToken, registerJobs } from "@rube/jobs";
 import { createTrpc } from "./index.ts";
 import { t } from "./_base.ts";
@@ -45,6 +48,20 @@ setConfig("global_plex_owner_id", 42);
 setConfig("global_plex_owner_username", "owner");
 setConfig("global_plex_owner_token_hash", createHash("sha256").update(OWNER_TOKEN).digest("hex"));
 c.resolve(DbToken).insert(plexUsers).values({ userId: 42, username: "owner", label: "owner", syncedAt: 0 }).run();
+
+c.resolve(DbToken)
+  .insert(rules)
+  .values({ id: "seeded-rule", name: "Seeded", type: "smart_filter", createdAt: Date.now() })
+  .run();
+for (const withFunnel of [false, true]) {
+  const runId = deps.ruleRuns.createRuleRun({
+    ruleId: "seeded-rule",
+    phase: withFunnel ? "test" : "run",
+    trigger: "manual",
+  });
+  deps.ruleRuns.activateRuleRun(runId);
+  if (withFunnel) deps.ruleRuns.setRuleRunFunnel(runId, []);
+}
 
 interface ProcedureDef {
   type: "query" | "mutation" | "subscription";

@@ -121,7 +121,9 @@ const SUMMARY_COLUMNS = {
   startedAt: ruleRuns.startedAt,
   updatedAt: ruleRuns.updatedAt,
   finishedAt: ruleRuns.finishedAt,
-  hasFunnel: sql<boolean>`${ruleRuns.funnel} IS NOT NULL`,
+  // SQLite answers 0/1; the procedures' output schemas want a real boolean,
+  // and a number here made every rule-run query a 500.
+  hasFunnel: sql<boolean>`${ruleRuns.funnel} IS NOT NULL`.mapWith(Boolean),
 };
 
 // ── Creating and activating ──────────────────────────────────────────────

@@ -22,6 +22,17 @@ function makeRule(): string {
   return id;
 }
 
+describe("a run summary's hasFunnel", () => {
+  // SQLite answers `IS NOT NULL` with 0/1; the native-API output schema wants a
+  // real boolean, and a number there turned every run query into a 500.
+  test("is a boolean, both with and without a funnel", () => {
+    const runId = runs.createRuleRun({ ruleId: makeRule(), phase: "run", trigger: "manual" });
+    assert.equal(runs.getRuleRun(runId)?.hasFunnel, false);
+    runs.setRuleRunFunnel(runId, []);
+    assert.equal(runs.getRuleRun(runId)?.hasFunnel, true);
+  });
+});
+
 describe("attaching to a run already in flight", () => {
   test("an active run is findable; a finished one is not", () => {
     const ruleId = makeRule();
