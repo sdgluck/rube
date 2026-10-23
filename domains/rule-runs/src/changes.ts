@@ -16,6 +16,20 @@ import { perDeps } from "@rube/container";
 import { and, desc, eq, inArray, lt, sql } from "drizzle-orm";
 import { ruleCollectionMembers, ruleRunChanges, type Db } from "@rube/db";
 
+/**
+ * Rows per insert. A change row binds 10 values and SQLite allows 32,766 per
+ * statement, so one insert for a whole collection broke at ~3,300 items — a
+ * first run of "Top Rated" over a 4,273-film library threw "too many SQL
+ * variables" and recorded nothing.
+ */
+const CHANGE_ROWS_PER_INSERT = 1000;
+
+function chunk<T>(rows: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < rows.length; i += size) out.push(rows.slice(i, i + size));
+  return out;
+}
+
 export interface ChangesetMember {
   ratingKey: string;
   title: string;
@@ -156,21 +170,29 @@ export const createChanges = perDeps(function createChanges(deps: ChangesDeps) {
       at: now,
     }));
 
-    if (rows.length > 0) db.insert(ruleRunChanges).values(rows).run();
+    // One transaction across the chunks and the snapshot: a changeset written
+    // without its snapshot would be recorded again, in full, next run.
+    db.transaction((tx) => {
+      for (const batch of chunk(rows, CHANGE_ROWS_PER_INSERT)) tx.insert(ruleRunChanges).values(batch).run();
 
-    db.insert(ruleCollectionMembers)
-      .values({
-        ruleId: input.ruleId,
-        sectionKey: input.sectionKey,
-        collectionName: input.collectionName,
-        members: input.members,
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: [ruleCollectionMembers.ruleId, ruleCollectionMembers.sectionKey, ruleCollectionMembers.collectionName],
-        set: { members: input.members, updatedAt: now },
-      })
-      .run();
+      tx.insert(ruleCollectionMembers)
+        .values({
+          ruleId: input.ruleId,
+          sectionKey: input.sectionKey,
+          collectionName: input.collectionName,
+          members: input.members,
+          updatedAt: now,
+        })
+        .onConflictDoUpdate({
+          target: [
+            ruleCollectionMembers.ruleId,
+            ruleCollectionMembers.sectionKey,
+            ruleCollectionMembers.collectionName,
+          ],
+          set: { members: input.members, updatedAt: now },
+        })
+        .run();
+    });
 
     return diff;
   }

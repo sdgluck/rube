@@ -262,3 +262,25 @@ describe("run tallies for the rules table", () => {
     assert.equal(runs.getRuleRunCounts()[ruleId].lastRunId, newer);
   });
 });
+
+describe("recording a collection's changes", () => {
+  // A change row binds 10 values and SQLite caps a statement at 32,766, so a
+  // single insert broke at ~3,300 items. "Top Rated" over a 4,273-film library
+  // hit exactly that on its first run and recorded nothing.
+  test("a collection bigger than one statement can bind is recorded in full", () => {
+    const ruleId = makeRule();
+    const runId = runs.createRuleRun({ ruleId, phase: "run", trigger: "manual" });
+    const members = Array.from({ length: 5000 }, (_, i) => ({ ratingKey: String(i), title: `Film ${i}` }));
+    const diff = runs.recordCollectionChanges({
+      runId,
+      ruleId,
+      sectionKey: "1",
+      sectionTitle: "Films",
+      collectionName: "Everything",
+      collectionRatingKey: "999",
+      members,
+    });
+    assert.equal(diff.added.length, 5000);
+    assert.deepEqual(runs.getRunChangeCounts([runId]).get(runId), { added: 5000, removed: 0 });
+  });
+});
