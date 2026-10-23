@@ -6,6 +6,32 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.47.0] - 2026-10-23
+
+### Added
+
+- Award-winner rules can now find Emmy winners, read from the awards line OMDb publishes for each title.
+- Rube now rechecks the OMDb data of recent releases every month, so their OMDb details stay current.
+
+### Changed
+
+- **Award-winner rules now find winners in OMDb's awards line instead of TMDb keywords**, so existing award rules may match a different set of titles after you upgrade.
+- **Top Rated and Lowest Rated rules now stay within their configured limit**, so a rule promising 50 items collects 50 instead of the whole section, and existing collections from these rules may shrink.
+- The public rule registry no longer offers a rule for a library its source has no data for: RT Top Rated is offered only for films, streaming only for TV, and media grouping only for films.
+
+### Fixed
+
+- TV director rules now find directors, because Rube reads a show's directors from the job credits across all its seasons. Before, these rules found no one at all.
+- A rule run now records a collection's changes when the collection has more than about 3,300 items, instead of failing with a "too many SQL variables" error.
+- When OMDb itself refuses a request, Rube now reports the refusal on the Health page so you can see why lookups are failing.
+- The Rotten Tomatoes run log now counts the lookups that got no answer, so you can see how many titles are missing a score.
+- If a title has no Rotten Tomatoes score, Rube now asks OMDb for it again after 30 days instead of leaving it missing.
+- A rule now skips any library its source has no data for: RT Top Rated runs only on films, streaming only on TV, and media grouping only on films.
+
+### Removed
+
+- **Award-winner rules no longer cover the Cannes Film Festival**, so any rule that relied on Cannes winners will stop finding them after you upgrade.
+
 ## [0.46.1] - 2026-10-23
 
 ### Fixed
