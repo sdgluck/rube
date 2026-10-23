@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.46.1] - 2026-10-23
+
+### Fixed
+
+- On the Rules page, a wide rules table now scrolls sideways inside its own card instead of pushing the whole page sideways.
+- Loading rule runs no longer fails with a 500 server error, because the server was returning a value that did not match the expected response format.
+
 ## [0.46.0] - 2026-10-21
 
 ### Changed

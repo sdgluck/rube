@@ -1,4 +1,4 @@
 // Stamped by scripts/release.mjs alongside every workspace package version.
 // Keep exactly these two keys: the release script rewrites them in place.
-MARKETING_VERSION = 0.46.0
-CURRENT_PROJECT_VERSION = 46000
+MARKETING_VERSION = 0.46.1
+CURRENT_PROJECT_VERSION = 46001
