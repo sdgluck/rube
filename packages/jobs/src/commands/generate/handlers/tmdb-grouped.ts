@@ -90,13 +90,6 @@ export function createTmdbGroupedCommand(deps: Services) {
       for (const section of sections) {
         ctx.signal?.throwIfAborted();
 
-        // Networks rules only make sense for TV; streaming applies to both
-        // (Netflix originals are movies + shows). Everything else accepts both.
-        if (field === "networks" && section.type !== "show") {
-          ctx.log(`[${field}] Skipping "${section.title}" — networks are TV-only.`);
-          continue;
-        }
-
         ctx.log(`[${field}] "${section.title}" — indexing by TMDb ID...`);
         const { items, tmdbToItem } = await indexItemsByTmdb(client, section.key);
         ctx.log(`[${field}] ${tmdbToItem.size}/${items.length} items have TMDb IDs.`);

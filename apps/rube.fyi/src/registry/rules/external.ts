@@ -27,10 +27,11 @@ export const EXTERNAL_RULES: RegistryRuleInput[] = [
   {
     slug: "critically-acclaimed-tv",
     name: "Critically Acclaimed",
-    description: "Rotten Tomatoes top-rated titles via OMDb. Needs an OMDb API key.",
+    description:
+      "Rotten Tomatoes top-rated films via OMDb. Films only — OMDb carries almost no Rotten Tomatoes scores for TV. Needs an OMDb API key.",
     type: "rt_top_rated",
     config: { limit: 100, pinToHomepage: false, presentation: { poster: "mosaic" } },
-    mediaTypes: ["show"],
+    mediaTypes: ["movie"],
   },
   {
     slug: "seerr-approved",

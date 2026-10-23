@@ -41,6 +41,7 @@ export function createRtTopRatedCommand(deps: Pick<Services, "clients" | "config
       let processed = 0;
       let apiCalls = 0;
       let cacheHits = 0;
+      let unanswered = 0;
       for (const item of items) {
         const imdbId = extractImdbId(item.guids);
         if (!imdbId) continue;
@@ -49,8 +50,9 @@ export function createRtTopRatedCommand(deps: Pick<Services, "clients" | "config
           ctx.signal?.throwIfAborted();
           const ratings = await getOmdbClient().getRatings(imdbId);
           processed++;
-          if (ratings?.source === "cache") cacheHits++;
-          else if (ratings?.source === "api") apiCalls++;
+          if (!ratings) unanswered++;
+          else if (ratings.source === "cache") cacheHits++;
+          else apiCalls++;
           if (processed % PROGRESS_INTERVAL === 0) {
             ctx.log(`OMDB progress: ${processed} processed (${cacheHits} cached, ${apiCalls} fetched)...`);
           }
@@ -71,6 +73,14 @@ export function createRtTopRatedCommand(deps: Pick<Services, "clients" | "config
       ctx.log(
         `Processed ${processed} item(s) (${cacheHits} from cache, ${apiCalls} fetched from OMDB), ${scored.length} have RT scores.`,
       );
+      // A null is OMDb not knowing the title, a failed request, or the key's
+      // daily limit — and the last one empties every lookup after it. Counted
+      // apart from "no RT score", or a quota run looks like an unrated library.
+      if (unanswered > 0) {
+        ctx.log(
+          `${unanswered} lookup(s) got no answer from OMDB (unknown title, failed request or request limit) — see Health for the reason.`,
+        );
+      }
 
       if (scored.length === 0) {
         ctx.log(`No items with RT scores in "${section.title}", skipping.`);

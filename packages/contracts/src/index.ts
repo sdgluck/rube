@@ -29,6 +29,7 @@ export {
   producesManyCollections,
   rotatesPins,
   RULE_TYPE_REQUIRES,
+  RULE_TYPE_SECTION_TYPE,
   RULE_TYPE_VALUES,
   ruleAction,
   ruleCollectionCount,

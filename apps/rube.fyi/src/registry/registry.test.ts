@@ -20,6 +20,7 @@ import {
   producesManyCollections,
   ruleConfigSchema,
   RULE_TYPE_REQUIRES,
+  RULE_TYPE_SECTION_TYPE,
   RULE_TYPE_VALUES,
 } from "@rube/contracts";
 import { smartFilterGroupSchema, type SmartFilterNode } from "@rube/plex-smart-filter";
@@ -179,6 +180,21 @@ test("declared requirements cover what the rule type needs", () => {
     assert.ok(
       rule.requires.includes(needed),
       `rule "${rule.slug}" (${rule.type}) must declare requires: ["${needed}"]`,
+    );
+  }
+});
+
+test("no rule is offered for a library kind its source has no data for", () => {
+  // The engine skips the section, so the rule would import cleanly and then
+  // build nothing — "Critically Acclaimed" shipped for TV and made one
+  // collection of one show, because OMDb has Rotten Tomatoes scores for films.
+  for (const rule of REGISTRY.rules) {
+    const only = RULE_TYPE_SECTION_TYPE[rule.type];
+    if (!only) continue;
+    assert.deepEqual(
+      rule.mediaTypes,
+      [only],
+      `rule "${rule.slug}" (${rule.type}) must declare mediaTypes: ["${only}"]`,
     );
   }
 });

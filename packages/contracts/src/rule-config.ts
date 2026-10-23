@@ -695,6 +695,29 @@ export const RULE_TYPE_REQUIRES: Partial<Record<RuleTypeValue, RuleRequirement>>
 };
 
 /**
+ * Rule types whose data source only exists for one kind of library. The
+ * wizard limits the section picker with it, the engine skips a mismatched
+ * section with a log line, and the registry test refuses a published rule
+ * that targets the other kind.
+ *
+ * Each entry is a source that silently comes back empty, not a preference.
+ * Without it the rule "succeeds" with nothing, which reads as a bug in the
+ * user's library: OMDb gave 1 Rotten Tomatoes score for 665 shows, TMDb has
+ * no networks for films (so `streaming` built 0 groups from 4,241), and a
+ * Plex show row carries no Media (only its episodes do).
+ */
+export const RULE_TYPE_SECTION_TYPE: Partial<Record<RuleTypeValue, "movie" | "show">> = {
+  networks: "show",
+  streaming: "show",
+  tmdb_franchises: "movie",
+  rt_top_rated: "movie",
+  resolutions: "movie",
+  audio_languages: "movie",
+  subtitle_languages: "movie",
+  video_formats: "movie",
+};
+
+/**
  * Plex filter fields whose values are stored as **per-server numeric tag
  * keys** rather than the display name you see in the UI. A rule carrying
  * `genre = "5840"` is meaningless on any other Plex server, so anything

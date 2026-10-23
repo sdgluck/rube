@@ -7,6 +7,7 @@ import {
   PLAYLIST_CAPABLE_RULE_TYPES,
   posterUrlError,
   producesManyCollections,
+  RULE_TYPE_SECTION_TYPE,
   ruleCollectionCount,
   templateError,
   type RuleTypeValue,
@@ -303,14 +304,12 @@ export function typeHasOptionalLimit(type: string): boolean {
 
 /**
  * Section-type constraint for rule types that only make sense for movies
- * or shows. `imdb_chart` is determined by the selected chart; other
- * constraints are intrinsic to the type.
+ * or shows. `imdb_chart` is determined by the selected chart; the rest come
+ * from `RULE_TYPE_SECTION_TYPE`, which the engine enforces too.
  */
 export function requiredSectionTypeForRule(type: string, chart: string): "movie" | "show" | undefined {
   if (type === "imdb_chart") return IMDB_CHART_SECTION_TYPE[chart] as "movie" | "show" | undefined;
-  if (type === "networks") return "show";
-  if (type === "tmdb_franchises") return "movie";
-  return undefined;
+  return RULE_TYPE_SECTION_TYPE[type as RuleTypeValue];
 }
 
 export function typeHasSourceStep(type: string): boolean {

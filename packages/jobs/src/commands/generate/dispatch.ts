@@ -18,7 +18,13 @@ import { createSmartFilterCommand } from "./handlers/smart-filter.ts";
 import { createPlaylistCommand } from "./playlist.ts";
 import { createStaticListCommand } from "./handlers/static-list.ts";
 import type { PlexSection } from "@rube/plex";
-import { DEFAULT_PIN_ROTATION, producesManyCollections, ruleAction } from "@rube/contracts";
+import {
+  DEFAULT_PIN_ROTATION,
+  producesManyCollections,
+  RULE_TYPE_SECTION_TYPE,
+  ruleAction,
+  type RuleTypeValue,
+} from "@rube/contracts";
 import { type CleanupBudget } from "./cleanup.ts";
 import { type MetadataBudget } from "./metadata.ts";
 import { type HistoricalCollection } from "@rube/domain.rule-history";
@@ -69,6 +75,25 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
    * misconfigured rule doesn't break a whole batch run.
    */
   function handlerForRule(ruleType: string): Handler | null {
+    const handler = handlerForType(ruleType);
+    const only = RULE_TYPE_SECTION_TYPE[ruleType as RuleTypeValue];
+    if (!handler || !only) return handler;
+    // Here rather than in each handler, so every path that runs a rule — commit,
+    // playlist, cleanup, metadata, test — skips the section the same way. A rule
+    // aimed at the wrong kind of library otherwise "succeeds" with nothing,
+    // which reads as something wrong with the library rather than the rule.
+    return (deps) => {
+      const kind = only === "show" ? "TV" : "movie";
+      for (const section of deps.sections) {
+        if (section.type !== only) {
+          deps.ctx.log(`Skipping "${section.title}" — ${ruleType} rules only work for ${kind} libraries.`);
+        }
+      }
+      return handler({ ...deps, sections: deps.sections.filter((s) => s.type === only) });
+    };
+  }
+
+  function handlerForType(ruleType: string): Handler | null {
     switch (ruleType) {
       case "ai_prompt":
         return aiPromptHandler;

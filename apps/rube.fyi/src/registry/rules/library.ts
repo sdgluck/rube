@@ -128,6 +128,7 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
     description: "Netflix, Disney+, Apple TV+ and friends, split out from the rest of the library.",
     type: "streaming",
     config: { pinToHomepage: true, pinRotationCount: 10, pinMinItems: 3, presentation: { poster: "mosaic" } },
+    mediaTypes: ["show"],
   },
   {
     slug: "based-on",
@@ -192,6 +193,7 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
     description: "Group by primary audio stream language, read straight from Plex media info.",
     type: "audio_languages",
     config: { pinToHomepage: true, pinRotationCount: 10, pinMinItems: 3, presentation: { poster: "gradient" } },
+    mediaTypes: ["movie"],
   },
   {
     slug: "atmos-and-surround",
@@ -199,6 +201,7 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
     description: "Audio-language shelves for the demo library — useful next to the format collections.",
     type: "audio_languages",
     config: { pinToHomepage: true, pinRotationCount: 10, pinMinItems: 3, presentation: { poster: "gradient" } },
+    mediaTypes: ["movie"],
   },
   {
     slug: "by-subtitle-language",
@@ -206,6 +209,7 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
     description: "Group by available subtitle language. The practical half of a world-cinema shelf.",
     type: "subtitle_languages",
     config: { pinToHomepage: true, pinRotationCount: 10, pinMinItems: 3, presentation: { poster: "gradient" } },
+    mediaTypes: ["movie"],
   },
   {
     slug: "resolutions",
@@ -213,6 +217,7 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
     description: "Plex's reported resolution, split into 4K / 1080p / 720p / SD.",
     type: "resolutions",
     config: { pinToHomepage: true, pinRotationCount: 10, pinMinItems: 3, presentation: { poster: "gradient" } },
+    mediaTypes: ["movie"],
   },
   {
     slug: "video-formats",
@@ -220,5 +225,6 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
     description: "Bluray, WEB-DL, HDTV and friends, inferred from Plex media metadata.",
     type: "video_formats",
     config: { pinToHomepage: true, pinRotationCount: 10, pinMinItems: 3, presentation: { poster: "gradient" } },
+    mediaTypes: ["movie"],
   },
 ];
