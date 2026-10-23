@@ -1070,7 +1070,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
           }
         />
       ) : (
-        <div className={`table-scroll ${styles.tableBleedRight}`}>
+        <div className={`table-scroll ${styles.rulesTableWrap}`}>
           <table className={shared.table}>
             <thead>
               <tr>

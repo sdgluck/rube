@@ -109,40 +109,6 @@ td.previewBlockCell {
   max-height: 58rem;
   overflow-y: auto;
   background: var(--sidebar);
-  position: relative;
-}
-
-/* Desktop only, both of these. The bleed paints 80px past the right edge of
-   the content column and nothing downstream clips it — `.table-scroll` is
-   `visible`, `.content` is `overflow-y` only. On desktop that 80px lands in
-   `.content`'s 40px gutter and reads as the canvas reaching the window edge.
-   On a phone the gutter is 16px, so the same strip is ~64px of unconditional
-   horizontal page scroll for a decoration nobody asked for. Mobile also gets
-   the wrapper's `overflow-x: visible` from App.css already, so scoping
-   `.tableBleedRight` here changes nothing there. */
-@media (min-width: 769px) {
-  /* We can't simply widen the previewStack inside the table cell — that would
-     push the table wider than the viewport — so the pseudo paints a strip
-     extending right of it, at 80px to comfortably cover .content's 40px
-     padding plus any rounding. */
-  .previewStack::after {
-    content: "";
-    position: absolute;
-    top: 0;
-    bottom: 0;
-    left: 100%;
-    width: 8rem;
-    background: var(--sidebar);
-    pointer-events: none;
-  }
-
-  /* Let the bleed escape the wrapper. Native `.table-scroll` uses
-     `overflow-x: auto` for narrow-viewport horizontal scroll; at this width
-     the table fits comfortably so the bleed is the more important
-     consideration. */
-  .tableBleedRight {
-    overflow-x: visible !important;
-  }
 }
 
 /* Both stacks are sized from the `.table-scroll` wrapper's clientWidth by a
@@ -153,37 +119,6 @@ td.previewBlockCell {
 .previewStack,
 .testPreviewStack {
   max-width: 100%;
-}
-
-/* `.table-scroll` normally gets its rounded corners for free: `overflow-x:
-   auto` clips the square-cornered table inside it. Opting out of that clipping
-   above also opts out of the rounding, so the table's own opaque background
-   paints right over the wrapper's rounded corners and this one table reads as
-   a square card while every other list page is rounded.
-
-   Fix without reinstating the clip: let the wrapper's rounded surface show
-   through (the table stops painting its own background) and round the four
-   corner cells, which do paint — the header cells always, the last row's cells
-   on hover. `border-collapse: collapse` rules out rounding the <table> itself,
-   so the corners have to be applied per-cell. */
-.tableBleedRight > table {
-  background: none;
-}
-
-.tableBleedRight > table thead tr:first-child th:first-child {
-  border-top-left-radius: var(--r-card);
-}
-
-.tableBleedRight > table thead tr:first-child th:last-child {
-  border-top-right-radius: var(--r-card);
-}
-
-.tableBleedRight > table tbody tr:last-child td:first-child {
-  border-bottom-left-radius: var(--r-card);
-}
-
-.tableBleedRight > table tbody tr:last-child td:last-child {
-  border-bottom-right-radius: var(--r-card);
 }
 
 /* Test-preview (RuleWizard) — same Plex canvas with a self-contained border
@@ -871,15 +806,21 @@ td.previewBlockCell {
 /* Eleven columns, seven of them per-row actions: at the shared 16px cell
    gutter the name column loses and rule names wrap to two lines. Tighten the
    gutter for this table only — and only while it is still a table, since on
-   mobile the rows become cards and set their own padding. */
+   mobile the rows become cards and set their own padding.
+
+   The wrapper keeps `.table-scroll`'s own `overflow-x: auto`. It used to be
+   overridden to `visible` so the preview canvas could bleed to the window
+   edge, on the theory that the table always fit on desktop; it doesn't between
+   ~770 and ~1400px, and the overflow then scrolled `.content` sideways,
+   clipping the left of the whole page. */
 @media (min-width: 769px) {
-  .tableBleedRight th,
-  .tableBleedRight td {
+  .rulesTableWrap th,
+  .rulesTableWrap td {
     /* stylelint-disable-next-line rube/primitive-geometry -- the gutter only, row height untouched; eleven columns don't fit at 16px */
     padding: 0 1rem;
   }
 
-  .tableBleedRight .titleCell {
+  .rulesTableWrap .titleCell {
     min-width: 16rem;
   }
 }
