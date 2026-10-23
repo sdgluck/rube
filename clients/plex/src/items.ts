@@ -145,8 +145,11 @@ export function createItemsModule(http: PlexHttp) {
 
   async function fetchItemsSorted(sectionId: string, sort: string, limit: number): Promise<PlexItem[]> {
     const data = await http.request(`/library/sections/${sectionId}/all`, {
+      // Start as well as Size: Plex ignored a lone Size here and answered with
+      // the whole section, so a "Top 50" rule built a 4,273-film collection.
       params: {
         sort,
+        "X-Plex-Container-Start": 0,
         "X-Plex-Container-Size": limit,
       },
     });

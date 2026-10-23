@@ -15,7 +15,9 @@ export function ratedHandler(direction: "top" | "lowest") {
     for (const section of sections) {
       ctx.log(`[${displayName}] "${section.title}" — fetching top ${limit} items sorted by ${sort}...`);
 
-      const items = await client.fetchItemsSorted(section.key, sort, limit);
+      // Trimmed here too: the limit is the rule's whole promise, and Plex has
+      // already once answered a paged request with the entire section.
+      const items = (await client.fetchItemsSorted(section.key, sort, limit)).slice(0, limit);
       if (items.length === 0) {
         ctx.log(`No items found, skipping.`);
         continue;
