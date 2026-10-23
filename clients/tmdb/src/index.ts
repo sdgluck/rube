@@ -52,7 +52,16 @@ const crewRawSchema = z.object({
   id: z.number(),
   name: z.string(),
   job: z.string().optional(),
+  /** `aggregate_credits` only: a person's roles across the whole show. */
+  jobs: z.array(z.object({ job: z.string(), episode_count: z.number().optional() })).optional(),
 });
+
+/**
+ * Directors this many episodes deep (at most) define a show. A long-running
+ * series has a dozen people who directed one episode each; counting them all
+ * put every show in a dozen director groups and made the groups meaningless.
+ */
+const TV_DIRECTORS_PER_SHOW = 3;
 
 const genreRawSchema = z.object({ id: z.number(), name: z.string() });
 const companyRawSchema = z.object({ id: z.number(), name: z.string() });
@@ -382,8 +391,18 @@ export async function fetchItemDetails(
   const cast = credits.cast
     .map((c) => ({ id: c.id, name: c.name, order: c.order }))
     .sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
+  // `aggregate_credits` puts the role in `jobs[]`, not `job`, so matching on
+  // `job` alone found no director for any show and a TV Directors rule built
+  // nothing. `job` is still read for the plain `credits` fallback.
   const directors = credits.crew
-    .filter((c) => c.job === "Director" || c.job === "Series Director")
+    .map((c) => {
+      const roles = c.jobs ?? (c.job ? [{ job: c.job, episode_count: 0 }] : []);
+      const directed = roles.filter((r) => r.job === "Director" || r.job === "Series Director");
+      return { id: c.id, name: c.name, episodes: directed.reduce((n, r) => n + (r.episode_count ?? 0), 0), directed };
+    })
+    .filter((c) => c.directed.length > 0)
+    .sort((a, b) => b.episodes - a.episodes)
+    .slice(0, TV_DIRECTORS_PER_SHOW)
     .map((c) => ({ id: c.id, name: c.name }));
   const productionCountries =
     data.production_countries && data.production_countries.length > 0
