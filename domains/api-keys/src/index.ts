@@ -55,6 +55,14 @@ export interface ApiKeysDeps {
   now: Clock;
 }
 
+/**
+ * One unsalted SHA-256, deliberately — not bcrypt/scrypt. Those exist to make
+ * guessing a low-entropy human password expensive; this key is 32 random
+ * bytes, so there is nothing to guess, and a slow KDF would only add its cost
+ * to every agent request. Unsalted because the hash is the lookup key: the
+ * presented key is hashed and found by equality. CodeQL's
+ * js/insufficient-password-hash flags it from the `API_KEY` name alone.
+ */
 function hashKey(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }

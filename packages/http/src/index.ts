@@ -151,3 +151,4 @@ export async function httpRequestJson<T>(opts: HttpRequestOptions): Promise<T> {
 }
 
 export { assertSafeOutboundUrl, UnsafeUrlError } from "./ssrf.ts";
+export { trimTrailing } from "./trim.ts";

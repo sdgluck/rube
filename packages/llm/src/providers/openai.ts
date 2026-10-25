@@ -1,3 +1,4 @@
+import { trimTrailing } from "@rube/http";
 import type { LlmClient, LlmConfig, LlmProvider, LlmRequest, LlmResponse } from "../types.ts";
 import { LlmConfigError, LlmRequestError } from "../types.ts";
 import {
@@ -46,7 +47,7 @@ export function createOpenAiCompatibleClient(config: LlmConfig, options: Options
   if (options.apiKeyRequired && !config.apiKey) {
     throw new LlmConfigError(`${options.provider} provider requires an API key.`);
   }
-  const baseUrl = (config.baseUrl ?? options.defaultBaseUrl).replace(/\/+$/, "");
+  const baseUrl = trimTrailing(config.baseUrl ?? options.defaultBaseUrl);
   if (!baseUrl) throw new LlmConfigError(`${options.provider} provider requires a base URL.`);
   const model = config.model;
   if (!model) throw new LlmConfigError(`${options.provider} provider requires a model.`);

@@ -56,8 +56,9 @@ export function classifyOne(collection: CollectionInput): { bucket: BucketKind |
 
   // Explicit role suffix wins outright — "Brian De Palma (Director)" should
   // never get re-routed by a downstream lookup.
-  if (DIRECTOR_SUFFIX_RE.test(title)) return { bucket: "director" };
-  if (ACTOR_SUFFIX_RE.test(title)) return { bucket: "actor" };
+  const untrailed = title.trimEnd();
+  if (DIRECTOR_SUFFIX_RE.test(untrailed)) return { bucket: "director" };
+  if (ACTOR_SUFFIX_RE.test(untrailed)) return { bucket: "actor" };
 
   if (SEPARATOR_NAMES.has(lower)) {
     return { bucket: null, reason: "Kometa separator collection — leave or delete manually" };

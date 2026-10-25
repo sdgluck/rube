@@ -5,6 +5,7 @@
  * are the part that silently breaks playback when wrong — can be tested
  * directly.
  */
+import { trimTrailing } from "@rube/http";
 
 export type PrerollMode = "random" | "sequential";
 
@@ -29,7 +30,7 @@ export const MODE_SEPARATORS: Record<PrerollMode, string> = {
  * Windows Plex accepts forward slashes, so they're the safe common form.
  */
 export function joinPlexPath(plexDir: string, filename: string): string {
-  const base = plexDir.replace(/[/\\]+$/, "");
+  const base = trimTrailing(plexDir, "/\\");
   return base ? `${base}/${filename}` : filename;
 }
 

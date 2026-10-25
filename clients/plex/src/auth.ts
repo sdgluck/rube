@@ -7,7 +7,7 @@
  * Flow: createPlexPin → redirect the user to buildPlexAuthUrl → poll
  * checkPlexPin until it returns a token → getPlexAccount to identify them.
  */
-import { httpRequestJson } from "@rube/http";
+import { httpRequestJson, trimTrailing } from "@rube/http";
 
 /**
  * plex.tv, unless a development build points it at the mock in
@@ -18,7 +18,7 @@ import { httpRequestJson } from "@rube/http";
  */
 function plexTv(): string {
   const override = process.env.RUBE_PLEX_TV_URL;
-  if (override && process.env.NODE_ENV !== "production") return `${override.replace(/\/+$/, "")}/api/v2`;
+  if (override && process.env.NODE_ENV !== "production") return `${trimTrailing(override)}/api/v2`;
   return "https://plex.tv/api/v2";
 }
 

@@ -22,6 +22,7 @@
  * than one wall-clock figure: loading a 20B model and reading a 25k-token
  * prompt on modest hardware legitimately takes minutes before the first token.
  */
+import { trimTrailing } from "@rube/http";
 import type { LlmClient, LlmConfig, LlmRequest, LlmResponse } from "../types.ts";
 import { LlmConfigError, LlmRequestError } from "../types.ts";
 import {
@@ -93,7 +94,7 @@ function sameModel(a: string, b: string): boolean {
 
 export function ollamaBaseUrl(configured: string | undefined): string {
   // People paste the `/v1` URL from guides written for the OpenAI shim.
-  return (configured || DEFAULT_BASE_URL).replace(/\/+$/, "").replace(/\/v1$/, "");
+  return trimTrailing(configured || DEFAULT_BASE_URL).replace(/\/v1$/, "");
 }
 
 /** Names of the models pulled on the server, for the Settings dropdown and the ping. */

@@ -98,16 +98,18 @@ export function extractJSON(text: string): unknown {
     // fall through to bracketed-object extraction
   }
 
-  const objMatch = text.match(/\{[\s\S]*\}/);
+  // indexOf/lastIndexOf rather than `/\{[\s\S]*\}/`: the same first-to-last
+  // span, without a backtracking scan from every brace in a long run of them.
+  const objMatch = outermost(text, "{", "}");
   if (objMatch) {
     try {
-      return JSON.parse(objMatch[0]);
+      return JSON.parse(objMatch);
     } catch {
       // fall through to cleaned variant
     }
 
     // eslint-disable-next-line no-control-regex
-    const cleaned = objMatch[0].replace(/,\s*([}\]])/g, "$1").replace(/[\u0000-\u001f]/g, " ");
+    const cleaned = objMatch.replace(/,\s*([}\]])/g, "$1").replace(/[\u0000-\u001f]/g, " ");
     try {
       return JSON.parse(cleaned);
     } catch {
@@ -115,14 +117,20 @@ export function extractJSON(text: string): unknown {
     }
   }
 
-  const arrMatch = text.match(/\[[\s\S]*\]/);
+  const arrMatch = outermost(text, "[", "]");
   if (arrMatch) {
     try {
-      return JSON.parse(arrMatch[0]);
+      return JSON.parse(arrMatch);
     } catch {
       // exhausted fallbacks; caller treats `null` as "couldn't parse"
     }
   }
 
   return null;
+}
+
+function outermost(text: string, open: string, close: string): string | null {
+  const start = text.indexOf(open);
+  const end = text.lastIndexOf(close);
+  return start >= 0 && end > start ? text.slice(start, end + 1) : null;
 }

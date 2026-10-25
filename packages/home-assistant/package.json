@@ -17,6 +17,7 @@
   "dependencies": {
     "@rube/container": "workspace:*",
     "@rube/core": "workspace:*",
+    "@rube/http": "workspace:*",
     "@rube/mqtt": "workspace:*",
     "@rube/trpc": "workspace:*"
   },

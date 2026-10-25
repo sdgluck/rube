@@ -286,6 +286,6 @@ export function tasteProfilePromptBlock(profile: TasteProfile): string {
   if (profile.abandoned.length > 0) {
     lines.push("", "Started but gave up on early:", ...profile.abandoned.map((t) => `- ${t}`));
   }
-  const fenced = lines.join("\n").replace(/<\/?history>/gi, (m) => m.replace(">", "_>"));
+  const fenced = lines.join("\n").replace(/<\/?history>/gi, (m) => m.replace(/>/g, "_>"));
   return `<history>\n${fenced}\n</history>`;
 }

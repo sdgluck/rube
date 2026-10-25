@@ -11,6 +11,7 @@
  * Rubes on one broker (a test install beside the real one) are two
  * devices instead of one device whose entities flip between them.
  */
+import { trimTrailing } from "@rube/http";
 
 export interface Snapshot {
   version: string;
@@ -188,13 +189,13 @@ export const DEFAULT_TOPIC_PREFIX = "rube";
 export const DEFAULT_DISCOVERY_PREFIX = "homeassistant";
 
 export function topicsFor(cfg: { topicPrefix?: string; discoveryPrefix?: string }): Topics {
-  const prefix = cfg.topicPrefix?.trim().replace(/\/+$/, "") || DEFAULT_TOPIC_PREFIX;
+  const prefix = trimTrailing(cfg.topicPrefix?.trim() ?? "") || DEFAULT_TOPIC_PREFIX;
   return {
     // Discovery node ids allow only [a-zA-Z0-9_-].
     node: prefix.replace(/[^a-zA-Z0-9_-]/g, "_"),
     state: `${prefix}/state`,
     availability: `${prefix}/availability`,
-    discoveryPrefix: cfg.discoveryPrefix?.trim().replace(/\/+$/, "") || DEFAULT_DISCOVERY_PREFIX,
+    discoveryPrefix: trimTrailing(cfg.discoveryPrefix?.trim() ?? "") || DEFAULT_DISCOVERY_PREFIX,
   };
 }
 

@@ -136,7 +136,7 @@ export function bywRowName(watchedTitle: string): string {
  */
 export function bywSynopsisBlock(synopsis: string | null): string {
   if (!synopsis) return "";
-  const fenced = synopsis.replace(/<\/?synopsis>/gi, (m) => m.replace(">", "_>"));
+  const fenced = synopsis.replace(/<\/?synopsis>/gi, (m) => m.replace(/>/g, "_>"));
   return `\nWhat it's about:\n<synopsis>\n${fenced}\n</synopsis>\n`;
 }
 
@@ -676,7 +676,7 @@ export function createBecauseYouWatchedCommand(
     const itemList = candidates
       .map((i) => `${i.title}${i.year ? ` (${i.year})` : ""}`)
       .join("\n")
-      .replace(/<\/?library>/gi, (m) => m.replace(">", "_>"));
+      .replace(/<\/?library>/gi, (m) => m.replace(/>/g, "_>"));
     const prefsBlock = prefs ? preferencesPromptBlock(prefs) : "";
     // Per-call, so it goes in `prompt`, never `library`.
     const synopsisBlock = bywSynopsisBlock(synopsis);

@@ -13,7 +13,7 @@
  * run in `running` forever and blocked the whole queue behind it.
  */
 
-import { httpRequestJson, HttpError } from "@rube/http";
+import { httpRequestJson, HttpError, trimTrailing } from "@rube/http";
 
 const MDBLIST_TIMEOUT_MS = 20_000;
 const DEFAULT_BASE_URL = "https://api.mdblist.com";
@@ -96,7 +96,7 @@ export function mdblistListPath(idOrSlug: string): string {
   const trimmed = idOrSlug.trim();
   if (/^\d+$/.test(trimmed)) return `/lists/${encodeURIComponent(trimmed)}`;
   // Strip a leading https://mdblist.com/lists/ if a user pasted a URL.
-  const slug = trimmed.replace(/^https?:\/\/(www\.)?mdblist\.com\/lists\//i, "").replace(/\/+$/, "");
+  const slug = trimTrailing(trimmed.replace(/^https?:\/\/(www\.)?mdblist\.com\/lists\//i, ""));
   // Encode each segment independently so the `/` separator survives but
   // unsafe characters in the segments don't.
   const encoded = slug.split("/").map(encodeURIComponent).join("/");
@@ -132,7 +132,7 @@ function toItem(raw: RawListItem, mediaType: "movie" | "show"): MdblistListItem 
 
 export function createMdblistClient(opts: MdblistClientOptions) {
   const { apiKey, onHealth } = opts;
-  const baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const baseUrl = trimTrailing(opts.baseUrl ?? DEFAULT_BASE_URL);
 
   function requireApiKey(): string {
     if (!apiKey) throw new Error("MDBList API key is not configured (Settings → Databases).");

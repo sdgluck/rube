@@ -9,13 +9,14 @@
  * that Plex has matched. Its *Arr folder and its Plex folder share the part
  * below the root, and what is left over on the Plex side is the Plex root.
  */
+import { trimTrailing as trimSeparators } from "@rube/http";
 
 function separatorOf(path: string): "/" | "\\" {
   return path.includes("\\") && !path.includes("/") ? "\\" : "/";
 }
 
 function trimTrailing(path: string): string {
-  return path.length > 1 ? path.replace(/[\\/]+$/, "") : path;
+  return path.length > 1 ? trimSeparators(path, "\\/") : path;
 }
 
 /** `path` below `root`, as segments, or null when it isn't below it. */

@@ -210,7 +210,7 @@ describe("email", () => {
 
   test("the HTML escapes its content", () => {
     const html = renderEmailHtml(plainMessage("A <script>alert(1)</script> title", "body & more"));
-    assert.doesNotMatch(html, /<script>/);
+    assert.doesNotMatch(html, /<script/i);
     assert.match(html, /&lt;script&gt;/);
     assert.match(html, /body &amp; more/);
   });

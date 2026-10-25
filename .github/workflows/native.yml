@@ -26,6 +26,12 @@ concurrency:
   group: native-${{ github.ref }}
   cancel-in-progress: true
 
+# Read-only by default. A job that writes (packages, pages) says so itself,
+# so the token every other job — and every action it runs — holds can only
+# read the repo.
+permissions:
+  contents: read
+
 jobs:
   ios:
     # iOS 26 is the deployment target, which needs the Xcode 26 SDK.

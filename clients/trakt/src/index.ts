@@ -24,7 +24,7 @@
  * reference parsing. One copy, here, so the two can't drift.
  */
 
-import { httpRequestJson, HttpError } from "@rube/http";
+import { httpRequestJson, HttpError, trimTrailing } from "@rube/http";
 
 const TRAKT_TIMEOUT_MS = 20_000;
 const DEFAULT_BASE_URL = "https://api.trakt.tv";
@@ -101,7 +101,7 @@ interface RawListItemEntry {
  * out of the path and into the query string.
  */
 export function traktListPath(reference: string): string {
-  const trimmed = reference.trim().replace(/\/+$/, "");
+  const trimmed = trimTrailing(reference.trim());
 
   // https://trakt.tv/users/<user>/lists/<slug>
   const url = trimmed.match(/trakt\.tv\/users\/([^/]+)\/lists\/([^/?#]+)/i);
@@ -146,7 +146,7 @@ function toItem(entry: RawListItemEntry): TraktListItem | null {
 
 export function createTraktClient(opts: TraktClientOptions) {
   const { clientId, onHealth } = opts;
-  const baseUrl = (opts.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+  const baseUrl = trimTrailing(opts.baseUrl ?? DEFAULT_BASE_URL);
 
   function requireClientId(): string {
     if (!clientId) throw new Error("Trakt API key is not configured (Settings → Databases).");

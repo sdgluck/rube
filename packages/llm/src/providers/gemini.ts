@@ -1,3 +1,4 @@
+import { trimTrailing } from "@rube/http";
 import type { LlmClient, LlmConfig, LlmRequest, LlmResponse } from "../types.ts";
 import { LlmConfigError, LlmRequestError } from "../types.ts";
 import {
@@ -28,7 +29,7 @@ function geminiModelReasons(model: string): boolean {
 
 export function createGeminiClient(config: LlmConfig): LlmClient {
   if (!config.apiKey) throw new LlmConfigError("Gemini provider requires an API key.");
-  const baseUrl = (config.baseUrl ?? "https://generativelanguage.googleapis.com").replace(/\/+$/, "");
+  const baseUrl = trimTrailing(config.baseUrl ?? "https://generativelanguage.googleapis.com");
   const model = config.model;
   if (!model) throw new LlmConfigError("Gemini provider requires a model.");
   const reasons = geminiModelReasons(model);

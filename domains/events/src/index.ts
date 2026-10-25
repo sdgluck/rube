@@ -52,7 +52,10 @@ function rollupKey(e: { type: string; message: string; metadata: Record<string, 
  * stops rolling up. `packages/core/src/time.test.ts` pins the round trip.
  */
 export function parseDurationMs(message: string): number | null {
-  const match = message.match(/(?:(\d+)m )?(\d+)s$/);
+  // Bounded digit runs keep this linear (an unbounded `\d+` is retried from
+  // every digit of a long number); the lookbehind stops a number too long for
+  // them from being read from its middle.
+  const match = message.match(/(?<!\d)(?:(\d{1,9})m )?(\d{1,9})s$/);
   if (!match) return null;
   const minutes = match[1] ? Number(match[1]) : 0;
   const seconds = Number(match[2]);

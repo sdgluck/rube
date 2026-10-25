@@ -16,7 +16,7 @@ import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { pipeline } from "node:stream/promises";
-import { createLogger, errorMessage } from "@rube/core";
+import { createLogger } from "@rube/core";
 import type { Services } from "@rube/composition";
 import { BUNDLE_PARTS, IMPORT_RESOLUTIONS, type BundlePart, type ImportResolution } from "@rube/contracts";
 import { backupPath, listBackups, type BackupFile } from "@rube/domain.backups";
@@ -216,7 +216,7 @@ export function createPortabilityRoutes(deps: Services & { version: string }) {
       // message the domain wrote, which names the version needed or the field
       // that failed. A 500 here would send somebody looking at logs for a
       // problem that is visible in the file they just picked.
-      if (!res.headersSent) json(res, 400, { error: errorMessage(err) });
+      if (!res.headersSent) json(res, 400, { error: err instanceof Error ? err.message : "Import failed" });
       else res.end();
       return true;
     }

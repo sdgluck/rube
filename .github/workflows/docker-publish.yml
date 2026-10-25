@@ -13,6 +13,12 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
 
+# Read-only by default. A job that writes (packages, pages) says so itself,
+# so the token every other job — and every action it runs — holds can only
+# read the repo.
+permissions:
+  contents: read
+
 jobs:
   # The gate. Until this existed, `edge` shipped on every master commit and a
   # release image shipped on every tag with the test suite never having run —

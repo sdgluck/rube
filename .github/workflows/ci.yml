@@ -32,6 +32,12 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
+# Read-only by default. A job that writes (packages, pages) says so itself,
+# so the token every other job — and every action it runs — holds can only
+# read the repo.
+permissions:
+  contents: read
+
 jobs:
   # Format, lint and typecheck in one job, the suite in four beside it. One job
   # running all of it took 2.5–4 minutes on a 2-vCPU hosted runner — the suite

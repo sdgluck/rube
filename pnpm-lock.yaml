@@ -1428,6 +1428,9 @@ importers:
       '@rube/domain.rules':
         specifier: workspace:*
         version: link:../rules
+      '@rube/http':
+        specifier: workspace:*
+        version: link:../../packages/http
       '@rube/plex':
         specifier: workspace:*
         version: link:../../clients/plex
@@ -2158,6 +2161,9 @@ importers:
       '@rube/core':
         specifier: workspace:*
         version: link:../core
+      '@rube/http':
+        specifier: workspace:*
+        version: link:../http
       '@rube/mqtt':
         specifier: workspace:*
         version: link:../../clients/mqtt
@@ -2370,6 +2376,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.74.0
         version: 0.74.0(zod@4.4.3)
+      '@rube/http':
+        specifier: workspace:*
+        version: link:../http
     devDependencies:
       '@types/node':
         specifier: ^25.2.3

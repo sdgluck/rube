@@ -17,6 +17,12 @@ concurrency:
   group: pages
   cancel-in-progress: false
 
+# Read-only by default. A job that writes (packages, pages) says so itself,
+# so the token every other job — and every action it runs — holds can only
+# read the repo.
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest

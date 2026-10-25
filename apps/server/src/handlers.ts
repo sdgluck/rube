@@ -26,7 +26,6 @@ import { Readable } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import { fetchRequestHandler } from "@trpc/server/adapters/fetch";
 import { isAgentApiPath } from "@rube/agent-api";
-import { errorMessage } from "@rube/core";
 import type { Services } from "@rube/composition";
 import type { createTrpc } from "@rube/trpc";
 import { buildPlexImageUrl, isBuildAsset, resolveStaticPath } from "./security.ts";
@@ -203,7 +202,7 @@ export function createAdminHandler(deps: AdminHandlerDeps) {
         if (await handlePortabilityRoute(req, res, url)) return;
       } catch (err) {
         if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: errorMessage(err) }));
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : "Request failed" }));
         return;
       }
     }
@@ -216,7 +215,7 @@ export function createAdminHandler(deps: AdminHandlerDeps) {
         if (await handleCollectionRoute(req, res, url)) return;
       } catch (err) {
         if (!res.headersSent) res.writeHead(500, { "Content-Type": "application/json" });
-        res.end(JSON.stringify({ error: errorMessage(err) }));
+        res.end(JSON.stringify({ error: err instanceof Error ? err.message : "Request failed" }));
         return;
       }
     }

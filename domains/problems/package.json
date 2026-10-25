@@ -21,6 +21,7 @@
     "@rube/db": "workspace:*",
     "@rube/domain.arr-library": "workspace:*",
     "@rube/domain.rules": "workspace:*",
+    "@rube/http": "workspace:*",
     "@rube/plex": "workspace:*",
     "@rube/ports": "workspace:*",
     "@rube/radarr": "workspace:*",

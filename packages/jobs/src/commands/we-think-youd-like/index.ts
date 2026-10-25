@@ -141,7 +141,7 @@ export function wtylLibraryBlock(
   const lines = items
     .map((item) => libraryLine(item, genresByKey))
     .join("\n")
-    .replace(/<\/?library>/gi, (m) => m.replace(">", "_>"));
+    .replace(/<\/?library>/gi, (m) => m.replace(/>/g, "_>"));
   const intro = opts.shortlisted
     ? `the titles in a Plex "${sectionTitle}" library that best fit this viewer's history, closest first, each with its genres`
     : `the full list of titles in a Plex "${sectionTitle}" library, each with its genres`;
@@ -251,7 +251,8 @@ export function pickRatingKeys(opts: {
   const picked: string[] = [];
   const seen = new Set<string>();
   for (const raw of opts.items) {
-    const title = raw.replace(/\s+—\s+.*$/, "").trim();
+    const dash = raw.search(/\s—\s/);
+    const title = (dash < 0 ? raw : raw.slice(0, dash)).trim();
     const key = opts.match(title);
     if (!key || seen.has(key) || opts.watched.has(key)) continue;
     if (excluded.has((opts.titleOf.get(key) ?? "").toLowerCase())) continue;

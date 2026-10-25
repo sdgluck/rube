@@ -20,6 +20,7 @@
  */
 import { TRPCError } from "@trpc/server";
 import { z } from "zod";
+import { trimTrailing } from "@rube/http";
 import { matchCodeSchema, matchFiltersSchema } from "@rube/contracts";
 import { GUEST_NAME_MAX, MatchError, type Caller } from "@rube/domain.match";
 import type { PlexClient } from "@rube/plex";
@@ -147,7 +148,7 @@ export function createPortalMatchRouter(
         // The admin's public address when there is one — the link is going to
         // someone who isn't on this network — and the address this request came
         // in on otherwise. A fragment, so the secret never reaches a server log.
-        const base = (getConfig("user_app_public_url") || ctx.origin).replace(/\/+$/, "");
+        const base = trimTrailing(getConfig("user_app_public_url") || ctx.origin);
         return {
           ...state,
           link: `${base}/#match/${state.code}/${state.invite}`,

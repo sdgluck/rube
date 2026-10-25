@@ -93,9 +93,13 @@ export const BASED_ON_PATTERNS = [
 export const YEAR_RE = /^\d{4}$/;
 export const DECADE_RE = /^\d{4}s$/;
 
-/** Explicit role suffixes Kometa uses to disambiguate same-name people. */
-export const DIRECTOR_SUFFIX_RE = /\s*\((directors?|director)\)\s*$/i;
-export const ACTOR_SUFFIX_RE = /\s*\((actors?|actor)\)\s*$/i;
+/**
+ * Explicit role suffixes Kometa uses to disambiguate same-name people. Test
+ * them against a `trimEnd()`ed title: a trailing `\s*$` in the pattern is
+ * retried from every space in a run, which is quadratic on a long one.
+ */
+export const DIRECTOR_SUFFIX_RE = /\(directors?\)$/i;
+export const ACTOR_SUFFIX_RE = /\(actors?\)$/i;
 
 /**
  * Heuristic for "looks like a person's name": two to four capitalized tokens

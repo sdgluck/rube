@@ -277,7 +277,7 @@ export function startMockPlex(port: number, host = "127.0.0.1"): Promise<MockPle
       json(res, { Metadata: [], Directory: [], Hub: [] });
     } catch (err) {
       res.writeHead(500, { "Content-Type": "text/plain" });
-      res.end(String(err));
+      res.end(err instanceof Error ? err.message : "Mock Plex request failed");
     }
   });
 

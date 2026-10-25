@@ -96,9 +96,12 @@ export interface MetadataFileResult {
 
 /** `Star Wars (1977)` → `{ title: "Star Wars", year: 1977 }`. */
 export function parseTitleKey(key: string): { title: string; year?: number } {
-  const m = key.trim().match(/^(.*?)\s*\((\d{4})\)\s*$/);
-  if (m) return { title: m[1]!.trim(), year: Number(m[2]) };
-  return { title: key.trim() };
+  // Anchored only at the end and fixed-width, so it is linear; the lazy
+  // `^(.*?)\s*` it replaces was quadratic on a long run of spaces.
+  const trimmed = key.trim();
+  const m = trimmed.match(/\((\d{4})\)$/);
+  if (m) return { title: trimmed.slice(0, m.index).trim(), year: Number(m[1]) };
+  return { title: trimmed };
 }
 
 function toNumber(value: unknown): number | undefined {
