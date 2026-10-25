@@ -1,0 +1,104 @@
+name: CodeQL
+
+# Advanced setup, replacing GitHub's default setup — for one language. Default
+# setup can't scan Kotlin here: Kotlin is only extracted from a real
+# compilation, and its autobuild looks for Gradle at the repo root, while the
+# Android app's build lives in native/android. It takes no build command and no
+# working directory, and GitHub refuses advanced-setup uploads while default
+# setup is on, so this file has to own every language rather than just Kotlin.
+#
+# The rest mirrors what default setup ran: the same languages, the default
+# query suite, a weekly sweep, and `/language:<x>` categories — the action's
+# default — so existing alerts and their dismissals carry over rather than
+# reopening as new ones.
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: actions
+            build-mode: none
+            runner: ubuntu-latest
+          - language: javascript-typescript
+            build-mode: none
+            runner: ubuntu-latest
+          - language: python
+            build-mode: none
+            runner: ubuntu-latest
+          # Swift needs macOS, and the Xcode 26 SDK for the iOS 26 target —
+          # the same runner and build as native.yml's `ios` job.
+          - language: swift
+            build-mode: manual
+            runner: macos-26
+          - language: java-kotlin
+            build-mode: manual
+            runner: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+
+      - name: Build the iOS app
+        if: matrix.language == 'swift'
+        run: >-
+          xcodebuild build
+          -project native/ios/Rube.xcodeproj
+          -scheme Rube
+          -destination 'generic/platform=iOS Simulator'
+          CODE_SIGNING_ALLOWED=NO
+
+      - if: matrix.language == 'java-kotlin'
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # Only platform-tools: see native.yml for why the default list fails.
+      - if: matrix.language == 'java-kotlin'
+        uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+
+      - if: matrix.language == 'java-kotlin'
+        uses: gradle/actions/setup-gradle@v5
+
+      # CodeQL sees only what is compiled in front of it. gradle.properties
+      # turns the build cache on, and a cache hit restores classes without
+      # running kotlinc — an analysis with nothing in it. In-process compilation
+      # keeps kotlinc inside the traced build rather than in a Kotlin daemon.
+      - name: Build the Android app
+        if: matrix.language == 'java-kotlin'
+        working-directory: native/android
+        run: >-
+          ./gradlew assembleDebug
+          --no-build-cache --no-daemon --console=plain
+          -Pkotlin.compiler.execution.strategy=in-process
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:${{ matrix.language }}"
