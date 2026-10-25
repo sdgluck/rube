@@ -6,6 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.49.0] - 2026-10-25
+
+### Added
+
+- Grouped rules can now take a filter, so they group only the items that match it. For example, Horror Through the Decades can now build its decade collections from horror films alone, not from every film in each decade.
+- Grouped rules can now set a name for the collections they build, so a decade group comes out as "2020s Horror" and not just the bare group value.
+- When a job queue stops taking work, Rube now posts a notice to the event log, so you can see the stall while it is happening and not only after it ends.
+
+### Fixed
+
+- A job's time limit now starts when a worker actually begins running it. Before, jobs waiting in the queue behind slow work could be killed for running too long before they had even started.
+
 ## [0.48.0] - 2026-10-25
 
 ### Added
