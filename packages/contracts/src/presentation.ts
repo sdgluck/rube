@@ -229,7 +229,10 @@ export function resolvePresentation(config: { presentation?: PresentationConfig 
 
 export interface CollectionSummaryContext {
   ruleType: string;
-  /** The collection's title — for a grouped rule this is the group itself. */
+  /**
+   * The group itself for a grouped rule ("2020s"), which is the collection's
+   * title unless the rule names its collections with a template.
+   */
   collectionName: string;
   /** Plex section type: "movie", "show", or anything else. */
   sectionType?: string;
@@ -240,7 +243,13 @@ export interface CollectionSummaryContext {
    */
   sourceSummary?: string;
   /** The rule's parsed config, for the types whose summary depends on it. */
-  config?: { smartFilter?: SmartFilterGroup; listProvider?: string; listId?: string; filter?: string };
+  config?: {
+    smartFilter?: SmartFilterGroup;
+    scope?: SmartFilterGroup;
+    listProvider?: string;
+    listId?: string;
+    filter?: string;
+  };
   /**
    * Turns a per-server tag key into its title. Without one a smart filter's
    * summary says "genre is 1204" — accurate, unreadable, and written to
@@ -303,6 +312,16 @@ export function describeSmartFilter(node: SmartFilterNode, isRoot = true, resolv
  * the blank description it replaced.
  */
 export function templatedCollectionSummary(input: CollectionSummaryContext): string | null {
+  const base = baseCollectionSummary(input);
+  // A scoped grouped rule's "2020s" holds only what the scope let through;
+  // "Films released between 2020 and 2029." alone would claim the whole decade.
+  const scope = input.config?.scope;
+  if (!base || !scope || input.ruleType === "smart_filter") return base;
+  const described = describeSmartFilter(scope, true, input.resolveTag);
+  return described ? `${base} Only those where ${lowerClauseStarts(described)}.` : base;
+}
+
+function baseCollectionSummary(input: CollectionSummaryContext): string | null {
   const name = input.collectionName.trim();
   const source = input.sourceSummary?.trim();
   // TMDb's own overview outranks every template below it — it was written by a

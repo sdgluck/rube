@@ -397,6 +397,28 @@ const baseRuleConfigSchema = z.object({
    * equality and OR groups via push/or/pop) round-trips cleanly.
    */
   smartFilter: smartFilterGroupSchema.optional(),
+  /**
+   * Grouped rules only (`SCOPABLE_RULE_TYPES`): the items to group, as a
+   * Plex filter. Absent means the whole library.
+   *
+   * A grouped rule groups everything it reads, so without this "Horror
+   * Through the Decades" could only mean "every decade" — on a mixed library
+   * its 2020s shelf held 1,117 films, almost none of them horror. Plex fields
+   * only: it runs as one query per library, and a watch-history clause would
+   * need the per-user evaluation `smartFilter` does.
+   */
+  scope: smartFilterGroupSchema.optional(),
+  /**
+   * Grouped rules only: how each collection is titled, with `{name}` standing
+   * for the group — "{name} Horror" makes "2020s Horror". Absent means the
+   * group's own name. A scoped rule needs one: two rules each building a
+   * "2020s" would both be called just that.
+   */
+  nameTemplate: z
+    .string()
+    .max(100)
+    .refine((t) => t.includes("{name}"), { message: "The name template must include {name}." })
+    .optional(),
   /** seerr-requests: status filter ("all" / "approved" / "pending" / …). */
   filter: z.string().optional(),
   pinToHomepage: z.boolean().optional(),
@@ -515,6 +537,14 @@ export const ruleConfigSchema = baseRuleConfigSchema.superRefine((config, ctx) =
     }
   }
 
+  if (config.scope && collectLocalLeaves(config.scope).length > 0) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["scope"],
+      message: "A rule's scope can only use library fields, not watch history.",
+    });
+  }
+
   if (!config.smartFilter) return;
 
   if (splitLocalLeaves(config.smartFilter).error === "local-leaf-in-or-group") {
@@ -584,6 +614,39 @@ export const RULE_TYPE_VALUES = [
    */
   "static_list",
 ] as const;
+
+/**
+ * Rule types that group a library and so can be narrowed by `scope`. Each
+ * reads its items through the Plex client's full-library walks, which is
+ * where the scope is applied — before grouping, so limits and minimums count
+ * only what is in scope.
+ */
+export const SCOPABLE_RULE_TYPES: ReadonlySet<string> = new Set([
+  "actors",
+  "directors",
+  "studios",
+  "networks",
+  "genres",
+  "countries",
+  "content_ratings",
+  "streaming",
+  "decades",
+  "years",
+  "resolutions",
+  "audio_languages",
+  "subtitle_languages",
+  "video_formats",
+  "based_on",
+  "seasonal",
+  "awards",
+]);
+
+/** A grouped collection's title: the group run through `nameTemplate`, or the group itself. */
+export function applyNameTemplate(template: string | undefined, groupName: string): string {
+  const t = template?.trim();
+  if (!t || !t.includes("{name}")) return groupName;
+  return t.replaceAll("{name}", groupName).replace(/\s+/g, " ").trim();
+}
 
 export type RuleTypeValue = (typeof RULE_TYPE_VALUES)[number];
 

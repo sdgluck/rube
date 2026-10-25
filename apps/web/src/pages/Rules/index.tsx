@@ -24,6 +24,7 @@ import {
   isPersonalizableAction,
   rotatesPins,
   ruleCollectionCount,
+  SCOPABLE_RULE_TYPES,
   type RuleAction,
   type RuleConfig,
 } from "@rube/contracts";
@@ -455,6 +456,8 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
         "mdblist") satisfies RuleFormState["listProvider"],
       collectionName: (config.collectionName as string) || "",
       smartFilter,
+      scope: (config.scope as SmartFilterGroup | undefined) ?? { kind: "group", combinator: "all", children: [] },
+      nameTemplate: (config.nameTemplate as string | undefined) ?? "",
       filter: (config.filter as string) || "all",
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       pinRotationCount: (config.pinRotationCount as number | undefined) ?? 0,
@@ -502,6 +505,10 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       if (next.collectionName.trim()) config.collectionName = next.collectionName.trim();
     }
     if (next.type === "seerr_requests") config.filter = next.filter;
+    if (SCOPABLE_RULE_TYPES.has(next.type)) {
+      if (next.scope.children.length > 0) config.scope = next.scope;
+      if (next.nameTemplate.includes("{name}")) config.nameTemplate = next.nameTemplate.trim();
+    }
     if (next.sections.length > 0) config.sections = next.sections;
     // The cleanup path pins its shelf `false` unconditionally, so writing any
     // of these onto a cleanup rule would store settings nothing reads. A rule

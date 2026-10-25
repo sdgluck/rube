@@ -282,3 +282,27 @@ describe("collection prefs", () => {
     assert.equal(presentationConfigSchema.safeParse({ collectionMode: 1 }).success, false);
   });
 });
+
+describe("a scoped grouped rule's summary", () => {
+  const scope = {
+    kind: "group" as const,
+    combinator: "all" as const,
+    children: [{ kind: "leaf" as const, field: "genre", op: "=" as const, value: "Horror" }],
+  };
+
+  it("says what the scope let through, after describing the group", () => {
+    // Without the second sentence "2020s Horror" would claim the whole decade.
+    const text = templatedCollectionSummary({
+      ruleType: "decades",
+      collectionName: "2020s",
+      sectionType: "movie",
+      config: { scope },
+    });
+    assert.equal(text, "Films released between 2020 and 2029. Only those where genre is Horror.");
+  });
+
+  it("leaves an unscoped rule's summary as it was", () => {
+    const text = templatedCollectionSummary({ ruleType: "decades", collectionName: "2020s", sectionType: "movie" });
+    assert.equal(text, "Films released between 2020 and 2029.");
+  });
+});

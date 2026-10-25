@@ -86,6 +86,8 @@ export interface CommitCollectionOptions {
    * up by what the row is called, not by those marks. Defaults to `name`.
    */
   displayName?: string;
+  /** The group a templated title was built from — see `PendingCollection.groupLabel`. */
+  groupLabel?: string;
   /**
    * A person's copy rather than the rule's own collection. Its summary is
    * written when it is created and then left alone: the summary ledger is keyed
@@ -249,7 +251,7 @@ export function createFinalizeCommand(deps: Services) {
     const resolveTag = await tagResolverFor(client, opts.section.key, opts.ruleConfig?.smartFilter);
     const resolved = resolveCollectionSummary(presentation, {
       ruleType: opts.ruleType,
-      collectionName: opts.displayName ?? opts.name,
+      collectionName: opts.groupLabel ?? opts.displayName ?? opts.name,
       sectionType: opts.section.type,
       itemCount: opts.ratingKeys.length,
       sourceSummary: opts.sourceSummary,
@@ -338,7 +340,7 @@ export function createFinalizeCommand(deps: Services) {
     // collection per run, the second one silently replacing the first.
     if (resolvePresentation(opts.ruleConfig).poster !== "none") return;
 
-    const name = opts.displayName ?? opts.name;
+    const name = opts.groupLabel ?? opts.displayName ?? opts.name;
     const result = await fetchAutoPoster({ ruleType: opts.ruleType, collectionName: name });
 
     if ("buffer" in result) {

@@ -329,9 +329,23 @@ interface GroupEditorProps {
    */
   underOr?: boolean;
   onRemove?: () => void;
+  /**
+   * Library fields only. A grouped rule's scope runs as one Plex query, so a
+   * watch-history field — evaluated per person, after the query — can't go in it.
+   */
+  plexOnly?: boolean;
 }
 
-function GroupEditor({ group, onChange, depth, sectionId, underOr = false, onRemove }: GroupEditorProps) {
+/** The AND/OR clause editor, for a grouped rule's scope as well as a smart filter. */
+export function GroupEditor({
+  group,
+  onChange,
+  depth,
+  sectionId,
+  underOr = false,
+  onRemove,
+  plexOnly = false,
+}: GroupEditorProps) {
   const updateChild = (i: number, next: SmartFilterNode) => {
     onChange({ ...group, children: group.children.map((c, idx) => (idx === i ? next : c)) });
   };
@@ -401,6 +415,7 @@ function GroupEditor({ group, onChange, depth, sectionId, underOr = false, onRem
             leaf={child}
             sectionId={sectionId}
             underOr={childrenUnderOr}
+            plexOnly={plexOnly}
             onChange={(next) => updateChild(i, next)}
             onRemove={() => removeChild(i)}
           />
@@ -412,6 +427,7 @@ function GroupEditor({ group, onChange, depth, sectionId, underOr = false, onRem
             depth={depth + 1}
             sectionId={sectionId}
             underOr={childrenUnderOr}
+            plexOnly={plexOnly}
             onRemove={() => removeChild(i)}
           />
         ),
@@ -433,6 +449,7 @@ interface LeafEditorProps {
   sectionId: string | null;
   /** True when the enclosing group — or one above it — combines with OR. */
   underOr: boolean;
+  plexOnly: boolean;
   onChange: (next: SmartFilterLeaf) => void;
   onRemove: () => void;
 }
@@ -443,7 +460,7 @@ const LOCAL_FIELD_OPTIONS = SMART_FILTER_FIELD_DEFS.filter((d) => d.source === "
 const OR_DISABLED_REASON =
   "Watch-history fields only work with AND. Inside an OR group, Plex would never return the items this filter needs to check.";
 
-function LeafEditor({ leaf, sectionId, underOr, onChange, onRemove }: LeafEditorProps) {
+function LeafEditor({ leaf, sectionId, underOr, plexOnly, onChange, onRemove }: LeafEditorProps) {
   const ops = withFallbackOp(opsFor(leaf.field), leaf.op);
   const isLocal = isLocalField(leaf.field);
   // An existing local leaf whose group was flipped to OR after the fact. The
@@ -475,18 +492,20 @@ function LeafEditor({ leaf, sectionId, underOr, onChange, onRemove }: LeafEditor
         {/* Grouped separately, and disabled rather than hidden inside an OR:
             a field that vanishes reads as a bug, where a greyed one with a
             reason attached reads as a rule. */}
-        <optgroup label={underOr ? `${LOCAL_FIELD_GROUP_LABEL} (needs AND)` : LOCAL_FIELD_GROUP_LABEL}>
-          {LOCAL_FIELD_OPTIONS.map((f) => (
-            <option
-              key={f.field}
-              value={f.field}
-              disabled={underOr && f.field !== leaf.field}
-              title={underOr ? OR_DISABLED_REASON : LOCAL_FIELD_HINTS.get(f.field)}
-            >
-              {f.label}
-            </option>
-          ))}
-        </optgroup>
+        {!plexOnly && (
+          <optgroup label={underOr ? `${LOCAL_FIELD_GROUP_LABEL} (needs AND)` : LOCAL_FIELD_GROUP_LABEL}>
+            {LOCAL_FIELD_OPTIONS.map((f) => (
+              <option
+                key={f.field}
+                value={f.field}
+                disabled={underOr && f.field !== leaf.field}
+                title={underOr ? OR_DISABLED_REASON : LOCAL_FIELD_HINTS.get(f.field)}
+              >
+                {f.label}
+              </option>
+            ))}
+          </optgroup>
+        )}
         {/* Preserve the imported field even if it's outside the curated list, so
             migrated rules with fields like `show.network` round-trip cleanly. */}
         {!SMART_FILTER_FIELD_DEFS.some((f) => f.field === leaf.field) && (

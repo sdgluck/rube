@@ -139,6 +139,10 @@ export interface RuleFormState {
   collectionName: string;
   /** smart_filter rule type: recursive AND/OR tree of clauses. */
   smartFilter: SmartFilterGroup;
+  /** Grouped rule types: only group what this matches. No clauses = the whole library. */
+  scope: SmartFilterGroup;
+  /** Grouped rule types: each collection's title, with `{name}` for the group. Empty = the group's name. */
+  nameTemplate: string;
   /**
    * Which cleanup preset wrote `smartFilter`, if one did.
    *

@@ -19,6 +19,19 @@
  */
 import type { RegistryRuleInput } from "@rube/contracts";
 
+/**
+ * The horror rules' scope. A grouped rule groups the whole library unless it
+ * has one, so these used to need a library that was nothing but horror: on a
+ * mixed one, "Horror Through the Decades" put every 2020s film in its 2020s.
+ * A genre title rather than a tag key, as the smart rules use, so it holds on
+ * any server.
+ */
+const HORROR_ONLY = {
+  kind: "group",
+  combinator: "all",
+  children: [{ kind: "leaf", field: "genre", op: "=", value: "Horror" }],
+} as const;
+
 export const LIBRARY_RULES: RegistryRuleInput[] = [
   {
     slug: "top-rated",
@@ -44,9 +57,11 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
   {
     slug: "horror-by-decade",
     name: "Horror Through the Decades",
-    description: "Decade collections for a horror library — 70s grit, 80s practical effects, 2010s elevated dread.",
+    description: "Your horror, a decade at a time — 70s grit, 80s practical effects, 2010s elevated dread.",
     type: "decades",
     config: {
+      scope: HORROR_ONLY,
+      nameTemplate: "{name} Horror",
       pinToHomepage: true,
       pinRotationCount: 10,
       pinMinItems: 3,
@@ -63,9 +78,14 @@ export const LIBRARY_RULES: RegistryRuleInput[] = [
   {
     slug: "horror-subgenres",
     name: "Horror Subgenres",
-    description: "Slasher, supernatural, folk horror, body horror — genre shelves for a spooky library.",
+    description:
+      "Your horror split by what else it is — comedy horror, sci-fi horror, horror that's really a thriller.",
     type: "genres",
     config: {
+      scope: HORROR_ONLY,
+      nameTemplate: "{name} Horror",
+      // Every title in scope is Horror, so that group is the whole scope again.
+      excludeValues: ["Horror"],
       pinToHomepage: true,
       pinRotationCount: 10,
       pinMinItems: 3,

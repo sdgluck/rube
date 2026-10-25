@@ -17,10 +17,13 @@ import {
   ruleCollectionCount,
   volumeLevel,
   RULE_TYPE_REQUIRES,
+  SCOPABLE_RULE_TYPES,
+  applyNameTemplate,
   type ArrService,
   type RuleSchedule,
   type RuleTypeValue,
 } from "@rube/contracts";
+import { GroupEditor } from "#pages/Rules/RuleWizard/sources/SmartFilterSource.tsx";
 import CollectionPosterPreview from "#components/CollectionPosterPreview";
 import ColorField from "#components/ColorField";
 import CronPreview from "#components/CronPreview";
@@ -300,6 +303,26 @@ interface RuleWizardProps {
   onCancel: () => void;
 }
 
+/** An example group per type, for the name template's preview. */
+const SAMPLE_GROUP: Record<string, string> = {
+  decades: "2020s",
+  years: "2024",
+  genres: "Comedy",
+  actors: "Florence Pugh",
+  directors: "Greta Gerwig",
+  studios: "A24",
+  networks: "HBO",
+  countries: "France",
+  content_ratings: "PG-13",
+  streaming: "Netflix",
+  resolutions: "4K",
+  audio_languages: "French",
+  subtitle_languages: "English",
+  video_formats: "Remux",
+  based_on: "Based on a Novel",
+  seasonal: "Halloween",
+  awards: "Academy Award Winners",
+};
 export default function RuleWizard({ open, mode, initial, saving, onSave, onCancel }: RuleWizardProps) {
   const [form, setForm] = useState<RuleFormState>(initial);
   const [stepIdx, setStepIdx] = useState(0);
@@ -825,6 +848,61 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               )}
             </div>
           ))}
+
+        {SCOPABLE_RULE_TYPES.has(form.type) && (
+          <>
+            <div className={styles.field}>
+              <label>
+                <input
+                  type="checkbox"
+                  checked={form.scope.children.length > 0}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      scope: {
+                        kind: "group",
+                        combinator: "all",
+                        children: e.target.checked ? [{ kind: "leaf", field: "genre", op: "=", value: "" }] : [],
+                      },
+                    })
+                  }
+                />{" "}
+                Only group items matching a filter
+              </label>
+              {form.scope.children.length > 0 ? (
+                <GroupEditor
+                  group={form.scope}
+                  onChange={(scope) => setForm({ ...form, scope })}
+                  depth={0}
+                  sectionId={tagSectionId}
+                  plexOnly
+                />
+              ) : (
+                <span className={styles.hint}>Off groups the whole library.</span>
+              )}
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="rule-name-template">Collection names</label>
+              <input
+                id="rule-name-template"
+                className={shared.input}
+                style={{ maxWidth: "24rem" }}
+                value={form.nameTemplate}
+                placeholder="{name}"
+                maxLength={100}
+                onChange={(e) => setForm({ ...form, nameTemplate: e.target.value })}
+              />
+              <span className={styles.hint}>
+                {form.nameTemplate.trim() && !form.nameTemplate.includes("{name}")
+                  ? "Include {name} — it stands for each " + groupNounForType(form.type) + "."
+                  : `{name} is each ${groupNounForType(form.type)} — "${applyNameTemplate(form.nameTemplate, SAMPLE_GROUP[form.type] ?? "Example")}".` +
+                    (form.scope.children.length > 0 && !form.nameTemplate.includes("{name}")
+                      ? " Name a scoped rule's collections so they don't read like the unscoped ones."
+                      : "")}
+              </span>
+            </div>
+          </>
+        )}
 
         {typeHasMinItems(form.type) && (
           <div className={styles.field}>

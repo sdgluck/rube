@@ -10,6 +10,7 @@ import { createTmdbGroupedCommand } from "./handlers/tmdb-grouped.ts";
 import { createImdbContentCommand } from "./handlers/imdb-content.ts";
 import { createRtTopRatedCommand } from "./handlers/rt-top-rated.ts";
 import { createAwardsCommand } from "./handlers/awards.ts";
+import { prepareHandlerRun } from "./scope.ts";
 import { createSeerrRequestsCommand } from "./handlers/seerr-requests.ts";
 import { createTmdbPopularPeopleCommand } from "./handlers/tmdb-popular-people.ts";
 import { createTmdbFranchisesCommand } from "./handlers/tmdb-franchises.ts";
@@ -174,10 +175,14 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
     metadataBudget: MetadataBudget,
   ): Promise<RunHandlerResult> {
     const action = ruleAction(deps.ruleConfig);
-    if (action.kind === "collection") return runHandlerWithCommits(deps, machineId, labels);
-
-    const handler = handlerForRule(deps.rule.type);
-    if (!handler) return { lastCollectionKey: null, collectionCount: 0, itemCount: 0 };
+    const base = handlerForRule(deps.rule.type);
+    if (!base) return { lastCollectionKey: null, collectionCount: 0, itemCount: 0 };
+    // Every ending sees the same narrowed, renamed collections — a scoped
+    // cleanup rule must not reach outside its scope any more than a collection.
+    const prepared = prepareHandlerRun(deps, base);
+    deps = prepared.deps;
+    const handler = prepared.handler;
+    if (action.kind === "collection") return runHandlerWithCommits(deps, machineId, labels, handler);
 
     if (action.kind === "playlist") {
       const result = await runHandlerWithPlaylist(deps, action, machineId, handler);
@@ -208,10 +213,8 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
     deps: HandlerDeps,
     machineId: string,
     labels: string[],
+    handler: (deps: HandlerDeps) => AsyncGenerator<PendingCollection>,
   ): Promise<{ lastCollectionKey: string | null; collectionCount: number; itemCount: number }> {
-    const handler = handlerForRule(deps.rule.type);
-    if (!handler) return { lastCollectionKey: null, collectionCount: 0, itemCount: 0 };
-
     const { ctx, client, rule, ruleConfig } = deps;
     const pinToHomepage = ruleConfig.pinToHomepage ?? true;
     // With a rotation count set we can't decide what to pin as collections
@@ -285,6 +288,7 @@ export const createDispatchCommand = perDeps(function createDispatchCommand(deps
             section: pending.section,
             machineId,
             name: pending.name,
+            groupLabel: pending.groupLabel,
             ratingKeys,
             labels,
             ruleType: rule.type,

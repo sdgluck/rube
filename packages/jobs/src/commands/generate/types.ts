@@ -10,6 +10,12 @@ import type { RuleConfig } from "./config.ts";
  */
 export interface PendingCollection {
   name: string;
+  /**
+   * The group this collection is ("2020s"), when `name` is that group run
+   * through the rule's `nameTemplate` ("2020s Horror"). The summary and the
+   * auto-poster describe the group; set only by `prepareHandlerRun`.
+   */
+  groupLabel?: string;
   section: PlexSection;
   matched: Array<{ ratingKey: string; title: string; year?: number }>;
   /**

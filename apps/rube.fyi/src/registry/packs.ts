@@ -51,7 +51,7 @@ export const PACKS: RegistryPackInput[] = [
     description:
       "Horror by decade and subgenre, a shelf of horror you own but have never started, and a Halloween shelf " +
       "that puts itself up on 1 October and takes itself down on 1 November. The rest stay until you switch them off.",
-    version: 4,
+    version: 5,
     tags: ["seasonal", "horror"],
     ruleSlugs: ["horror-by-decade", "horror-subgenres", "unwatched-horror", "seasonal-picks", "spooky-ai"],
   },

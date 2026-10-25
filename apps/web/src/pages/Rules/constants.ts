@@ -188,6 +188,8 @@ export const EMPTY_FORM: RuleFormState = {
   listProvider: "mdblist",
   collectionName: "",
   smartFilter: { kind: "group", combinator: "all", children: [] },
+  scope: { kind: "group", combinator: "all", children: [] },
+  nameTemplate: "",
   filter: "all",
   pinToHomepage: true,
   pinRotationCount: 0,

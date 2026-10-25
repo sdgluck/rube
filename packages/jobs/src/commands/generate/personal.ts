@@ -203,6 +203,7 @@ export function createPersonalPass(deps: Services) {
           machineId,
           name: title,
           displayName: pending.name,
+          groupLabel: pending.groupLabel,
           ratingKeys,
           labels: personalRowLabels(username, `Rule:${rule.id}`),
           ruleType: rule.type,

@@ -11,6 +11,7 @@ import { parseRuleConfig } from "./config.ts";
 
 import { type SectionFunnel } from "./funnel.ts";
 import { describe as describeValue, planWrites, type PlannedWrite } from "./metadata.ts";
+import { prepareHandlerRun } from "./scope.ts";
 
 const testRuleLog = createLogger("test-rule");
 
@@ -257,8 +258,8 @@ export function createPreviewCommand(deps: Services) {
 
     progress(3, 4, `Processing ${sections.length} section${sections.length !== 1 ? "s" : ""}…`);
 
-    const handler = handlerForRule(rule.type);
-    if (!handler) {
+    const base = handlerForRule(rule.type);
+    if (!base) {
       log(`Error: Unknown rule type "${rule.type}"`);
       throw new Error(`Unknown rule type: ${rule.type}`);
     }
@@ -266,18 +267,24 @@ export function createPreviewCommand(deps: Services) {
     const collections: TestCollectionPreview[] = [];
     let tokensIn = 0;
     let tokensOut = 0;
-    for await (const pending of handler({
-      ctx,
-      client,
-      sections,
-      rule,
-      ruleConfig,
-      preview: true,
-      onAiUsage: (i, o) => {
-        tokensIn += i;
-        tokensOut += o;
+    // The same scope and titles a real run gets, so the preview shows "2020s
+    // Horror" with its horror films rather than the whole decade.
+    const { deps: handlerDeps, handler } = prepareHandlerRun(
+      {
+        ctx,
+        client,
+        sections,
+        rule,
+        ruleConfig,
+        preview: true,
+        onAiUsage: (i, o) => {
+          tokensIn += i;
+          tokensOut += o;
+        },
       },
-    })) {
+      base,
+    );
+    for await (const pending of handler(handlerDeps)) {
       collections.push({
         name: pending.name,
         sectionTitle: pending.section.title,

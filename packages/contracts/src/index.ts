@@ -31,6 +31,8 @@ export {
   RULE_TYPE_REQUIRES,
   RULE_TYPE_SECTION_TYPE,
   RULE_TYPE_VALUES,
+  SCOPABLE_RULE_TYPES,
+  applyNameTemplate,
   ruleAction,
   ruleCollectionCount,
   ruleConfigSchema,
