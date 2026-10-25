@@ -106,7 +106,9 @@ export default function JobRun() {
                 ? "Watchdog — over its time budget; a command job's work may still be running."
                 : run.failureKind === "cancel-timeout"
                   ? "Cancellation timed out — it was asked to stop and never did."
-                  : run.failureKind}
+                  : run.failureKind === "queue-timeout"
+                    ? "Queue timeout — it waited hours for its lane and never started."
+                    : run.failureKind}
             </span>
           </>
         )}

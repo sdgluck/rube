@@ -118,7 +118,9 @@ export function TimelinePanel({ dragHandle, dragProps }: DashboardPanelProps) {
                         ? " — force-failed by the watchdog, which means it may still be running inside a worker thread"
                         : run.failureKind === "cancel-timeout"
                           ? " — cancellation never completed"
-                          : "";
+                          : run.failureKind === "queue-timeout"
+                            ? " — never started; its lane didn't move for hours"
+                            : "";
                     return (
                       <button
                         key={run.id}

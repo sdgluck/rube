@@ -172,10 +172,8 @@ describe("internal jobs", () => {
 
     // Push the row past its budget and sweep.
     const budget = (internalJobs[JOB_ID] as { timeoutMs: number }).timeoutMs;
-    db.update(jobRuns)
-      .set({ startedAt: Date.now() - budget - 60_000 * 5 })
-      .where(eq(jobRuns.id, runId))
-      .run();
+    const longAgo = Date.now() - budget - 60_000 * 5;
+    db.update(jobRuns).set({ startedAt: longAgo, claimedAt: longAgo }).where(eq(jobRuns.id, runId)).run();
     assert.equal(sweepStuckRuns(), 1);
 
     assert.equal(abortedByWatchdog, true, "the watchdog should have aborted the handler");

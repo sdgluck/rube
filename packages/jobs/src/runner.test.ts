@@ -24,7 +24,7 @@ const db = c.resolve(DbToken);
 const { startJob, cancelRun, sweepStuckRuns, seedDefaultJobs } = createRunner(services);
 const { internalJobs, isInternalJobName } = createInternalJobs(services);
 
-const { JOB_RUN_KEEP_PER_JOB, JOB_CANCELLING_GRACE_MS } = await import("./limits.ts");
+const { JOB_RUN_KEEP_PER_JOB, JOB_CANCELLING_GRACE_MS, JOB_QUEUE_LIMIT_MS } = await import("./limits.ts");
 const { COMMANDS, isCommandName } = await import("./commands/catalog.ts");
 
 /**
@@ -41,8 +41,11 @@ function seedJob(id = JOB_ID, command = "preroll-process"): void {
     .run();
 }
 
-function insertRun(id: string, status: string, startedAt = Date.now()): void {
-  db.insert(jobRuns).values({ id, jobId: JOB_ID, status, log: "", progress: 0, message: "", startedAt }).run();
+/** `claimedAt` defaults to `startedAt`: a run a worker picked up straight away. `null` is one still queued. */
+function insertRun(id: string, status: string, startedAt = Date.now(), claimedAt: number | null = startedAt): void {
+  db.insert(jobRuns)
+    .values({ id, jobId: JOB_ID, status, log: "", progress: 0, message: "", startedAt, claimedAt })
+    .run();
 }
 
 function statusOf(runId: string): { status: string; finishedAt: number | null } | undefined {
@@ -209,6 +212,55 @@ describe("watchdog", () => {
     assert.match(log?.log ?? "", /\[watchdog\]/);
   });
 
+  it("leaves a queued run alone however long it has waited for its lane", () => {
+    // A run queued behind a long `generate` used to be failed here before it
+    // started, then dropped as an orphan when its turn came — it never ran.
+    // `shuffle` has a 30-minute budget, well inside the queue limit.
+    seedJob("queued-job", "shuffle");
+    const budget = COMMANDS.shuffle.timeoutMs;
+    const now = Date.now();
+    db.insert(jobRuns)
+      .values({
+        id: "queued",
+        jobId: "queued-job",
+        status: "running",
+        log: "",
+        progress: 0,
+        message: "",
+        startedAt: now - budget * 3,
+        claimedAt: null,
+      })
+      .run();
+    assert.equal(sweepStuckRuns(now), 0);
+    assert.equal(statusOf("queued")?.status, "running");
+  });
+
+  it("times the budget from when the worker claimed the run", () => {
+    const budget = COMMANDS["preroll-process"].timeoutMs;
+    const now = Date.now();
+    // Queued long ago, claimed a minute ago: inside its budget.
+    insertRun("late-start", "running", now - budget * 3, now - 60_000);
+    assert.equal(sweepStuckRuns(now), 0);
+    // Claimed longer ago than its budget allows: wedged.
+    insertRun("late-wedge", "running", now - budget * 3, now - budget - 60_000 * 5);
+    assert.equal(sweepStuckRuns(now), 1);
+    assert.equal(statusOf("late-wedge")?.status, "failed");
+  });
+
+  it("gives up on a run whose lane never moves, and says so", () => {
+    const now = Date.now();
+    insertRun("stranded", "running", now - JOB_QUEUE_LIMIT_MS - 60_000, null);
+    assert.equal(sweepStuckRuns(now), 1);
+    const row = db
+      .select({ status: jobRuns.status, failureKind: jobRuns.failureKind, message: jobRuns.message })
+      .from(jobRuns)
+      .where(eq(jobRuns.id, "stranded"))
+      .get();
+    assert.equal(row?.status, "failed");
+    assert.equal(row?.failureKind, "queue-timeout");
+    assert.match(row?.message ?? "", /Never started/);
+  });
+
   it("force-fails a wedged internal job too", () => {
     // Internal jobs skip the queue and so have no in-run deadline — the
     // watchdog is their only backstop. Without it a stuck `healthcheck` would
@@ -228,6 +280,7 @@ describe("watchdog", () => {
         progress: 0,
         message: "",
         startedAt: now - budget - 60_000 * 5,
+        claimedAt: now - budget - 60_000 * 5,
       })
       .run();
 

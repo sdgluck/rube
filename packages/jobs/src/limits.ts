@@ -3,7 +3,7 @@
  * named in one place and obvious to find when tuning.
  */
 
-import { MINUTE_MS, WEEK_MS } from "@rube/core";
+import { HOUR_MS, MINUTE_MS, WEEK_MS } from "@rube/core";
 
 /** How long finished job runs are kept before `purge-runs` deletes them. */
 export const JOB_RUN_RETENTION_MS = WEEK_MS;
@@ -33,6 +33,15 @@ export const JOB_CANCEL_POLL_INTERVAL_MS = 1000;
  * and failing the run so the queue and the UI recover.
  */
 export const JOB_TIMEOUT_GRACE_MS = MINUTE_MS;
+
+/**
+ * How long a command job may wait in its lane before the watchdog gives up on
+ * it. Its budget only starts once a worker claims it, so waiting is normal —
+ * a night's chain queues behind `generate` — and this is far longer than any
+ * chain. A run still unclaimed after this is behind a lane that has stopped,
+ * and leaving it `running` would block every later start of its job.
+ */
+export const JOB_QUEUE_LIMIT_MS = 6 * HOUR_MS;
 
 /** How often the main process sweeps `job_runs` for runs past their deadline. */
 export const JOB_WATCHDOG_INTERVAL_MS = MINUTE_MS;

@@ -1,5 +1,5 @@
 import { Job } from "sidequest";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { jobRuns } from "@rube/db";
 import type { Scope } from "@rube/container";
 import { buildContainer, ServicesToken, type Services } from "@rube/composition";
@@ -77,6 +77,17 @@ export function createCommandJob(services: Services, scopeFor: (name: string) =>
       if (claim.status !== "running") {
         log.warn("orphaned execution: run already finished", { status: claim.status });
         return this.complete({ skipped: claim.status });
+      }
+      // Start of the watchdog's budget. Conditional on the status so a sweep
+      // landing between the read above and here can't be undone.
+      const claimed = db
+        .update(jobRuns)
+        .set({ claimedAt: Date.now() })
+        .where(and(eq(jobRuns.id, runId), eq(jobRuns.status, "running")))
+        .run();
+      if (claimed.changes === 0) {
+        log.warn("orphaned execution: run finished while being claimed");
+        return this.complete({ skipped: "claim-lost" });
       }
 
       const startedAt = Date.now();

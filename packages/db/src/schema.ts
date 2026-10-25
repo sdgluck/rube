@@ -548,6 +548,7 @@ export const jobRuns = sqliteTable(
      *
      * `"watchdog"` — the sweep force-failed it for blowing its budget without
      * unwinding. `"cancel-timeout"` — a cancellation that never completed.
+     * `"queue-timeout"` — it never left its lane (`JOB_QUEUE_LIMIT_MS`).
      * Null for every ordinary failure, which is the command throwing.
      *
      * The distinction is not cosmetic: a watchdog failure means the run may
@@ -564,7 +565,19 @@ export const jobRuns = sqliteTable(
      * look identical in the run history.
      */
     variant: text("variant"),
+    /** When the run was queued — which is also when it starts occupying its job. */
     startedAt: integer("started_at").notNull(),
+    /**
+     * When a worker actually began executing it. Null while a command job is
+     * still waiting in its lane; an internal job runs inline, so it is claimed
+     * as it is inserted.
+     *
+     * The watchdog times a run's budget from here. It used to use `startedAt`,
+     * so a job queued behind slow work was force-failed without ever starting,
+     * then dropped as an orphan when its turn came — a nightly Because You
+     * Watched died four seconds before it would have run.
+     */
+    claimedAt: integer("claimed_at"),
     finishedAt: integer("finished_at"),
   },
   (table) => [index("idx_job_runs_job_status_started").on(table.jobId, table.status, table.startedAt)],

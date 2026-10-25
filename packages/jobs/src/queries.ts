@@ -50,6 +50,7 @@ export function createQueries(deps: Pick<Services, "db">) {
         failureKind: jobRuns.failureKind,
         variant: jobRuns.variant,
         startedAt: jobRuns.startedAt,
+        claimedAt: jobRuns.claimedAt,
         finishedAt: jobRuns.finishedAt,
       })
       .from(jobRuns)
@@ -102,6 +103,7 @@ export function createQueries(deps: Pick<Services, "db">) {
           failureKind: jobRuns.failureKind,
           variant: jobRuns.variant,
           startedAt: jobRuns.startedAt,
+          claimedAt: jobRuns.claimedAt,
           finishedAt: jobRuns.finishedAt,
         })
         .from(jobRuns)

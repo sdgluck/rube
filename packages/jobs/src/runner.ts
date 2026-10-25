@@ -41,6 +41,7 @@ import {
   JOB_CANCELLING_GRACE_MS,
   JOB_RUN_KEEP_PER_JOB,
   JOB_TIMEOUT_GRACE_MS,
+  JOB_QUEUE_LIMIT_MS,
   JOB_WATCHDOG_INTERVAL_MS,
 } from "./limits.ts";
 
@@ -519,8 +520,8 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     // the command is still executing until it unwinds, so letting a second run
     // start would put two live executions on the same job.
     const result = db.run(sql`
-    INSERT INTO job_runs (id, job_id, status, log, progress, message, started_at, variant)
-    SELECT ${runId}, ${jobId}, 'running', ${initialLog}, 0, '', ${now}, ${variant?.id ?? null}
+    INSERT INTO job_runs (id, job_id, status, log, progress, message, started_at, claimed_at, variant)
+    SELECT ${runId}, ${jobId}, 'running', ${initialLog}, 0, '', ${now}, ${isInternalJobName(job.command) ? now : null}, ${variant?.id ?? null}
     WHERE NOT EXISTS (
       SELECT 1 FROM job_runs WHERE job_id = ${jobId} AND status IN ('running', 'cancelling')
     )
@@ -756,6 +757,7 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
         jobId: jobRuns.jobId,
         status: jobRuns.status,
         startedAt: jobRuns.startedAt,
+        claimedAt: jobRuns.claimedAt,
         command: jobs.command,
         name: jobs.name,
       })
@@ -767,6 +769,7 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     let failed = 0;
     for (const run of active) {
       let reason: string | null = null;
+      let kind = run.status === "cancelling" ? "cancel-timeout" : "watchdog";
 
       if (run.status === "cancelling") {
         const requestedAt = cancelRequestedAt.get(run.id) ?? run.startedAt;
@@ -785,8 +788,18 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
         // (`better-sqlite3` is entirely synchronous, which is most of what
         // `purge-runs` does.) This covers async stalls — a fetch that never
         // settles, a promise that never resolves — which is the common case.
+        //
+        // The budget runs from when a worker claimed the run, not from when it
+        // was queued: a job waiting its turn behind a long `generate` is not
+        // wedged, and failing it then meant the worker dropped it as an orphan
+        // when its turn came — it never ran at all.
         const budgetMs = runBudgetMs(run.command);
-        if (budgetMs !== null && now > run.startedAt + budgetMs + JOB_TIMEOUT_GRACE_MS * 2) {
+        if (run.claimedAt === null) {
+          if (now - run.startedAt > JOB_QUEUE_LIMIT_MS) {
+            reason = `Never started — waited ${formatDuration(now - run.startedAt)} in the queue`;
+            kind = "queue-timeout";
+          }
+        } else if (budgetMs !== null && now > run.claimedAt + budgetMs + JOB_TIMEOUT_GRACE_MS * 2) {
           reason = `Exceeded its ${formatDuration(budgetMs)} budget and did not unwind`;
         }
       }
@@ -814,7 +827,7 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
           // this run" and "this run threw" want to read differently in the UI,
           // and grepping a multi-megabyte log for `[watchdog]` is not a way to
           // tell them apart.
-          failureKind: run.status === "cancelling" ? "cancel-timeout" : "watchdog",
+          failureKind: kind,
           finishedAt: now,
         })
         .where(eq(jobRuns.id, run.id))
