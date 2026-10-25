@@ -22,3 +22,18 @@ allowBuilds:
   better-sqlite3: true
   esbuild: true
   sharp: true
+
+# drizzle-kit still loads config through the deprecated @esbuild-kit loader,
+# which pins esbuild ~0.18 — inside the range of GHSA-67mh-4wv8-2f99 (any page
+# can drive the dev server). Lift just that edge onto the 0.25 line drizzle-kit
+# already uses itself; a bare `esbuild` override would also move vite's copy
+# onto a major it hasn't been released against. Drop this once drizzle-kit
+# stops depending on @esbuild-kit.
+#
+# tsx's `~0.28.0` already admits the fixed 0.28.1 (GHSA-g7r4-m6w7-qqqr, a
+# Windows dev server file read), but pnpm keeps the locked 0.28.0 through every
+# `update`, so the floor is stated here instead. Drop it once tsx requires
+# >=0.28.1.
+overrides:
+  "@esbuild-kit/core-utils>esbuild": ^0.25.12
+  "tsx>esbuild": ~0.28.1
