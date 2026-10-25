@@ -8,9 +8,9 @@
     "typecheck": "tsc"
   },
   "dependencies": {
-    "@tanstack/react-query": "^5.90.21",
     "@rube/contracts": "workspace:*",
     "@rube/trpc": "workspace:*",
+    "@tanstack/react-query": "^5.90.21",
     "@trpc/client": "^11.10.0",
     "@trpc/react-query": "^11.10.0",
     "@trpc/server": "^11.10.0",
@@ -24,6 +24,6 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^4.3.0",
     "typescript": "^7.0.2",
-    "vite": "^6.0.0"
+    "vite": "^6.4.5"
   }
 }

@@ -1,4 +1,4 @@
-import sharp from "sharp";
+import sharp, { type OverlayOptions, type Sharp } from "sharp";
 import type { BadgeStyle, OverlayPosition, OverlayType } from "./schemas.ts";
 import { createBadgeSvg, createStyledBadgeSvg, getBadgeColors } from "./badge.ts";
 import { calculatePosition } from "./position.ts";
@@ -44,7 +44,7 @@ function isLegacy(b: Badge): boolean {
 /**
  * Build the composited sharp pipeline up to (but not including) final encoding.
  */
-export async function buildCompositeSharp(posterBuffer: Buffer, badges: Badge[]): Promise<sharp.Sharp> {
+export async function buildCompositeSharp(posterBuffer: Buffer, badges: Badge[]): Promise<Sharp> {
   const image = sharp(posterBuffer);
   const metadata = await image.metadata();
   const imgW = metadata.width || 600;
@@ -62,7 +62,7 @@ export async function buildCompositeSharp(posterBuffer: Buffer, badges: Badge[])
     list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }
 
-  const composites: sharp.OverlayOptions[] = [];
+  const composites: OverlayOptions[] = [];
 
   for (const [position, list] of groups) {
     // Stack vertically — each subsequent badge offset by previous height + gap.

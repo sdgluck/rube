@@ -19,13 +19,13 @@
     "@rube/core": "workspace:*",
     "@rube/http": "workspace:*",
     "@rube/ports": "workspace:*",
-    "nodemailer": "^7.0.9"
+    "nodemailer": "^10.2.1"
   },
   "devDependencies": {
     "@rube/composition": "workspace:*",
     "@rube/db": "workspace:*",
     "@types/node": "^25.2.3",
-    "@types/nodemailer": "^7.0.4",
+    "@types/nodemailer": "^8.0.2",
     "typescript": "^7.0.2"
   }
 }

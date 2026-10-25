@@ -12,7 +12,7 @@
  * items have no artwork is routine, and a mosaic of four grey rectangles is
  * worse than the typographic plate it would have fallen back to.
  */
-import sharp from "sharp";
+import sharp, { type OverlayOptions } from "sharp";
 import { fitText, measureText, textPathData } from "@rube/overlays";
 import { COLLECTION_POSTER_HEIGHT, COLLECTION_POSTER_WIDTH } from "@rube/contracts";
 import type { CollectionPosterTemplateId } from "@rube/contracts";
@@ -160,7 +160,7 @@ async function mosaic(input: CollectionPosterInput, cols: number, rows: number):
   const rowHeights = partition(H, rows);
   const chosen = tile(input.memberPosters, cols * rows);
 
-  const composites: sharp.OverlayOptions[] = [];
+  const composites: OverlayOptions[] = [];
   let top = 0;
   for (let row = 0; row < rows; row++) {
     let left = 0;
