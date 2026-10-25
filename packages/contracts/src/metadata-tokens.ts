@@ -62,7 +62,7 @@ export const DEFAULT_SORT_LANGUAGES: readonly string[] = ["en"];
  * The comma form rather than plain removal, because "Matrix" and "Matrix, The"
  * are distinguishable at a glance in the Plex UI and "Matrix" alone reads as a
  * different film. A title that is *only* an article ("The") is left alone —
- * "​, The" is not a sort title.
+ * ", The" is not a sort title.
  */
 export function sortableTitle(title: string, languages: readonly string[] = DEFAULT_SORT_LANGUAGES): string {
   const trimmed = title.trim();

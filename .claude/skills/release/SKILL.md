@@ -76,4 +76,4 @@ tree with the bump and CHANGELOG entry already in place.
 - **Tree dirty with a bump but no `vX.Y.Z` commit** → an earlier run died. Decide
   between finishing by hand (`git add -A && git commit -m vX.Y.Z && git tag -a vX.Y.Z -m vX.Y.Z`)
   and resetting with `git checkout -- .` before rerunning. Never rerun `pnpm
-release` on top of an existing bump — it would bump twice.
+  release` on top of an existing bump — it would bump twice.

@@ -26,7 +26,7 @@ export function seriesKey(title: string): string {
   const andThe = key.match(/^(\S+\s+\S+.*?)\s+and\s+the\s+/);
   if (andThe) key = andThe[1]!;
   key = key.replace(/^(?:the|a|an)\s+/, "");
-  for (let prev = ""; prev !== key; ) {
+  for (let prev = ""; prev !== key;) {
     prev = key;
     key = key.replace(ROMAN, "").replace(SEQUEL, "").trim();
   }

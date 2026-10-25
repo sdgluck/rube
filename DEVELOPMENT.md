@@ -108,7 +108,7 @@ Three pieces of scaffolding do most of the work:
   HTTP on port 0, each with a `journal` of what it was asked to do, plus
   `failNext` for asserting that a mutation is _not_ retried. Point the code at
   one by writing its origin into config: `setConfig("global_plex_url",
-plex.origin)`.
+  plex.origin)`.
 
 Prefer a mock server to a `fetch` stub. A stub agrees with you about URL
 construction, parameter encoding, which endpoint a mutation was addressed to

@@ -64,7 +64,7 @@ export function finishedFilms(db: Db, userIds: number[], sectionIds: string[]): 
       film.copies.push({ sectionId: row.sectionId, ratingKey: row.ratingKey });
     films.set(identity, film);
   }
-  return [...films.values()].filter((f) => f.finished).map(({ finished: _, ...film }) => film);
+  return [...films.values()].flatMap(({ finished, ...film }) => (finished ? [film] : []));
 }
 
 /**

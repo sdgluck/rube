@@ -127,14 +127,12 @@ export function buildPresetFilter(preset: CleanupPreset, amount: number): SmartF
   return {
     kind: "group",
     combinator: "all",
-    children: preset.clauses.map(
-      (c): SmartFilterLeaf => ({
-        kind: "leaf",
-        field: c.field,
-        op: c.op,
-        value: c.value ?? knobValue(preset, amount),
-      }),
-    ),
+    children: preset.clauses.map((c): SmartFilterLeaf => ({
+      kind: "leaf",
+      field: c.field,
+      op: c.op,
+      value: c.value ?? knobValue(preset, amount),
+    })),
   };
 }
 

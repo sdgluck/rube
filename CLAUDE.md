@@ -117,9 +117,7 @@ export interface SectionsDeps {
   db: Db;
 }
 export function createSections(deps: SectionsDeps) {
-  /* … */ return {
-    /* … */
-  };
+  /* … */ return {/* … */};
 }
 export type Sections = ReturnType<typeof createSections>;
 export const SectionsToken = token<Sections>("sections");
