@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) 
 
 ## [Unreleased]
 
+## [0.48.0] - 2026-10-25
+
+### Added
+
+- Rule rows and feature rows that you have chosen to keep at the top of Home now stay there, including when Home's rows are shuffled.
+
+### Fixed
+
+- The Light schedule preset no longer starts the newer personal rows late on the 1st, because those rows are now packed into the preset's chains.
+
 ## [0.47.0] - 2026-10-23
 
 ### Added
