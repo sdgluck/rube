@@ -893,6 +893,22 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
               </label>
             </div>
 
+            {form.pinToHomepage && (
+              <div className={styles.field}>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={form.pinToTop}
+                    onChange={(e) => setForm({ ...form, pinToTop: e.target.checked })}
+                  />{" "}
+                  Keep {pinsOne ? "it" : "them"} at the top of the homepage
+                </label>
+                <p className={styles.hint}>
+                  First among the collection rows in each library, even when hubs are shuffled.
+                </p>
+              </div>
+            )}
+
             {form.pinToHomepage && typeProducesManyCollections(form.type) && (
               <div className={styles.field}>
                 <label htmlFor="rule-pin-rotation">Collections on the homepage at a time</label>
@@ -1908,6 +1924,7 @@ export default function RuleWizard({ open, mode, initial, saving, onSave, onCanc
                   : form.pinRotationCount > 0
                     ? `On — ${form.pinRotationCount}/library, rotating`
                     : (pinRotationError(form) ?? "On")}
+                {form.pinToHomepage && form.pinToTop ? ", kept at the top" : ""}
               </span>
               <button type="button" className={styles.summaryEdit} onClick={() => jumpTo("scope")}>
                 Edit

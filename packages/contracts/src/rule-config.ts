@@ -401,6 +401,14 @@ const baseRuleConfigSchema = z.object({
   filter: z.string().optional(),
   pinToHomepage: z.boolean().optional(),
   /**
+   * Keep this rule's pinned collections first among the collection rows on
+   * Home. Means nothing unless they are pinned (and, with rotation, applies to
+   * whichever are pinned this run). `hub-order.ts` in `@rube/jobs` re-asserts
+   * it after every pinning job and keeps it out of the shuffle, which would
+   * otherwise bury the row at a random depth every half hour.
+   */
+  pinToTop: z.boolean().optional(),
+  /**
    * Pin only this many of the rule's collections per library, rotating a
    * different set in on each run. Unset (or 0) pins every collection, which
    * is the original behaviour.

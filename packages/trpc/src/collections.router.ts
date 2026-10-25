@@ -46,7 +46,7 @@ function refuseIfSmart(row: { smart: number }, verb: string): void {
   }
 }
 
-export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collections" | "config" | "db">) {
+export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collections" | "config" | "db" | "jobs">) {
   const { clearPreviewCache } = createPreviewCache(deps);
   /**
    * Render a generated poster from a collection's own members.
@@ -55,7 +55,7 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
    * media mirror: the mirror is a paged snapshot of a whole library, so sampling
    * it for a 15-member collection mostly returns things that aren't in it.
    */
-  const { clients } = deps;
+  const { clients, jobs } = deps;
   const getPlexClient = mapNotConfiguredClient(clients);
   const { collections, config, db } = deps;
   const { getConfig } = config;
@@ -483,6 +483,10 @@ export function createCollectionsRouter(deps: Pick<TrpcDeps, "clients" | "collec
         promotedToRecommended: 1,
         promotedToSharedHome: 1,
       });
+      // The pin landed at the bottom; if this is one of the rows kept at the
+      // top, the rest have to move behind it.
+      const section = (await client.getSections()).find((s) => s.key === row.sectionId);
+      if (section) await jobs.applyTopPins(client, [section], () => {});
       clearPreviewCache();
       return { ok: true as const };
     }),

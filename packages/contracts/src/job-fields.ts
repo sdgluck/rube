@@ -16,6 +16,7 @@ export const BYW_DEFAULTS = {
   limit: 10,
   mode: "per-user",
   pinToHomepage: true,
+  pinToTop: false,
   minItems: 10,
   maxItems: 30,
   minLibrarySize: 15,
@@ -26,6 +27,7 @@ export const WTYL_DEFAULTS = {
   historyDays: 365,
   minHistoryTitles: 5,
   pinToHomepage: true,
+  pinToTop: false,
   minItems: 10,
   maxItems: 25,
   minLibrarySize: 15,
@@ -37,6 +39,7 @@ export const PIBU_DEFAULTS = {
   minEpisodes: 2,
   maxItems: 20,
   pinToHomepage: true,
+  pinToTop: false,
 } as const;
 
 export const FRANCHISE_DEFAULTS = {
@@ -44,6 +47,7 @@ export const FRANCHISE_DEFAULTS = {
   minWatched: 1,
   maxItems: 20,
   pinToHomepage: true,
+  pinToTop: false,
   skipMissing: false,
 } as const;
 
@@ -51,11 +55,13 @@ export const REQUESTS_DEFAULTS = {
   maxAgeDays: 60,
   maxItems: 20,
   pinToHomepage: true,
+  pinToTop: false,
 } as const;
 
 export const SEASON_DEFAULTS = {
   mode: "server",
   pinToHomepage: true,
+  pinToTop: false,
   minItems: 5,
   maxItems: 30,
   useAi: true,
@@ -66,6 +72,7 @@ export const LEAVING_DEFAULTS = {
   maxItems: 30,
   minItems: 1,
   pinToHomepage: true,
+  pinToTop: false,
 } as const;
 
 export const WATCH_AGAIN_DEFAULTS = {
@@ -73,6 +80,7 @@ export const WATCH_AGAIN_DEFAULTS = {
   minItems: 3,
   maxItems: 20,
   pinToHomepage: true,
+  pinToTop: false,
 } as const;
 
 export const NEW_FOR_YOU_DEFAULTS = {
@@ -80,6 +88,7 @@ export const NEW_FOR_YOU_DEFAULTS = {
   minItems: 3,
   maxItems: 20,
   pinToHomepage: true,
+  pinToTop: false,
 } as const;
 
 export const MORE_FROM_DEFAULTS = {
@@ -88,6 +97,7 @@ export const MORE_FROM_DEFAULTS = {
   minItems: 3,
   maxItems: 15,
   pinToHomepage: true,
+  pinToTop: false,
   includeActors: true,
 } as const;
 
@@ -137,6 +147,16 @@ const RULE_CONCURRENCY: FieldSpec = {
   advanced: true,
 };
 
+/** Every feature that pins offers it, right under "Pin to home screen". */
+const PIN_TO_TOP: FieldSpec = {
+  key: "pinToTop",
+  label: "Keep at the top",
+  help: "These rows stay first among the collection rows on Home, even when hubs are shuffled.",
+  control: { kind: "boolean" },
+  default: false,
+  showWhen: { key: "pinToHomepage", equals: true },
+};
+
 /** Fields beyond `sections`, which is added for every command whose schema has it. */
 const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
   generate: [RULE_CONCURRENCY],
@@ -174,6 +194,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: BYW_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "includeSynopsis",
       label: "Send the synopsis",
@@ -225,6 +246,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: WTYL_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "minHistoryTitles",
       label: "Least history",
@@ -284,6 +306,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: PIBU_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "minEpisodes",
       label: "Fewest episodes watched",
@@ -320,6 +343,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: FRANCHISE_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "minWatched",
       label: "Films seen to count",
@@ -364,6 +388,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: REQUESTS_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "maxItems",
       label: "Most items",
@@ -404,6 +429,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: SEASON_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "useAi",
       label: "Top up with AI",
@@ -441,6 +467,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: LEAVING_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "minItems",
       label: "Fewest items",
@@ -477,6 +504,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: WATCH_AGAIN_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "minItems",
       label: "Fewest items",
@@ -513,6 +541,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: NEW_FOR_YOU_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "minItems",
       label: "Fewest items",
@@ -556,6 +585,7 @@ const COMMAND_FIELDS: Record<string, FieldSpec[]> = {
       control: { kind: "boolean" },
       default: MORE_FROM_DEFAULTS.pinToHomepage,
     },
+    PIN_TO_TOP,
     {
       key: "minSeen",
       label: "Films seen to count",

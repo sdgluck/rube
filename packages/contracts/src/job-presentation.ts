@@ -302,7 +302,8 @@ export const JOB_PRESENTATION: Record<string, JobPresentation> = {
   },
   shuffle: {
     kind: "feature",
-    description: "Randomises the order of items in shuffled hub collections so the homescreen stays fresh.",
+    description:
+      "Reorders the pinned collection rows on Home at random so it stays fresh. Rows kept at the top stay first.",
   },
   overlays: {
     kind: "feature",

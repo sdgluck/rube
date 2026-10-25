@@ -192,6 +192,7 @@ export const EMPTY_FORM: RuleFormState = {
   pinToHomepage: true,
   pinRotationCount: 0,
   pinMinItems: 0,
+  pinToTop: false,
   personalizable: false,
   outcome: { ...DEFAULT_OUTCOME_FORM },
   presentation: { ...DEFAULT_PRESENTATION_FORM },

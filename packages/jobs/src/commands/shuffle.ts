@@ -2,9 +2,10 @@ import { ServicesToken, type Services } from "@rube/composition";
 import { createPlexClient } from "@rube/plex";
 
 import { shuffleSectionHubs } from "@rube/domain.shuffle-hubs";
+import { createHubOrder } from "../hub-order.ts";
 import type { JobContext, CommonJobConfig } from "@rube/core";
 
-export function createShuffleCommand(deps: Pick<Services, "clients" | "config">) {
+export function createShuffleCommand(deps: Pick<Services, "clients" | "config" | "db" | "rules">) {
   const { clients, config } = deps;
   const { plexHealthCallback } = clients;
   const { getConfig } = config;
@@ -50,10 +51,13 @@ export function createShuffleCommand(deps: Pick<Services, "clients" | "config">)
 
     ctx.log(`Sections: ${sections.map((s) => s.title).join(", ")}`);
 
+    const keepFirst = createHubOrder(deps).topPinnedRatingKeys();
+    if (keepFirst.size > 0) ctx.log(`Keeping ${keepFirst.size} collection(s) at the top.`);
+
     for (let i = 0; i < sections.length; i++) {
       const section = sections[i];
       ctx.progress(i + 1, sections.length, `Shuffling "${section.title}"...`);
-      await shuffleSectionHubs(client, section, ctx.log);
+      await shuffleSectionHubs(client, section, ctx.log, { keepFirst });
     }
 
     ctx.log("All done!");

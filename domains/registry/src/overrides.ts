@@ -38,12 +38,14 @@ export function applyImportOverrides(
   if (!pins) {
     // Nothing to decide, and nothing worth keeping if the pack shipped it.
     delete next.pinToHomepage;
+    delete next.pinToTop;
     delete next.pinRotationCount;
     delete next.pinMinItems;
   } else if (overrides.pinToHomepage === false) {
     // Unpinning is unconditional — "don't touch my homepage" has to mean
     // every rule in the pack, not just the grouped ones.
     next.pinToHomepage = false;
+    delete next.pinToTop;
     delete next.pinRotationCount;
     delete next.pinMinItems;
   } else if (overrides.pinToHomepage === true && many) {
@@ -77,7 +79,7 @@ export function applyImportOverrides(
 }
 
 /** The keys the import modal (and the rule editor) let a user decide. */
-const USER_OWNED_KEYS = ["pinToHomepage", "pinRotationCount", "pinMinItems", "limit", "minItems"] as const;
+const USER_OWNED_KEYS = ["pinToHomepage", "pinToTop", "pinRotationCount", "pinMinItems", "limit", "minItems"] as const;
 
 /**
  * Carries the user's answers forward across a pack update.

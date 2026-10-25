@@ -35,6 +35,7 @@ import { createReconcile } from "./personalize/reconcile.ts";
 import { JobStarterToken } from "./starter.ts";
 import { createFieldOptions } from "./field-options.ts";
 import { createReadiness } from "./readiness.ts";
+import { createHubOrder } from "./hub-order.ts";
 import { JobConfigWriterToken } from "@rube/ports";
 
 // ─── Pure exports ────────────────────────────────────────────────────────────
@@ -49,6 +50,7 @@ export { type InternalJobName, type InternalJobs } from "./internal-jobs.ts";
 export { FEATURE_TEMPLATES, type FeatureTemplate, type FeatureCatalogEntry } from "./features.ts";
 export { BASELINE_LABEL } from "./personalize/reconcile.ts";
 export { stopStressTest } from "./stress-test/index.ts";
+export { PIN_TO_TOP_LABELS, pinsHubs } from "./hub-order.ts";
 export {
   stressTestConfigSchema,
   stressTestConfigInputSchema,
@@ -89,6 +91,7 @@ export const createJobs = perDeps(function createJobs(deps: Services) {
     ...createReconcile(deps),
     ...createFieldOptions(deps),
     ...createReadiness(deps),
+    ...createHubOrder(deps),
     runSingleRule: generate.runSingleRule,
     testRule: generate.testRule,
     previewDigest: createDigestCommand(deps).previewDigest,

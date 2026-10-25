@@ -22,7 +22,7 @@ import {
   repairPersonalRow,
 } from "../personalize/personal-row.ts";
 
-const BYW_LABEL = "BecauseYouWatched";
+export const BYW_LABEL = "BecauseYouWatched";
 const BYW_LABELS = ["Rube", BYW_LABEL];
 
 const aiCollectionSchema = z.object({

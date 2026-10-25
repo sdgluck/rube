@@ -28,6 +28,7 @@ import { parseRuleConfig } from "./config.ts";
 
 import { withItemCache } from "./item-cache.ts";
 import { bufferLog } from "./log-buffer.ts";
+import { createHubOrder } from "../../hub-order.ts";
 import { RULE_CONCURRENCY_DEFAULT } from "@rube/contracts";
 
 export type { TestRuleResult, TestCollectionPreview } from "./preview.ts";
@@ -133,6 +134,7 @@ export const createGenerateCommand = perDeps(function createGenerateCommand(deps
   const { createMetadataBudget } = createMetadataCommand(deps);
   const { resolveArrAdds } = createArrCommand(deps);
   const { llmUnavailableReason } = createLlmCommand(deps);
+  const { applyTopPins } = createHubOrder(deps);
 
   const runRuleLog = createLogger("run-rule");
 
@@ -619,6 +621,10 @@ export const createGenerateCommand = perDeps(function createGenerateCommand(deps
       announceEmptyRule(rule.id, rule.name, previousItemCount, itemCount, ruleRunId);
       await diagnoseEmptyRun({ ctx, client, sections, ruleType: rule.type, ruleConfig, ruleRunId, itemCount });
     }
+
+    // A manual or triggered run pins outside the worker, so the hook in
+    // `sidequest/job.ts` never sees it; put the top rows back here instead.
+    if (!signal?.aborted) await applyTopPins(client, sections, (msg) => ctx.log(msg));
 
     ctx.progress(4, 4, "Done");
     ctx.log(`Done — lastCollectionKey: ${lastCollectionKey}`);

@@ -459,6 +459,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       pinToHomepage: (config.pinToHomepage as boolean | undefined) ?? true,
       pinRotationCount: (config.pinRotationCount as number | undefined) ?? 0,
       pinMinItems: (config.pinMinItems as number | undefined) ?? 0,
+      pinToTop: config.pinToTop === true,
       personalizable: config.personalizable === true,
       outcome: outcomeFromConfig(config.action),
       presentation: presentationFromConfig(config.presentation),
@@ -513,6 +514,7 @@ export default function Rules({ outcome = "collection" }: { outcome?: RulesOutco
       if (next.pinToHomepage && next.pinRotationCount > 0 && rotatesPins(ruleCollectionCount(next.type, next.limit)))
         config.pinRotationCount = next.pinRotationCount;
       if (next.pinToHomepage && next.pinMinItems > 0) config.pinMinItems = next.pinMinItems;
+      if (next.pinToHomepage && next.pinToTop) config.pinToTop = true;
       // Rebuilt from the form like everything else here, so a rule marked in
       // bulk keeps the mark through an edit rather than losing it to a config
       // that never mentioned it.

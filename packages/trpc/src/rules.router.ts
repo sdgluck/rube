@@ -44,7 +44,7 @@ export function createRulesRouter(
   deps: Pick<TrpcDeps, "clients" | "collections" | "jobs" | "ruleDrafts" | "ruleRuns" | "rules" | "sections">,
 ) {
   const { queueRuleRun, setLastTestResult, getLastTestResult, hasLastTestResult, clearLastTestResult } = deps.ruleRuns;
-  const { runSingleRule, testRule } = deps.jobs;
+  const { runSingleRule, testRule, applyTopPinsEverywhere } = deps.jobs;
   const { clients } = deps;
   const getPlexClient = mapNotConfiguredClient(clients);
   const { collections, ruleRuns, rules, sections } = deps;
@@ -299,11 +299,17 @@ export function createRulesRouter(
       )
       .mutation(({ input }) => {
         const { id, ...updates } = input;
+        const wasTop = !!(getRule(id)?.config as { pinToTop?: boolean } | undefined)?.pinToTop;
         updateRule(id, {
           ...updates,
           config: updates.config !== undefined ? assertValidRuleConfig(updates.config, getRule(id)?.type) : undefined,
           enabled: updates.enabled !== undefined ? (updates.enabled ? 1 : 0) : undefined,
         });
+        // Kept at the top from now, not from the next run. Not awaited: it is
+        // a Plex round trip per library, and the save has already happened.
+        if (!wasTop && (updates.config as { pinToTop?: boolean } | undefined)?.pinToTop) {
+          void applyTopPinsEverywhere();
+        }
         return { ok: true };
       }),
 

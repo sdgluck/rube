@@ -156,6 +156,8 @@ export interface RuleFormState {
   pinRotationCount: number;
   /** Only pin collections with at least this many items. 0 = no floor. */
   pinMinItems: number;
+  /** Keep the pinned collections first among the collection rows on Home, through shuffles. */
+  pinToTop: boolean;
   /** Each run also builds a per-user copy. Collection rules only. */
   personalizable: boolean;
   /** Collection (the default, and what every rule did before) or cleanup. */

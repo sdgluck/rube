@@ -221,6 +221,8 @@ export default function Preview() {
     }
     return map;
   }, [rulesQuery.data]);
+  const topPinnedQuery = trpc.preview.topPinned.useQuery();
+  const topPinned = useMemo(() => new Set(topPinnedQuery.data ?? []), [topPinnedQuery.data]);
   const shuffleSection = trpc.preview.shuffleSection.useMutation();
   const refreshMutation = trpc.preview.refresh.useMutation();
 
@@ -325,15 +327,21 @@ export default function Preview() {
 
   const onShuffle = () => {
     const hubs = previewQuery.data?.hubs ?? [];
+    // Rows kept at the top stay out of the shuffle and go first, as the server
+    // does it — otherwise the page would show them jumping, then snap back.
+    const isTop = (id: string) => topPinned.has(parseCollectionRatingKey(id) ?? "");
     const collectionHubIds = hubs
       .map((h) => h.identifier || h.key || h.title)
-      .filter((id) => id.startsWith(COLLECTION_HUB_PREFIX));
+      .filter((id) => id.startsWith(COLLECTION_HUB_PREFIX) && !isTop(id));
     if (collectionHubIds.length < 2) {
-      setShuffleStatus("Need at least 2 pinned collection hubs to shuffle.");
+      setShuffleStatus("Need at least 2 pinned collection hubs, besides the ones kept at the top, to shuffle.");
       setTimeout(() => setShuffleStatus(null), 3000);
       return;
     }
-    const shuffled = shuffleArray(collectionHubIds);
+    const shuffled = [
+      ...hubs.map((h) => h.identifier || h.key || h.title).filter((id) => isTop(id)),
+      ...shuffleArray(collectionHubIds),
+    ];
     const newOrder: string[] = [];
     let pulled = 0;
     for (const h of hubs) {
@@ -470,6 +478,14 @@ export default function Preview() {
           const isUnpinning = unpinMutation.isPending && unpinMutation.variables?.hubIdentifier === hub.identifier;
           const chips = collectionRatingKey ? (
             <>
+              {topPinned.has(collectionRatingKey) && (
+                <span
+                  className={`${styles.hubProv} ${styles.hubProvStatic}`}
+                  title="Kept at the top — shuffles leave it first"
+                >
+                  Top
+                </span>
+              )}
               {rule ? (
                 <Link
                   // `q` narrows the list behind the editor to this rule; `edit` opens it.

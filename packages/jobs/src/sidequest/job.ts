@@ -17,6 +17,7 @@ import { COMMANDS, isCommandName, type CommandName } from "../commands/catalog.t
 import { createCheckpoint as createCheckpointFactory } from "../checkpoint.ts";
 import { isShuttingDown } from "../runner.ts";
 import { isTerminalStatus } from "../statuses.ts";
+import { createHubOrder, pinsHubs } from "../hub-order.ts";
 import {
   JOB_CANCEL_POLL_INTERVAL_MS,
   JOB_LOG_FLUSH_INTERVAL_MS,
@@ -45,6 +46,7 @@ export function createCommandJob(services: Services, scopeFor: (name: string) =>
   const { db } = services;
   const { emitEvent } = services.events;
   const { createCheckpoint } = createCheckpointFactory(services);
+  const { applyTopPinsEverywhere } = createHubOrder(services);
 
   return class CommandJob extends Job {
     async run(commandName: string, runId: string, configJson: string, jobName: string, jobId: string) {
@@ -321,6 +323,13 @@ export function createCommandJob(services: Services, scopeFor: (name: string) =>
         }
         if (timedOut) {
           throw new Error(`Command exceeded its ${formatDuration(budgetMs)} budget`);
+        }
+
+        // Anything that pins appends its rows to the bottom of Home, below the
+        // rows kept at the top. Put those back in front while the run is still
+        // open, so its log says so; it never fails the run.
+        if (pinsHubs(commandName)) {
+          await applyTopPinsEverywhere({ signal: ctx.signal, log: (msg) => ctx.log(msg) });
         }
 
         progress = 1;

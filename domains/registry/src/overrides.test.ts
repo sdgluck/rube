@@ -70,6 +70,11 @@ test("an update keeps a pin floor the user changed, and one they cleared", () =>
   assert.ok(!("pinMinItems" in carryOverUserChoices({}, { ...PUBLISHED, pinMinItems: 3 })));
 });
 
+test("an update keeps a rule the user kept at the top there", () => {
+  assert.equal(carryOverUserChoices({ pinToTop: true }, PUBLISHED).pinToTop, true);
+  assert.ok(!("pinToTop" in carryOverUserChoices({}, { ...PUBLISHED, pinToTop: true })));
+});
+
 test("a cleanup rule takes no homepage settings at all", () => {
   const cleanup = { action: { kind: "cleanup", mode: "label" }, pinToHomepage: true, pinRotationCount: 10 };
   const out = applyImportOverrides("directors", cleanup, { pinToHomepage: true, pinRotationCount: 5, pinMinItems: 4 });

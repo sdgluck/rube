@@ -26,6 +26,13 @@ export const commonJobConfigSchema = z.object({
 });
 export type CommonJobConfig = z.infer<typeof commonJobConfigSchema>;
 
+/**
+ * Keep this feature's rows first among the collection rows on Home. Every
+ * feature that pins has it; `hub-order.ts` in `@rube/jobs` reads it after
+ * each pinning job and when shuffling, which would otherwise bury the rows.
+ */
+const pinToTopSchema = z.boolean().optional();
+
 export const generateJobConfigSchema = commonJobConfigSchema.extend({
   /**
    * How many rules to run at once. Rules are independent, but they share
@@ -41,6 +48,7 @@ export const bywJobConfigSchema = commonJobConfigSchema.extend({
   mode: z.enum(["per-user", "server"]).optional(),
   users: z.array(z.string()).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
   minItems: z.number().int().min(5).max(50).optional(),
   maxItems: z.number().int().min(10).max(100).optional(),
   minLibrarySize: z.number().int().min(1).optional(),
@@ -61,6 +69,7 @@ export const wtylJobConfigSchema = commonJobConfigSchema.extend({
   /** Fewer distinct titles than this is too little history to call a taste. */
   minHistoryTitles: z.number().int().min(1).max(100).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
   minItems: z.number().int().min(5).max(50).optional(),
   maxItems: z.number().int().min(10).max(100).optional(),
   minLibrarySize: z.number().int().min(1).optional(),
@@ -83,6 +92,7 @@ export const pibuJobConfigSchema = commonJobConfigSchema.extend({
   minEpisodes: z.number().int().min(1).max(20).optional(),
   maxItems: z.number().int().min(1).max(50).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
 });
 export type PibuJobConfig = z.infer<typeof pibuJobConfigSchema>;
 
@@ -99,6 +109,7 @@ export const franchiseJobConfigSchema = commonJobConfigSchema.extend({
   minWatched: z.number().int().min(1).max(10).optional(),
   maxItems: z.number().int().min(1).max(50).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
   /** When the next part isn't in the library, offer the one after it instead of nothing. */
   skipMissing: z.boolean().optional(),
 });
@@ -114,6 +125,7 @@ export const requestsJobConfigSchema = commonJobConfigSchema.extend({
   maxAgeDays: z.number().int().min(7).max(365).optional(),
   maxItems: z.number().int().min(1).max(50).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
 });
 export type RequestsJobConfig = z.infer<typeof requestsJobConfigSchema>;
 
@@ -130,6 +142,7 @@ export const seasonCollectionsJobConfigSchema = commonJobConfigSchema.extend({
   mode: z.enum(["server", "per-user"]).optional(),
   users: z.array(z.string()).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
   minItems: z.number().int().min(1).max(50).optional(),
   maxItems: z.number().int().min(5).max(100).optional(),
   /** Ask the AI provider for more when keywords find fewer than `minItems`. */
@@ -149,6 +162,7 @@ export const leavingSoonJobConfigSchema = commonJobConfigSchema.extend({
   maxItems: z.number().int().min(5).max(100).optional(),
   minItems: z.number().int().min(1).max(20).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
 });
 export type LeavingSoonJobConfig = z.infer<typeof leavingSoonJobConfigSchema>;
 
@@ -163,6 +177,7 @@ export const watchAgainJobConfigSchema = commonJobConfigSchema.extend({
   minItems: z.number().int().min(1).max(20).optional(),
   maxItems: z.number().int().min(5).max(50).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
 });
 export type WatchAgainJobConfig = z.infer<typeof watchAgainJobConfigSchema>;
 
@@ -177,6 +192,7 @@ export const newForYouJobConfigSchema = commonJobConfigSchema.extend({
   minItems: z.number().int().min(1).max(20).optional(),
   maxItems: z.number().int().min(5).max(50).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
 });
 export type NewForYouJobConfig = z.infer<typeof newForYouJobConfigSchema>;
 
@@ -193,6 +209,7 @@ export const moreFromJobConfigSchema = commonJobConfigSchema.extend({
   minItems: z.number().int().min(1).max(20).optional(),
   maxItems: z.number().int().min(5).max(50).optional(),
   pinToHomepage: z.boolean().optional(),
+  pinToTop: pinToTopSchema,
   /** Count lead actors as well as directors. */
   includeActors: z.boolean().optional(),
 });

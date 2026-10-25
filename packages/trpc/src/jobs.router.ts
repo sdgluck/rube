@@ -32,6 +32,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "config" |
     startJob,
     uninstallFeature,
     updateJob,
+    applyTopPinsEverywhere,
   } = deps.jobs;
   const { collections, config, stats } = deps;
   const { getBywCollectionsGroupedByUser, getGeneratedCollectionsGroupedByUser } = collections;
@@ -186,6 +187,7 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "config" |
       )
       .mutation(({ input }) => {
         const { jobId, ...updates } = input;
+        const wasTop = !!getJobs().find((j) => j.id === jobId)?.config?.pinToTop;
         try {
           updateJob(jobId, updates);
         } catch (err) {
@@ -195,6 +197,11 @@ export function createJobsRouter(deps: Pick<TrpcDeps, "collections" | "config" |
             throw new TRPCError({ code: "BAD_REQUEST", message: err.message });
           }
           throw err;
+        }
+        // Kept at the top from now, not from the feature's next run. Not
+        // awaited: it is a Plex round trip per library, and the save is done.
+        if (!wasTop && (updates.configPatch?.pinToTop === true || updates.config?.pinToTop === true)) {
+          void applyTopPinsEverywhere();
         }
         return { ok: true };
       }),

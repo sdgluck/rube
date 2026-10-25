@@ -38,7 +38,7 @@ export const createPreviewCache = perDeps(function createPreviewCache(_deps: obj
 export function createPreviewRouter(deps: TrpcDeps) {
   const { previewCache } = createPreviewCache(deps);
 
-  const { clients } = deps;
+  const { clients, jobs } = deps;
   const getPlexClient = mapNotConfiguredClient(clients);
   const { config } = deps;
   const { getConfig } = config;
@@ -98,6 +98,13 @@ export function createPreviewRouter(deps: TrpcDeps) {
      * spinner and nothing else for as long as Plex took — on a slow server, long
      * enough to look hung while hubs were visibly disappearing from home.
      */
+    /**
+     * Rating keys of the collections kept at the top, so the page can badge
+     * them and leave them in place when it shows a shuffle before Plex has
+     * finished one.
+     */
+    topPinned: procedure.query(() => [...jobs.topPinnedRatingKeys()]),
+
     shuffleTargets: procedure.query(async () => {
       const sections = await shuffleSections();
       return sections.map((s) => ({ key: s.key, title: s.title }));
@@ -106,7 +113,9 @@ export function createPreviewRouter(deps: TrpcDeps) {
     shuffleSection: procedure.input(z.object({ sectionKey: z.string() })).mutation(async ({ input }) => {
       const section = (await shuffleSections()).find((s) => s.key === input.sectionKey);
       if (!section) throw new Error(`Library ${input.sectionKey} is not one Rube manages`);
-      const result = await shuffleSectionHubs(getPlexClient(), section);
+      const result = await shuffleSectionHubs(getPlexClient(), section, undefined, {
+        keepFirst: jobs.topPinnedRatingKeys(),
+      });
       previewCache.clear();
       return result;
     }),
