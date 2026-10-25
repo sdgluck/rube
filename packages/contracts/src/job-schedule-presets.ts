@@ -43,6 +43,18 @@ const NIGHTLY = [
   "we-think-youd-like",
   "pick-it-back-up",
   "posters-refresh",
+  // The personal rows that came after the chain was drawn. Left out, a preset
+  // kept them at their install times (07:05 onwards), which in Light sat
+  // inside its monthly posters run on the 1st — a clash the preset test only
+  // saw in a week that held a 1st. Packed after posters because they're light
+  // and the window only binds heavy work; ahead of it they pushed posters out.
+  "finish-the-franchise",
+  "watch-it-again",
+  "new-for-you",
+  "more-from",
+  "requests-arrived",
+  "season-collections",
+  "leaving-soon",
 ];
 
 interface PresetSpec {
@@ -57,8 +69,6 @@ interface PresetSpec {
   padding: number;
   /** Chain members that only run on these days. */
   days?: Record<string, number[]>;
-  /** Chain members that run on the 1st of the month instead. */
-  monthly?: string[];
   /** Jobs taken out of the chain and given a fixed cron. */
   fixed: Record<string, string>;
 }
@@ -119,11 +129,14 @@ const SPECS: PresetSpec[] = [
     start: "03:00",
     padding: 0.25,
     days: { metadata: [0], "metadata-overrides": [0], "collection-art": [0] },
-    monthly: ["posters-refresh"],
     fixed: {
       // Out of the chain: its slot pushed the nightly jobs past this
       // preset's window, for a job that only runs once a week anyway.
       "we-think-youd-like": "15 6 * * 0",
+      // Likewise, for once a month: in the chain it held a slot every night,
+      // which carried the personal rows to 09:30 and onto Monday's digest.
+      // 01:00 is inside the window with nothing else on the queue until 03:00.
+      "posters-refresh": "0 1 1 * *",
       "sync-recently-added": "*/30 * * * *",
       "seerr-poll": "*/30 * * * *",
       "watchlist-sync": "*/30 * * * *",
@@ -259,9 +272,7 @@ export function buildPreset(presetId: string, ctx: ScheduleContext, base: Schedu
     const days = spec.days?.[id];
     jobs[id] = {
       ...jobs[id],
-      schedule: spec.monthly?.includes(id)
-        ? `${time % 60} ${Math.floor(time / 60)} 1 * *`
-        : formatSchedule(days ? { kind: "weekly", days, time } : { kind: "daily", time }),
+      schedule: formatSchedule(days ? { kind: "weekly", days, time } : { kind: "daily", time }),
     };
   }
 

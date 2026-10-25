@@ -15,21 +15,34 @@ const MATRIX = [
   { name: "window off", ctx: () => fixtureContext({ window: false }) },
 ];
 
+/**
+ * A custom cron (a monthly one, say) is checked over the week starting now, so
+ * without a fixed clock this test only caught a clash on the 1st in a week
+ * that held one — it passed for weeks, then failed on a Sunday in October.
+ * Both kinds of week, every time.
+ */
+const WEEKS = [
+  { name: "a week with a 1st in it", now: Date.parse("2026-10-25T12:00:00Z") },
+  { name: "a week without", now: Date.parse("2026-10-11T12:00:00Z") },
+];
+
 describe("schedule presets", () => {
   for (const preset of SCHEDULE_PRESETS) {
     for (const { name, ctx: make } of MATRIX) {
-      it(`${preset.name} is free of errors and warnings with ${name}`, () => {
-        const ctx = make();
-        const plan = buildPreset(preset.id, ctx, planFromContext(ctx));
-        const issues = validateSchedulePlan(plan, ctx).filter(
-          // Not the preset's to fix: a job installed without the service it needs.
-          (i) => i.severity !== "info" && i.code !== "service-missing",
-        );
-        assert.deepEqual(
-          issues.map((i) => i.message),
-          [],
-        );
-      });
+      for (const week of WEEKS)
+        it(`${preset.name} is free of errors and warnings with ${name}, in ${week.name}`, (t) => {
+          t.mock.timers.enable({ apis: ["Date"], now: week.now });
+          const ctx = make();
+          const plan = buildPreset(preset.id, ctx, planFromContext(ctx));
+          const issues = validateSchedulePlan(plan, ctx).filter(
+            // Not the preset's to fix: a job installed without the service it needs.
+            (i) => i.severity !== "info" && i.code !== "service-missing",
+          );
+          assert.deepEqual(
+            issues.map((i) => i.message),
+            [],
+          );
+        });
     }
 
     it(`${preset.name} only names jobs that exist, and is deterministic`, () => {
