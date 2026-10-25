@@ -12,7 +12,7 @@ import assert from "node:assert/strict";
 import { createTestContainer } from "@rube/composition/test-support";
 import { ServicesToken } from "@rube/composition";
 import { DbToken } from "@rube/db";
-import { jobRuns, jobs } from "@rube/db";
+import { events, jobRuns, jobs } from "@rube/db";
 import { createRunner } from "./runner.ts";
 import { createInternalJobs } from "./internal-jobs.ts";
 
@@ -21,10 +21,11 @@ after(() => c.dispose());
 
 const services = c.resolve(ServicesToken);
 const db = c.resolve(DbToken);
-const { startJob, cancelRun, sweepStuckRuns, seedDefaultJobs } = createRunner(services);
+const { startJob, cancelRun, sweepStuckRuns, checkLaneStalls, seedDefaultJobs } = createRunner(services);
 const { internalJobs, isInternalJobName } = createInternalJobs(services);
 
-const { JOB_RUN_KEEP_PER_JOB, JOB_CANCELLING_GRACE_MS, JOB_QUEUE_LIMIT_MS } = await import("./limits.ts");
+const { JOB_RUN_KEEP_PER_JOB, JOB_CANCELLING_GRACE_MS, JOB_QUEUE_LIMIT_MS, JOB_LANE_STALL_MS } =
+  await import("./limits.ts");
 const { COMMANDS, isCommandName } = await import("./commands/catalog.ts");
 
 /**
@@ -293,6 +294,69 @@ describe("watchdog", () => {
     insertRun("stuck-cancel", "cancelling", now - JOB_CANCELLING_GRACE_MS - 1000);
     assert.equal(sweepStuckRuns(now), 1);
     assert.equal(statusOf("stuck-cancel")?.status, "failed");
+  });
+});
+
+describe("lane stalls", () => {
+  // Both on the `default` lane: shuffle waits, generate is what may be running.
+  function queue(id: string, jobId: string, waitedMs: number, claimed: boolean, now: number): void {
+    db.insert(jobRuns)
+      .values({
+        id,
+        jobId,
+        status: "running",
+        log: "",
+        progress: 0,
+        message: "",
+        startedAt: now - waitedMs,
+        claimedAt: claimed ? now - waitedMs : null,
+      })
+      .run();
+  }
+  const stallEvents = () =>
+    db
+      .select()
+      .from(events)
+      .all()
+      .filter((e) => e.type === "job.stalled");
+
+  beforeEach(() => {
+    db.delete(jobRuns).run();
+    db.delete(events).run();
+    seedJob("stall-shuffle", "shuffle");
+    seedJob("stall-generate", "generate");
+    checkLaneStalls(); // clear whatever an earlier test left marked
+  });
+
+  it("says nothing while a lane is busy, however long the queue behind it", () => {
+    const now = Date.now();
+    queue("busy", "stall-generate", 60 * 60_000, true, now);
+    queue("behind", "stall-shuffle", JOB_LANE_STALL_MS * 3, false, now);
+    assert.deepEqual(checkLaneStalls(now), []);
+    assert.equal(stallEvents().length, 0);
+  });
+
+  it("announces a lane with a run waiting and nothing executing, once", () => {
+    // The overnight case: a run sat unclaimed for 92 minutes and nothing said so.
+    const now = Date.now();
+    queue("stuck", "stall-shuffle", JOB_LANE_STALL_MS + 60_000, false, now);
+    assert.deepEqual(checkLaneStalls(now), ["default"]);
+    assert.deepEqual(checkLaneStalls(now + 60_000), ["default"]);
+    const announced = stallEvents();
+    assert.equal(announced.length, 1, "one event per stall, not one a minute");
+    assert.match(announced[0].message, /default job queue has stopped/);
+  });
+
+  it("forgets the stall once the lane moves, so the next one is announced too", () => {
+    const now = Date.now();
+    queue("stuck", "stall-shuffle", JOB_LANE_STALL_MS + 60_000, false, now);
+    checkLaneStalls(now);
+    db.update(jobRuns).set({ claimedAt: now }).where(eq(jobRuns.id, "stuck")).run();
+    assert.deepEqual(checkLaneStalls(now), []);
+    db.delete(jobRuns).run();
+    queue("stuck-again", "stall-shuffle", JOB_LANE_STALL_MS + 60_000, false, now);
+    checkLaneStalls(now);
+    assert.equal(stallEvents().length, 2);
   });
 });
 

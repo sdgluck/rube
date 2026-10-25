@@ -42,6 +42,7 @@ import {
   JOB_RUN_KEEP_PER_JOB,
   JOB_TIMEOUT_GRACE_MS,
   JOB_QUEUE_LIMIT_MS,
+  JOB_LANE_STALL_MS,
   JOB_WATCHDOG_INTERVAL_MS,
 } from "./limits.ts";
 
@@ -406,6 +407,8 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
    * durable version pure cost.
    */
   const cancelRequestedAt = new Map<string, number>();
+  /** Lanes currently reported as stalled, and since when, so each stall is announced once. */
+  const stalledLanes = new Map<string, number>();
 
   const { config, configHistory, db, events, ruleRuns, rules } = deps;
   const { record: recordChange } = configHistory;
@@ -840,11 +843,64 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     return failed;
   }
 
+  /**
+   * Announce a lane that has stopped taking work.
+   *
+   * Each lane runs one command at a time, so a run waiting behind a busy lane
+   * is normal. A run waiting while *nothing* on its lane is executing is not:
+   * the worker has stopped picking jobs up. That happened once for 92 minutes
+   * overnight, and the only trace was jobs failing hours later — the container
+   * log that might have said why had gone with the container. This puts the
+   * stall, and when it began, into the event log while it is happening.
+   *
+   * Announced once per stall, on the transition; the recovery is logged.
+   */
+  function checkLaneStalls(now = Date.now()): string[] {
+    const active = db
+      .select({ claimedAt: jobRuns.claimedAt, startedAt: jobRuns.startedAt, command: jobs.command, name: jobs.name })
+      .from(jobRuns)
+      .innerJoin(jobs, eq(jobs.id, jobRuns.jobId))
+      .where(inArray(jobRuns.status, [...ACTIVE_RUN_STATUSES]))
+      .all();
+
+    const byLane = new Map<string, { executing: boolean; oldestWait: { since: number; name: string } | null }>();
+    for (const run of active) {
+      if (!isCommandName(run.command)) continue;
+      const lane = COMMANDS[run.command].lane;
+      const entry = byLane.get(lane) ?? { executing: false, oldestWait: null };
+      if (run.claimedAt !== null) entry.executing = true;
+      else if (!entry.oldestWait || run.startedAt < entry.oldestWait.since) {
+        entry.oldestWait = { since: run.startedAt, name: run.name };
+      }
+      byLane.set(lane, entry);
+    }
+
+    const stalled: string[] = [];
+    for (const lane of new Set(Object.values(COMMANDS).map((c) => c.lane))) {
+      const entry = byLane.get(lane);
+      const waiting = entry && !entry.executing ? entry.oldestWait : null;
+      if (waiting && now - waiting.since > JOB_LANE_STALL_MS) {
+        stalled.push(lane);
+        if (!stalledLanes.has(lane)) {
+          stalledLanes.set(lane, waiting.since);
+          const message = `The ${lane} job queue has stopped: ${waiting.name} has waited ${formatDuration(now - waiting.since)} with nothing running ahead of it.`;
+          emitEvent("job.stalled", message, { lane, since: waiting.since });
+          log.error("job lane stalled", { lane, waitingJob: waiting.name, since: waiting.since });
+        }
+      } else if (stalledLanes.has(lane)) {
+        log.warn("job lane moving again", { lane, stalledForMs: now - stalledLanes.get(lane)! });
+        stalledLanes.delete(lane);
+      }
+    }
+    return stalled;
+  }
+
   function startWatchdog(): void {
     if (watchdogTimer) clearInterval(watchdogTimer);
     watchdogTimer = setInterval(() => {
       try {
         sweepStuckRuns();
+        checkLaneStalls();
         // Rule runs have no deadline of their own — a rule may legitimately take
         // an hour. What they do have is a heartbeat, so the question here is
         // "did the executor stop existing?", not "is this taking too long?".
@@ -986,5 +1042,14 @@ export const createRunner = perDeps(function createRunner(deps: Services) {
     }
   }
 
-  return { startJob, cancelRun, sweepStuckRuns, updateJob, initJobs, seedDefaultJobs, adoptLegacyBackupSchedule };
+  return {
+    startJob,
+    cancelRun,
+    sweepStuckRuns,
+    checkLaneStalls,
+    updateJob,
+    initJobs,
+    seedDefaultJobs,
+    adoptLegacyBackupSchedule,
+  };
 });

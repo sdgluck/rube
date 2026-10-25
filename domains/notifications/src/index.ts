@@ -91,6 +91,7 @@ export function sampleMessageFor(type: string): RichMessage {
   const samples: Record<string, string> = {
     "job.completed": "Sync Media completed in 42s — 127 items updated.",
     "job.failed": "Generate failed: Plex returned 401 Unauthorized.",
+    "job.stalled": "The default job queue has stopped: Shuffle Hubs has waited 15m with nothing running ahead of it.",
     "health.failed": "Radarr is unreachable (connect ETIMEDOUT).",
     "health.recovered": "Radarr is responding again.",
     "plex.unreachable": "Plex has not responded for 6 minutes.",

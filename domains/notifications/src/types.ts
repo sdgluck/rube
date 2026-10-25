@@ -31,6 +31,9 @@ export type NotificationService = (typeof NOTIFICATION_SERVICES)[number];
 export const EVENT_TYPES = [
   { id: "job.completed", label: "Job Completed" },
   { id: "job.failed", label: "Job Failed" },
+  // A queue that stops taking work fails nothing for hours — its jobs just
+  // never start. Fires once when the stall is noticed.
+  { id: "job.stalled", label: "Job Queue Stalled" },
   { id: "health.failed", label: "Health Check Failed" },
   { id: "health.recovered", label: "Health Check Recovered" },
   // Separate from `health.failed` because it is the one outage that stops

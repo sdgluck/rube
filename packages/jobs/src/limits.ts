@@ -43,6 +43,13 @@ export const JOB_TIMEOUT_GRACE_MS = MINUTE_MS;
  */
 export const JOB_QUEUE_LIMIT_MS = 6 * HOUR_MS;
 
+/**
+ * How long a run may wait while nothing on its lane is executing before the
+ * lane is reported as stalled. A free lane claims a run within seconds, so this
+ * is generous; it only has to be longer than a worker's start-up.
+ */
+export const JOB_LANE_STALL_MS = 15 * MINUTE_MS;
+
 /** How often the main process sweeps `job_runs` for runs past their deadline. */
 export const JOB_WATCHDOG_INTERVAL_MS = MINUTE_MS;
 
