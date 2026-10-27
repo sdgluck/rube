@@ -41,6 +41,13 @@ data class CollectionPerformance(
 )
 
 @Serializable
+data class LogChunk(
+    val chunk: String,
+    val nextOffset: Double,
+    val size: Double,
+)
+
+@Serializable
 data class MatchFilters(
     val genres: List<String>? = null,
     val maxMinutes: Double? = null,
@@ -274,13 +281,6 @@ object Portal {
     @Serializable
     data class AuthExchangeInput(
         val plexToken: String,
-    )
-
-    @Serializable
-    data class AuthExchangeOutput(
-        val status: String,
-        val username: String,
-        val token: String,
     )
 
     @Serializable
@@ -733,14 +733,6 @@ object Portal {
     )
 
     @Serializable
-    data class MatchGuestPreviewOutput(
-        val code: String,
-        val library: String,
-        val filters: MatchFilters,
-        val members: List<String>,
-    )
-
-    @Serializable
     data class MatchGuestJoinInput(
         val code: String,
         val invite: String,
@@ -756,7 +748,7 @@ object Portal {
 
 object PortalApi {
     val authServer = Endpoint("auth.server", Endpoint.Kind.QUERY, NoInput.serializer(), Portal.AuthServerOutput.serializer())
-    val authExchange = Endpoint("auth.exchange", Endpoint.Kind.MUTATION, Portal.AuthExchangeInput.serializer(), Portal.AuthExchangeOutput.serializer())
+    val authExchange = Endpoint("auth.exchange", Endpoint.Kind.MUTATION, Portal.AuthExchangeInput.serializer(), SignedIn.serializer())
     val authLogout = Endpoint("auth.logout", Endpoint.Kind.MUTATION, NoInput.serializer(), Portal.AuthLogoutOutput.serializer())
     val branding = Endpoint("branding", Endpoint.Kind.QUERY, NoInput.serializer(), Portal.BrandingOutput.serializer())
     val personalizationStatus = Endpoint("personalizationStatus", Endpoint.Kind.QUERY, NoInput.serializer(), Portal.PersonalizationStatusOutput.serializer())
@@ -785,7 +777,7 @@ object PortalApi {
     val matchReset = Endpoint("match.reset", Endpoint.Kind.MUTATION, Portal.MatchResetInput.serializer(), NoOutput.serializer())
     val matchVote = Endpoint("match.vote", Endpoint.Kind.MUTATION, Portal.MatchVoteInput.serializer(), NoOutput.serializer())
     val matchLeave = Endpoint("match.leave", Endpoint.Kind.MUTATION, Portal.MatchLeaveInput.serializer(), NoOutput.serializer())
-    val matchGuestPreview = Endpoint("match.guest.preview", Endpoint.Kind.QUERY, Portal.MatchGuestPreviewInput.serializer(), Portal.MatchGuestPreviewOutput.serializer())
+    val matchGuestPreview = Endpoint("match.guest.preview", Endpoint.Kind.QUERY, Portal.MatchGuestPreviewInput.serializer(), MatchRoomSummary.serializer())
     val matchGuestJoin = Endpoint("match.guest.join", Endpoint.Kind.MUTATION, Portal.MatchGuestJoinInput.serializer(), Portal.MatchGuestJoinOutput.serializer())
 }
 
@@ -1307,13 +1299,6 @@ object Admin {
     )
 
     @Serializable
-    data class JobsRunLogOutput(
-        val chunk: String,
-        val nextOffset: Double,
-        val size: Double,
-    )
-
-    @Serializable
     data class JobsFullLogInput(
         val runId: String,
     )
@@ -1508,13 +1493,6 @@ object Admin {
     data class RulesRunLogInput(
         val runId: String,
         val offset: Long? = null,
-    )
-
-    @Serializable
-    data class RulesRunLogOutput(
-        val chunk: String,
-        val nextOffset: Double,
-        val size: Double,
     )
 
     @Serializable
@@ -2230,7 +2208,7 @@ object AdminApi {
     val jobsRecentRuns = Endpoint("jobs.recentRuns", Endpoint.Kind.QUERY, Admin.JobsRecentRunsInput.serializer(), ListSerializer(Admin.JobsRecentRunsItem.serializer()))
     val jobsRuns = Endpoint("jobs.runs", Endpoint.Kind.QUERY, Admin.JobsRunsInput.serializer(), ListSerializer(Admin.JobsRunsItem.serializer()))
     val jobsRun = Endpoint("jobs.run", Endpoint.Kind.QUERY, Admin.JobsRunInput.serializer(), Admin.JobsRunOutput.serializer())
-    val jobsRunLog = Endpoint("jobs.runLog", Endpoint.Kind.QUERY, Admin.JobsRunLogInput.serializer(), Admin.JobsRunLogOutput.serializer())
+    val jobsRunLog = Endpoint("jobs.runLog", Endpoint.Kind.QUERY, Admin.JobsRunLogInput.serializer(), LogChunk.serializer())
     val jobsFullLog = Endpoint("jobs.fullLog", Endpoint.Kind.QUERY, Admin.JobsFullLogInput.serializer(), Admin.JobsFullLogOutput.serializer())
     val jobsLastFailure = Endpoint("jobs.lastFailure", Endpoint.Kind.QUERY, NoInput.serializer(), ActiveJobRun.serializer().nullable)
     val jobsStart = Endpoint("jobs.start", Endpoint.Kind.MUTATION, Admin.JobsStartInput.serializer(), Admin.JobsStartOutput.serializer())
@@ -2242,7 +2220,7 @@ object AdminApi {
     val rulesRuns = Endpoint("rules.runs", Endpoint.Kind.QUERY, Admin.RulesRunsInput.serializer(), ListSerializer(Admin.RulesRunsItem.serializer()))
     val rulesRecentRuns = Endpoint("rules.recentRuns", Endpoint.Kind.QUERY, Admin.RulesRecentRunsInput.serializer(), ListSerializer(RuleRunSummary.serializer()))
     val rulesRunDetail = Endpoint("rules.runDetail", Endpoint.Kind.QUERY, Admin.RulesRunDetailInput.serializer(), Admin.RulesRunDetail.serializer().nullable)
-    val rulesRunLog = Endpoint("rules.runLog", Endpoint.Kind.QUERY, Admin.RulesRunLogInput.serializer(), Admin.RulesRunLogOutput.serializer())
+    val rulesRunLog = Endpoint("rules.runLog", Endpoint.Kind.QUERY, Admin.RulesRunLogInput.serializer(), LogChunk.serializer())
     val rulesRunsForJobRun = Endpoint("rules.runsForJobRun", Endpoint.Kind.QUERY, Admin.RulesRunsForJobRunInput.serializer(), ListSerializer(RuleRunSummary.serializer()))
     val cleanupQueue = Endpoint("cleanup.queue", Endpoint.Kind.QUERY, Admin.CleanupQueueInput.serializer(), ListSerializer(Admin.CleanupQueueItem.serializer()))
     val cleanupCounts = Endpoint("cleanup.counts", Endpoint.Kind.QUERY, NoInput.serializer(), MapSerializer(String.serializer(), Admin.CleanupCountsValue.serializer()))

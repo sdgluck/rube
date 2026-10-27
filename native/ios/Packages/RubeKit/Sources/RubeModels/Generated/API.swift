@@ -68,6 +68,32 @@ public struct CollectionPerformance: Codable, Sendable, Hashable {
     }
 }
 
+public struct LogChunk: Codable, Sendable, Hashable {
+
+    public var chunk: String
+    public var nextOffset: Double
+    public var size: Double
+
+    public init(chunk: String, nextOffset: Double, size: Double) {
+        self.chunk = chunk
+        self.nextOffset = nextOffset
+        self.size = size
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case chunk
+        case nextOffset
+        case size
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(chunk, forKey: .chunk)
+        try c.encode(nextOffset, forKey: .nextOffset)
+        try c.encode(size, forKey: .size)
+    }
+}
+
 public struct MatchFilters: Codable, Sendable, Hashable {
 
     public var genres: [String]?
@@ -816,32 +842,7 @@ extension Portal {
         }
     }
 
-    public struct AuthExchangeOutput: Codable, Sendable, Hashable {
-
-        public var status: String
-        public var username: String
-        public var token: String
-
-        public init(status: String, username: String, token: String) {
-            self.status = status
-            self.username = username
-            self.token = token
-        }
-
-        enum CodingKeys: String, CodingKey {
-            case status
-            case username
-            case token
-        }
-
-        public func encode(to encoder: Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(status, forKey: .status)
-            try c.encode(username, forKey: .username)
-            try c.encode(token, forKey: .token)
-        }
-    }
-
+    public typealias AuthExchangeOutput = SignedIn
     public struct AuthLogoutOutput: Codable, Sendable, Hashable {
 
         public var ok: Bool
@@ -2357,36 +2358,7 @@ extension Portal {
         }
     }
 
-    public struct MatchGuestPreviewOutput: Codable, Sendable, Hashable {
-
-        public var code: String
-        public var library: String
-        public var filters: MatchFilters
-        public var members: [String]
-
-        public init(code: String, library: String, filters: MatchFilters, members: [String]) {
-            self.code = code
-            self.library = library
-            self.filters = filters
-            self.members = members
-        }
-
-        enum CodingKeys: String, CodingKey {
-            case code
-            case library
-            case filters
-            case members
-        }
-
-        public func encode(to encoder: Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(code, forKey: .code)
-            try c.encode(library, forKey: .library)
-            try c.encode(filters, forKey: .filters)
-            try c.encode(members, forKey: .members)
-        }
-    }
-
+    public typealias MatchGuestPreviewOutput = MatchRoomSummary
     public struct MatchGuestJoinInput: Codable, Sendable, Hashable {
 
         public var code: String
@@ -4010,32 +3982,7 @@ extension Admin {
         }
     }
 
-    public struct JobsRunLogOutput: Codable, Sendable, Hashable {
-
-        public var chunk: String
-        public var nextOffset: Double
-        public var size: Double
-
-        public init(chunk: String, nextOffset: Double, size: Double) {
-            self.chunk = chunk
-            self.nextOffset = nextOffset
-            self.size = size
-        }
-
-        enum CodingKeys: String, CodingKey {
-            case chunk
-            case nextOffset
-            case size
-        }
-
-        public func encode(to encoder: Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(chunk, forKey: .chunk)
-            try c.encode(nextOffset, forKey: .nextOffset)
-            try c.encode(size, forKey: .size)
-        }
-    }
-
+    public typealias JobsRunLogOutput = LogChunk
     public struct JobsFullLogInput: Codable, Sendable, Hashable {
 
         public var runId: String
@@ -4703,32 +4650,7 @@ extension Admin {
         }
     }
 
-    public struct RulesRunLogOutput: Codable, Sendable, Hashable {
-
-        public var chunk: String
-        public var nextOffset: Double
-        public var size: Double
-
-        public init(chunk: String, nextOffset: Double, size: Double) {
-            self.chunk = chunk
-            self.nextOffset = nextOffset
-            self.size = size
-        }
-
-        enum CodingKeys: String, CodingKey {
-            case chunk
-            case nextOffset
-            case size
-        }
-
-        public func encode(to encoder: Encoder) throws {
-            var c = encoder.container(keyedBy: CodingKeys.self)
-            try c.encode(chunk, forKey: .chunk)
-            try c.encode(nextOffset, forKey: .nextOffset)
-            try c.encode(size, forKey: .size)
-        }
-    }
-
+    public typealias RulesRunLogOutput = LogChunk
     public struct RulesRunsForJobRunInput: Codable, Sendable, Hashable {
 
         public var jobRunId: String
