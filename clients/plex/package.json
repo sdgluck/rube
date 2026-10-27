@@ -18,7 +18,7 @@
     "@rube/http": "workspace:*",
     "fast-xml-parser": "^5.11.2",
     "p-queue": "^9.1.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

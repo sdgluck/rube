@@ -319,8 +319,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/http
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -392,8 +392,8 @@ importers:
         specifier: ^9.1.0
         version: 9.3.0
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -463,8 +463,8 @@ importers:
         specifier: ^9.1.0
         version: 9.3.0
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -986,8 +986,8 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/composition':
         specifier: workspace:*
@@ -1129,8 +1129,8 @@ importers:
         specifier: ^0.45.2
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -1194,8 +1194,8 @@ importers:
         specifier: workspace:*
         version: link:../rules
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/composition':
         specifier: workspace:*
@@ -1225,8 +1225,8 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/composition':
         specifier: workspace:*
@@ -1262,8 +1262,8 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/composition':
         specifier: workspace:*
@@ -1330,8 +1330,8 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/composition':
         specifier: workspace:*
@@ -1543,8 +1543,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/plex-smart-filter
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -1761,8 +1761,8 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/composition':
         specifier: workspace:*
@@ -1872,8 +1872,8 @@ importers:
         specifier: ^11.10.0
         version: 11.17.0(typescript@7.0.2)
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/composition':
         specifier: workspace:*
@@ -2063,8 +2063,8 @@ importers:
         specifier: ^9.0.0
         version: 9.1.0
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/test-support':
         specifier: workspace:*
@@ -2115,8 +2115,8 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/composition':
         specifier: workspace:*
@@ -2358,8 +2358,8 @@ importers:
         specifier: ^1.14.0
         version: 1.15.0(better-sqlite3@12.10.0)(supports-color@10.2.2)
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/test-support':
         specifier: workspace:*
@@ -2375,7 +2375,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.74.0
-        version: 0.74.0(zod@4.4.3)
+        version: 0.74.0(zod@4.6.6)
       '@rube/http':
         specifier: workspace:*
         version: link:../http
@@ -2399,8 +2399,8 @@ importers:
         specifier: ^2.9.0
         version: 2.9.0
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -2415,8 +2415,8 @@ importers:
         specifier: workspace:*
         version: link:../contracts
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/composition':
         specifier: workspace:*
@@ -2435,13 +2435,13 @@ importers:
         version: 7.0.2
       zod-native-ir:
         specifier: github:sdgluck/zod-native-ir#v0.1.2
-        version: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3)
+        version: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.6.6)
       zod-to-kotlin:
         specifier: github:sdgluck/zod-to-kotlin#v0.1.2
-        version: https://codeload.github.com/sdgluck/zod-to-kotlin/tar.gz/55efa437d9d07ad6c649785a9f12060d533737ad(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3))(zod@4.4.3)
+        version: https://codeload.github.com/sdgluck/zod-to-kotlin/tar.gz/55efa437d9d07ad6c649785a9f12060d533737ad(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.6.6))(zod@4.6.6)
       zod-to-swift:
         specifier: github:sdgluck/zod-to-swift#v0.1.2
-        version: https://codeload.github.com/sdgluck/zod-to-swift/tar.gz/4d0cce751393bdecf00897d3e706f65315604c5a(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3))(zod@4.4.3)
+        version: https://codeload.github.com/sdgluck/zod-to-swift/tar.gz/4d0cce751393bdecf00897d3e706f65315604c5a(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.6.6))(zod@4.6.6)
 
   packages/overlays:
     dependencies:
@@ -2452,8 +2452,8 @@ importers:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@25.9.1)
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -2468,8 +2468,8 @@ importers:
   packages/plex-smart-filter:
     dependencies:
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -2503,8 +2503,8 @@ importers:
         specifier: ^0.35.5
         version: 0.35.5(@types/node@25.9.1)
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@types/node':
         specifier: ^25.2.3
@@ -2696,8 +2696,8 @@ importers:
         specifier: ^0.45.1
         version: 0.45.2(@types/better-sqlite3@7.6.13)(better-sqlite3@12.10.0)(knex@3.2.10(better-sqlite3@12.10.0)(supports-color@10.2.2))
       zod:
-        specifier: ^4.3.6
-        version: 4.4.3
+        specifier: ^4.6.6
+        version: 4.6.6
     devDependencies:
       '@rube/mdblist':
         specifier: workspace:*
@@ -5823,7 +5823,7 @@ packages:
     hasBin: true
 
   zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0:
-    resolution: {gitHosted: true, tarball: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0}
+    resolution: {gitHosted: true, integrity: sha512-9Q7ty8hqQrUXH9Ic7poo2JyIeFhc24ychBshr6fDT2IbBeOg5BYfGipO1mTT9TC9ycXqCAeyyo9EA7JPRggOrA==, tarball: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0}
     version: 0.1.2
     engines: {node: '>=22.18'}
     peerDependencies:
@@ -5845,16 +5845,16 @@ packages:
       zod: ^4.3.6
       zod-native-ir: github:sdgluck/zod-native-ir#v0.1.2
 
-  zod@4.4.3:
-    resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
+  zod@4.6.6:
+    resolution: {integrity: sha512-4UmzQUF5fxvfcYHlbjBmejU+w+hbDnWFx4aS8kBx7nPBHcO2SqPbpAG8snbdg+Xse4pRefR98hgjFgIMCI/UhA==}
 
 snapshots:
 
-  '@anthropic-ai/sdk@0.74.0(zod@4.4.3)':
+  '@anthropic-ai/sdk@0.74.0(zod@4.6.6)':
     dependencies:
       json-schema-to-ts: 3.1.1
     optionalDependencies:
-      zod: 4.4.3
+      zod: 4.6.6
 
   '@babel/code-frame@7.29.0':
     dependencies:
@@ -8535,18 +8535,18 @@ snapshots:
 
   yaml@2.9.0: {}
 
-  zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3):
+  zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.6.6):
     dependencies:
-      zod: 4.4.3
+      zod: 4.6.6
 
-  zod-to-kotlin@https://codeload.github.com/sdgluck/zod-to-kotlin/tar.gz/55efa437d9d07ad6c649785a9f12060d533737ad(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3))(zod@4.4.3):
+  zod-to-kotlin@https://codeload.github.com/sdgluck/zod-to-kotlin/tar.gz/55efa437d9d07ad6c649785a9f12060d533737ad(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.6.6))(zod@4.6.6):
     dependencies:
-      zod: 4.4.3
-      zod-native-ir: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3)
+      zod: 4.6.6
+      zod-native-ir: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.6.6)
 
-  zod-to-swift@https://codeload.github.com/sdgluck/zod-to-swift/tar.gz/4d0cce751393bdecf00897d3e706f65315604c5a(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3))(zod@4.4.3):
+  zod-to-swift@https://codeload.github.com/sdgluck/zod-to-swift/tar.gz/4d0cce751393bdecf00897d3e706f65315604c5a(zod-native-ir@https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.6.6))(zod@4.6.6):
     dependencies:
-      zod: 4.4.3
-      zod-native-ir: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.4.3)
+      zod: 4.6.6
+      zod-native-ir: https://codeload.github.com/sdgluck/zod-native-ir/tar.gz/18a35691ba3c08f68d4e6196b80ca17fd640fbb0(zod@4.6.6)
 
-  zod@4.4.3: {}
+  zod@4.6.6: {}

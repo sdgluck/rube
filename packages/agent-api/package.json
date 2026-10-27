@@ -23,7 +23,7 @@
     "@rube/domain.search": "workspace:*",
     "@rube/trpc": "workspace:*",
     "@trpc/server": "^11.10.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@rube/composition": "workspace:*",
