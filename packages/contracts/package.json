@@ -19,7 +19,7 @@
     "@rube/overlays": "workspace:*",
     "@rube/plex-smart-filter": "workspace:*",
     "croner": "^9.0.0",
-    "zod": "^4.3.6"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@rube/test-support": "workspace:*",

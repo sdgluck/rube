@@ -21,7 +21,7 @@
     "@rube/db": "workspace:*",
     "@rube/migrate": "workspace:*",
     "drizzle-orm": "^0.45.2",
-    "zod": "^4.3.6"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "@types/node": "^25.2.3",

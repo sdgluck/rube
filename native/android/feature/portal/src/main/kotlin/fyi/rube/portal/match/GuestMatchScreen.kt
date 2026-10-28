@@ -44,6 +44,7 @@ import fyi.rube.api.Credential
 import fyi.rube.api.MatchLink
 import fyi.rube.api.MatchText
 import fyi.rube.api.TrpcClient
+import fyi.rube.model.MatchRoomSummary
 import fyi.rube.model.Portal
 import fyi.rube.model.PortalApi
 import fyi.rube.platform.ui.ActionErrorDialog
@@ -75,7 +76,7 @@ fun GuestMatchScreen(
     val error = rememberActionError()
     var token by remember { mutableStateOf(tokens.get(link.server, link.code)) }
     var left by remember { mutableStateOf(false) }
-    var preview by remember { mutableStateOf<LoadState<Portal.MatchGuestPreviewOutput>>(LoadState.Loading) }
+    var preview by remember { mutableStateOf<LoadState<MatchRoomSummary>>(LoadState.Loading) }
     var name by remember { mutableStateOf("") }
     var joining by remember { mutableStateOf(false) }
 
